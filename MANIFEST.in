@@ -1,0 +1,24 @@
+# Include all necessary files in source distribution
+
+# C headers
+include include/*.h
+
+# Static library
+include lib/*.a
+
+# Cython source files
+include libai/*.pyx
+include libai/*.pxd
+
+# Type stub marker
+include libai/py.typed
+
+# Documentation
+include README.md
+include LICENSE
+
+# Exclude unnecessary files
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store

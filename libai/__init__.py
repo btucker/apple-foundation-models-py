@@ -1,0 +1,95 @@
+"""
+libai-py: Python bindings for Apple Intelligence
+
+High-level Pythonic interface to the libai C library for accessing
+Apple Intelligence on-device Foundation models.
+
+Basic usage:
+    from libai import Client
+
+    with Client() as client:
+        # Check availability
+        if not client.is_ready():
+            print("Apple Intelligence not available")
+            return
+
+        # Create a session and generate response
+        session = client.create_session()
+        response = session.generate("Hello, how are you?")
+        print(response)
+
+Async streaming:
+    import asyncio
+    from libai import Client
+
+    async def main():
+        with Client() as client:
+            session = client.create_session()
+            async for chunk in session.generate_stream("Tell me a story"):
+                print(chunk, end='', flush=True)
+
+    asyncio.run(main())
+"""
+
+__version__ = "0.1.0"
+
+# Public API exports
+from .client import Client, client
+from .session import Session
+from .types import (
+    Result,
+    Availability,
+    SessionConfig,
+    GenerationParams,
+    Stats,
+    StreamCallback,
+    ToolCallback,
+)
+from .exceptions import (
+    LibAIError,
+    InitializationError,
+    NotAvailableError,
+    InvalidParametersError,
+    MemoryError,
+    JSONParseError,
+    GenerationError,
+    TimeoutError,
+    SessionNotFoundError,
+    StreamNotFoundError,
+    GuardrailViolationError,
+    ToolNotFoundError,
+    ToolExecutionError,
+    UnknownError,
+)
+
+__all__ = [
+    # Version
+    "__version__",
+    # Main classes
+    "Client",
+    "Session",
+    "client",
+    # Type definitions
+    "Result",
+    "Availability",
+    "SessionConfig",
+    "GenerationParams",
+    "Stats",
+    "StreamCallback",
+    "ToolCallback",
+    # Exceptions
+    "LibAIError",
+    "InitializationError",
+    "NotAvailableError",
+    "InvalidParametersError",
+    "MemoryError",
+    "JSONParseError",
+    "GenerationError",
+    "TimeoutError",
+    "SessionNotFoundError",
+    "StreamNotFoundError",
+    "GuardrailViolationError",
+    "ToolNotFoundError",
+    "ToolExecutionError",
+    "UnknownError",
+]

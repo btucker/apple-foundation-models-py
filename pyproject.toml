@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "Cython>=3.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "libai-py"
+version = "0.1.0"
+description = "Python bindings for libai - Apple Intelligence C library"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "6over3 Institute"}
+]
+maintainers = [
+    {name = "6over3 Institute"}
+]
+keywords = ["apple", "intelligence", "ai", "llm", "foundation-models", "on-device"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Cython",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "typing-extensions>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.20",
+    "black>=22.0",
+    "mypy>=0.991",
+]
+
+[project.urls]
+Homepage = "https://github.com/6over3/libai-py"
+Repository = "https://github.com/6over3/libai-py"
+Documentation = "https://github.com/6over3/libai-py#readme"
+Issues = "https://github.com/6over3/libai-py/issues"
+
+[tool.setuptools]
+packages = ["libai"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+libai = ["py.typed", "*.pxd"]
