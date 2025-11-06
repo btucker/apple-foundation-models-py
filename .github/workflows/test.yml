@@ -1,0 +1,103 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  test:
+    name: Run tests on macOS
+    runs-on: macos-26
+
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Check macOS version
+        run: |
+          echo "macOS version:"
+          sw_vers
+          echo "Architecture:"
+          uname -m
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Build Swift library
+        run: |
+          cd applefoundationmodels/swift
+          swiftc -emit-library -o libfoundation_models.dylib foundation_models.swift \
+            -framework Foundation -framework FoundationModels
+
+          # Copy to lib directory
+          mkdir -p ../../lib
+          cp libfoundation_models.dylib ../../lib/
+
+      - name: Build Cython extension
+        run: |
+          python setup.py build_ext --inplace
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --tb=short
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      - name: Run tests with coverage (Python 3.11 only)
+        if: matrix.python-version == '3.11'
+        run: |
+          pip install pytest-cov
+          pytest tests/ --cov=applefoundationmodels --cov-report=xml --cov-report=term
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      - name: Upload coverage reports
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
+    name: Lint and format check
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install black mypy
+
+      - name: Check formatting with black
+        run: |
+          black --check applefoundationmodels/ tests/
+
+      - name: Type check with mypy
+        run: |
+          mypy applefoundationmodels/ --ignore-missing-imports
+        continue-on-error: true
