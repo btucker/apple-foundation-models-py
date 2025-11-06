@@ -10,8 +10,8 @@ permissions:
   id-token: write # Required for trusted publishing to PyPI
 
 jobs:
-  build-and-publish:
-    name: Build and publish to PyPI
+  build:
+    name: Build package on macOS
     runs-on: macos-26
 
     steps:
@@ -46,6 +46,29 @@ jobs:
           echo ""
           echo "Verifying wheel contents:"
           unzip -l dist/*.whl || true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Verify artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          ls -lh dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
