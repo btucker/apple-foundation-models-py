@@ -339,8 +339,21 @@ private func convertJSONSchemaToDynamic(_ schema: [String: Any], name: String = 
         )
 
     case "array":
-        // Arrays are not yet fully supported - return string type as fallback
-        return DynamicGenerationSchema(type: String.self)
+        guard let items = schema["items"] as? [String: Any],
+              let itemSchema = convertJSONSchemaToDynamic(items, name: "\(name)Item") else {
+            // Fallback to string if items not properly specified
+            return DynamicGenerationSchema(type: String.self)
+        }
+
+        // Extract min/max items if specified
+        let minItems = schema["minItems"] as? Int
+        let maxItems = schema["maxItems"] as? Int
+
+        return DynamicGenerationSchema(
+            arrayOf: itemSchema,
+            minimumElements: minItems,
+            maximumElements: maxItems
+        )
 
     case "string":
         if let enumValues = schema["enum"] as? [String] {
