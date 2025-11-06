@@ -348,10 +348,7 @@ private func convertJSONSchemaToDynamic(_ schema: [String: Any], name: String = 
         }
         return DynamicGenerationSchema(type: String.self)
 
-    case "integer":
-        return DynamicGenerationSchema(type: Int.self)
-
-    case "number":
+    case "integer", "number":
         return DynamicGenerationSchema(type: Double.self)
 
     case "boolean":
@@ -383,12 +380,12 @@ private func extractValue(from content: GeneratedContent) -> Any? {
     switch content.kind {
     case .string(let str):
         return str
-    case .int(let int):
-        return int
-    case .double(let double):
-        return double
+    case .number(let num):
+        return num
     case .bool(let bool):
         return bool
+    case .null:
+        return NSNull()
     case .structure(let properties, _):
         var result: [String: Any] = [:]
         for (key, value) in properties {
