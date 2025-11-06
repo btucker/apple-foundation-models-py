@@ -1,0 +1,1 @@
+- Run mypy applefoundationmodels/ --ignore-missing-imports
