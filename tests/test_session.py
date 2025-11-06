@@ -16,7 +16,9 @@ class TestSessionGeneration:
         assert isinstance(response, str)
         assert len(response) > 0
         # Should contain the answer 4
-        assert "4" in response or "four" in response.lower(), "Response should contain the answer to 2+2"
+        assert (
+            "4" in response or "four" in response.lower()
+        ), "Response should contain the answer to 2+2"
 
     def test_generate_with_temperature(self, session, check_availability):
         """Test generation with different temperatures."""
@@ -39,15 +41,13 @@ class TestSessionGeneration:
 
         # All responses should be valid
         all_responses = [response1, response2, response3]
-        assert all(len(r) > 0 for r in all_responses), "All temperature variations should produce content"
+        assert all(
+            len(r) > 0 for r in all_responses
+        ), "All temperature variations should produce content"
 
     def test_generate_with_max_tokens(self, session, check_availability):
         """Test generation with token limit."""
-        response = session.generate(
-            "Tell me a story",
-            max_tokens=50,
-            temperature=0.5
-        )
+        response = session.generate("Tell me a story", max_tokens=50, temperature=0.5)
         assert isinstance(response, str)
         assert len(response) > 0
 
@@ -59,30 +59,24 @@ class TestSessionStreaming:
     async def test_generate_stream_basic(self, session, check_availability):
         """Test basic streaming generation."""
         chunks = []
-        async for chunk in session.generate_stream(
-            "Count to 5",
-            temperature=0.3
-        ):
+        async for chunk in session.generate_stream("Count to 5", temperature=0.3):
             assert isinstance(chunk, str)
             chunks.append(chunk)
 
         assert len(chunks) > 0
-        full_response = ''.join(chunks)
+        full_response = "".join(chunks)
         assert len(full_response) > 0
 
     @pytest.mark.asyncio
     async def test_generate_stream_with_temperature(self, session, check_availability):
         """Test streaming with different temperatures."""
         chunks = []
-        async for chunk in session.generate_stream(
-            "Say hello",
-            temperature=1.0
-        ):
+        async for chunk in session.generate_stream("Say hello", temperature=1.0):
             assert isinstance(chunk, str), "Each chunk should be a string"
             chunks.append(chunk)
 
         assert len(chunks) > 0, "Should receive at least one chunk"
-        full_response = ''.join(chunks)
+        full_response = "".join(chunks)
         assert len(full_response) > 0, "Combined response should not be empty"
 
 
@@ -123,7 +117,9 @@ class TestSessionHistory:
 
         # Verify message was added
         updated_history = session.get_history()
-        assert len(updated_history) >= initial_count, "History should not shrink after adding message"
+        assert (
+            len(updated_history) >= initial_count
+        ), "History should not shrink after adding message"
 
 
 class TestSessionLifecycle:
@@ -152,12 +148,7 @@ class TestStructuredOutput:
 
     def test_generate_structured_not_implemented(self, session):
         """Test that structured generation raises NotImplementedError."""
-        schema = {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string"}
-            }
-        }
+        schema = {"type": "object", "properties": {"name": {"type": "string"}}}
 
         with pytest.raises(NotImplementedError):
             session.generate_structured("Extract name: John", schema=schema)

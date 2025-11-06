@@ -34,6 +34,7 @@ def session(client):
 
 # Test helper functions
 
+
 def assert_valid_response(response, min_length=0, message="Response validation failed"):
     """
     Assert response is a valid non-empty string.
@@ -46,8 +47,12 @@ def assert_valid_response(response, min_length=0, message="Response validation f
     Returns:
         The validated response for chaining
     """
-    assert isinstance(response, str), f"{message}: should be a string, got {type(response)}"
-    assert len(response) > min_length, f"{message}: should have content (got {len(response)} chars)"
+    assert isinstance(
+        response, str
+    ), f"{message}: should be a string, got {type(response)}"
+    assert (
+        len(response) > min_length
+    ), f"{message}: should have content (got {len(response)} chars)"
     return response
 
 
@@ -62,7 +67,9 @@ def assert_valid_chunks(chunks):
         The combined full response string
     """
     assert len(chunks) > 0, "Should receive at least one chunk"
-    assert all(isinstance(chunk, str) for chunk in chunks), "All chunks should be strings"
-    full_response = ''.join(chunks)
+    assert all(
+        isinstance(chunk, str) for chunk in chunks
+    ), "All chunks should be strings"
+    full_response = "".join(chunks)
     assert len(full_response) > 0, "Combined response should not be empty"
     return full_response

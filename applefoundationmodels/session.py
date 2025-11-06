@@ -56,9 +56,7 @@ class Session(ContextManagedResource):
             raise RuntimeError("Session is closed")
 
     def _normalize_generation_params(
-        self,
-        temperature: Optional[float],
-        max_tokens: Optional[int]
+        self, temperature: Optional[float], max_tokens: Optional[int]
     ) -> tuple[float, int]:
         """
         Normalize generation parameters with defaults.
@@ -80,7 +78,7 @@ class Session(ContextManagedResource):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         include_reasoning: Optional[bool] = None,
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
     ) -> str:
         """
         Generate text response for a prompt.
@@ -112,7 +110,7 @@ class Session(ContextManagedResource):
         prompt: str,
         schema: Dict[str, Any],
         temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None
+        max_tokens: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Generate structured JSON output matching a schema.
@@ -157,7 +155,7 @@ class Session(ContextManagedResource):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         include_reasoning: Optional[bool] = None,
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
     ) -> AsyncIterator[str]:
         """
         Generate text response with async streaming.

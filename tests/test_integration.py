@@ -7,6 +7,7 @@ import asyncio
 import applefoundationmodels
 from applefoundationmodels import Availability
 
+
 def test_availability():
     """Test availability checking"""
     print("=" * 60)
@@ -54,7 +55,9 @@ def test_version():
         assert isinstance(version, str), "Version should be a string"
         assert isinstance(languages, list), "Languages should be a list"
         assert len(languages) > 0, "Should support at least one language"
-        assert all(isinstance(lang, str) for lang in languages), "All languages should be strings"
+        assert all(
+            isinstance(lang, str) for lang in languages
+        ), "All languages should be strings"
 
     print("\n✓ Version information retrieved")
     print()
@@ -80,7 +83,9 @@ def test_basic_generation():
 
         # Test general knowledge
         print("Q: What is the largest planet in our solar system?")
-        response = session.generate("What is the largest planet in our solar system?", temperature=0.5)
+        response = session.generate(
+            "What is the largest planet in our solar system?", temperature=0.5
+        )
         print(f"A: {response}")
         assert response, "Response should not be empty"
         assert isinstance(response, str), "Response should be a string"
@@ -150,14 +155,14 @@ async def test_streaming():
     session = client.create_session()
 
     print("Prompt: Tell me a short story about a robot learning to paint (2 sentences)")
-    print("Response: ", end='', flush=True)
+    print("Response: ", end="", flush=True)
 
     chunks = []
     async for chunk in session.generate_stream(
         "Tell me a short story about a robot learning to paint in exactly 2 sentences",
-        temperature=0.8
+        temperature=0.8,
     ):
-        print(chunk, end='', flush=True)
+        print(chunk, end="", flush=True)
         assert isinstance(chunk, str), "Each chunk should be a string"
         chunks.append(chunk)
 
@@ -165,9 +170,11 @@ async def test_streaming():
 
     # Assertions
     assert len(chunks) > 0, "Should receive at least one chunk"
-    full_response = ''.join(chunks)
+    full_response = "".join(chunks)
     assert len(full_response) > 0, "Full response should not be empty"
-    assert all(isinstance(chunk, str) for chunk in chunks), "All chunks should be strings"
+    assert all(
+        isinstance(chunk, str) for chunk in chunks
+    ), "All chunks should be strings"
     print(f"✓ Received {len(chunks)} chunks totaling {len(full_response)} characters")
 
     client.close()
@@ -186,21 +193,21 @@ def test_temperature_variations():
         prompt = "Complete this sentence: The sky is"
 
         # Low temperature (more deterministic)
-        print(f"Temperature 0.1: ", end='')
+        print(f"Temperature 0.1: ", end="")
         response1 = session.generate(prompt, temperature=0.1)
         print(response1)
         assert response1, "Response should not be empty"
         assert isinstance(response1, str), "Response should be a string"
 
         # Medium temperature
-        print(f"Temperature 0.7: ", end='')
+        print(f"Temperature 0.7: ", end="")
         response2 = session.generate(prompt, temperature=0.7)
         print(response2)
         assert response2, "Response should not be empty"
         assert isinstance(response2, str), "Response should be a string"
 
         # High temperature (more creative)
-        print(f"Temperature 1.5: ", end='')
+        print(f"Temperature 1.5: ", end="")
         response3 = session.generate(prompt, temperature=1.5)
         print(response3)
         assert response3, "Response should not be empty"
@@ -233,7 +240,9 @@ def test_session_management():
     assert response1, "Session 1 response should not be empty"
     assert isinstance(response1, str), "Response should be a string"
     # Check for the answer 96 or "ninety-six" etc.
-    assert "96" in response1 or "ninety" in response1.lower(), "Math response should contain the answer"
+    assert (
+        "96" in response1 or "ninety" in response1.lower()
+    ), "Math response should contain the answer"
     print()
 
     print("Session 2 (Poetry): Write one line of poetry about the moon")
@@ -245,7 +254,9 @@ def test_session_management():
     print()
 
     # Verify sessions are independent
-    assert response1 != response2, "Different sessions should produce different responses"
+    assert (
+        response1 != response2
+    ), "Different sessions should produce different responses"
 
     # Close sessions
     session1.close()
@@ -331,7 +342,13 @@ def main():
     """Run all tests"""
     print("\n")
     print("╔" + "=" * 58 + "╗")
-    print("║" + " " * 10 + "apple-foundation-models-py Comprehensive Test Suite" + " " * 14 + "║")
+    print(
+        "║"
+        + " " * 10
+        + "apple-foundation-models-py Comprehensive Test Suite"
+        + " " * 14
+        + "║"
+    )
     print("╚" + "=" * 58 + "╝")
     print()
 
@@ -366,7 +383,9 @@ def main():
         print("  • Context managers")
         print("  • Error handling")
         print()
-        print("🎉 apple-foundation-models-py is working correctly with FoundationModels!")
+        print(
+            "🎉 apple-foundation-models-py is working correctly with FoundationModels!"
+        )
 
     except Exception as e:
         print("\n" + "=" * 60)
@@ -374,6 +393,7 @@ def main():
         print("=" * 60)
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

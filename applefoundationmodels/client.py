@@ -123,7 +123,7 @@ class Client(ContextManagedResource):
         instructions: Optional[str] = None,
         tools_json: Optional[str] = None,
         enable_guardrails: bool = True,
-        prewarm: bool = False
+        prewarm: bool = False,
     ) -> Session:
         """
         Create a new AI session.
@@ -151,7 +151,7 @@ class Client(ContextManagedResource):
         """
         config = {}
         if instructions is not None:
-            config['instructions'] = instructions
+            config["instructions"] = instructions
         # Note: tools_json, enable_guardrails, prewarm not supported in simplified API
 
         session_id = _foundationmodels.create_session(config if config else None)

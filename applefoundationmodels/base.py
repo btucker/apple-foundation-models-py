@@ -7,7 +7,7 @@ Provides base functionality for context-managed resources.
 from abc import ABC, abstractmethod
 from typing import TypeVar
 
-T = TypeVar('T', bound='ContextManagedResource')
+T = TypeVar("T", bound="ContextManagedResource")
 
 
 class ContextManagedResource(ABC):
