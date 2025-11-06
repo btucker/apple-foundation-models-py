@@ -374,22 +374,22 @@ private func convertJSONSchemaToDynamic(_ schema: [String: Any], name: String = 
 
 // Helper to extract JSON from GeneratedContent
 @available(macOS 26.0, *)
-private func extractJSON(from content: GeneratedContent) -> [String: Any]? {
+private func extractJSON(from content: GeneratedContent) throws -> [String: Any] {
     guard case let .structure(properties, _) = content.kind else {
-        return nil
+        throw NSError(domain: "FoundationModels", code: -1, userInfo: [NSLocalizedDescriptionKey: "Expected structure content"])
     }
 
     var result: [String: Any] = [:]
 
     for (key, value) in properties {
-        result[key] = extractValue(from: value)
+        result[key] = try extractValue(from: value)
     }
 
     return result
 }
 
 @available(macOS 26.0, *)
-private func extractValue(from content: GeneratedContent) -> Any? {
+private func extractValue(from content: GeneratedContent) throws -> Any {
     switch content.kind {
     case .string(let str):
         return str
@@ -402,13 +402,17 @@ private func extractValue(from content: GeneratedContent) -> Any? {
     case .structure(let properties, _):
         var result: [String: Any] = [:]
         for (key, value) in properties {
-            result[key] = extractValue(from: value)
+            result[key] = try extractValue(from: value)
         }
         return result
     case .array(let items):
-        return items.map { extractValue(from: $0) }
+        var result: [Any] = []
+        for item in items {
+            result.append(try extractValue(from: item))
+        }
+        return result
     @unknown default:
-        return nil
+        throw NSError(domain: "FoundationModels", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unsupported GeneratedContent kind"])
     }
 }
 
@@ -467,12 +471,12 @@ public func appleAIGenerateStructured(
                 )
 
                 // Extract JSON from GeneratedContent
-                if let jsonObject = extractJSON(from: response.content),
-                   let jsonData = try? JSONSerialization.data(withJSONObject: ["object": jsonObject]),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                let jsonObject = try extractJSON(from: response.content)
+                let jsonData = try JSONSerialization.data(withJSONObject: ["object": jsonObject])
+                if let jsonString = String(data: jsonData, encoding: .utf8) {
                     result = jsonString
                 } else {
-                    result = "{\"error\": \"Failed to serialize response\"}"
+                    result = "{\"error\": \"Failed to encode JSON as string\"}"
                 }
             } catch {
                 result = "{\"error\": \"\(error.localizedDescription)\"}"
