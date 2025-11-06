@@ -1,0 +1,4 @@
+- In applefoundationmodels/swift/foundation_models.swift around lines 384-409,
+- commit this change. And then add a github action that runs all the tests
+- I'm confused by how it still seems like we're doing some string handling for
+  arrays?
