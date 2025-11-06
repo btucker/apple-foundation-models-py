@@ -1,0 +1,8 @@
+- I ran `uv pip install -e .` but then why is this happening?
+- sorry, please continue
+- none of these resolved the issue: ➜  apple-foundation-models-py git:(main) ✗
+  pytest tests/test_integration.py
+- I'm not seeing much of any assertions in @tests/test_integration.py
+- check that the rest of all the test files are actually asserting what they are
+  testing
+- do you notice anything else to cleanup?
