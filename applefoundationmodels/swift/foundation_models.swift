@@ -302,6 +302,106 @@ public func appleAIGenerateStream(
 
 // MARK: - Structured Generation
 
+// Helper to convert JSON Schema dictionary to DynamicGenerationSchema
+@available(macOS 26.0, *)
+private func convertJSONSchemaToDynamic(_ schema: [String: Any], name: String = "root") -> DynamicGenerationSchema? {
+    guard let type = schema["type"] as? String else {
+        return nil
+    }
+
+    switch type {
+    case "object":
+        guard let properties = schema["properties"] as? [String: [String: Any]] else {
+            return nil
+        }
+
+        var dynamicProperties: [DynamicGenerationSchema.Property] = []
+
+        for (propName, propSchema) in properties {
+            guard let propDynamicSchema = convertJSONSchemaToDynamic(propSchema, name: propName) else {
+                continue
+            }
+
+            let description = propSchema["description"] as? String
+            dynamicProperties.append(
+                DynamicGenerationSchema.Property(
+                    name: propName,
+                    description: description,
+                    schema: propDynamicSchema
+                )
+            )
+        }
+
+        return DynamicGenerationSchema(
+            name: name,
+            description: schema["description"] as? String,
+            properties: dynamicProperties
+        )
+
+    case "array":
+        // Arrays are not yet fully supported - return string type as fallback
+        return DynamicGenerationSchema(type: String.self)
+
+    case "string":
+        if let enumValues = schema["enum"] as? [String] {
+            return DynamicGenerationSchema(name: name, anyOf: enumValues)
+        }
+        return DynamicGenerationSchema(type: String.self)
+
+    case "integer":
+        return DynamicGenerationSchema(type: Int.self)
+
+    case "number":
+        return DynamicGenerationSchema(type: Double.self)
+
+    case "boolean":
+        return DynamicGenerationSchema(type: Bool.self)
+
+    default:
+        return nil
+    }
+}
+
+// Helper to extract JSON from GeneratedContent
+@available(macOS 26.0, *)
+private func extractJSON(from content: GeneratedContent) -> [String: Any]? {
+    guard case let .structure(properties, _) = content.kind else {
+        return nil
+    }
+
+    var result: [String: Any] = [:]
+
+    for (key, value) in properties {
+        result[key] = extractValue(from: value)
+    }
+
+    return result
+}
+
+@available(macOS 26.0, *)
+private func extractValue(from content: GeneratedContent) -> Any? {
+    switch content.kind {
+    case .string(let str):
+        return str
+    case .int(let int):
+        return int
+    case .double(let double):
+        return double
+    case .bool(let bool):
+        return bool
+    case .structure(let properties, _):
+        var result: [String: Any] = [:]
+        for (key, value) in properties {
+            result[key] = extractValue(from: value)
+        }
+        return result
+    case .array(let items):
+        return items.map { extractValue(from: $0) }
+    @unknown default:
+        return nil
+    }
+}
+
 @_cdecl("apple_ai_generate_structured")
 public func appleAIGenerateStructured(
     prompt: UnsafePointer<CChar>,
@@ -324,6 +424,11 @@ public func appleAIGenerateStructured(
             return strdup("{\"error\": \"Invalid schema JSON\"}")
         }
 
+        // Convert JSON Schema to DynamicGenerationSchema
+        guard let dynamicSchema = convertJSONSchemaToDynamic(schemaDict) else {
+            return strdup("{\"error\": \"Failed to convert schema\"}")
+        }
+
         // Use semaphore for async coordination
         let semaphore = DispatchSemaphore(value: 0)
         var result: String = ""
@@ -341,36 +446,23 @@ public func appleAIGenerateStructured(
                     temperature: temperature
                 )
 
-                // For now, inject schema into prompt since GenerationSchema requires @Generable types
-                // This is a temporary solution until we can properly map JSON Schema to GenerationSchema
-                let enhancedPrompt = """
-                \(promptString)
+                // Create GenerationSchema from DynamicGenerationSchema
+                let generationSchema = try GenerationSchema(root: dynamicSchema, dependencies: [])
 
-                Please respond with valid JSON that conforms to this schema:
-                \(schemaString)
-
-                Return ONLY the JSON object, no additional text.
-                """
-
-                // Generate response with schema in prompt
+                // Generate response with proper schema
                 let response = try await session.respond(
-                    to: enhancedPrompt,
+                    to: promptString,
+                    schema: generationSchema,
                     options: options
                 )
 
-                // The response.content should be a JSON string matching the schema
-                let responseContent = response.content
-
-                // Try to parse as JSON and wrap in "object" key
-                if let contentData = responseContent.data(using: .utf8),
-                   let parsedObject = try? JSONSerialization.jsonObject(with: contentData),
-                   let wrappedData = try? JSONSerialization.data(withJSONObject: ["object": parsedObject]),
-                   let wrappedString = String(data: wrappedData, encoding: .utf8) {
-                    result = wrappedString
+                // Extract JSON from GeneratedContent
+                if let jsonObject = extractJSON(from: response.content),
+                   let jsonData = try? JSONSerialization.data(withJSONObject: ["object": jsonObject]),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    result = jsonString
                 } else {
-                    // Fallback: wrap raw content as string (might need cleaning)
-                    let cleanContent = responseContent.trimmingCharacters(in: .whitespacesAndNewlines)
-                    result = "{\"object\": \(cleanContent)}"
+                    result = "{\"error\": \"Failed to serialize response\"}"
                 }
             } catch {
                 result = "{\"error\": \"\(error.localizedDescription)\"}"

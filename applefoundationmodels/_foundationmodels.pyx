@@ -295,16 +295,11 @@ def generate_structured(
     result_str = _decode_string(result_c)
     apple_ai_free_string(result_c)
 
-    # DEBUG: Print the raw response to stderr
-    import sys
-    sys.stderr.write(f"DEBUG: Raw response from Swift: {repr(result_str)}\n")
-    sys.stderr.flush()
-
     # Parse JSON response
     try:
         result_data = json.loads(result_str)
     except json.JSONDecodeError as e:
-        raise RuntimeError(f"Failed to parse response JSON: {e}\nRaw response: {repr(result_str)}")
+        raise RuntimeError(f"Failed to parse response JSON: {e}")
 
     # Check for error in response
     if "error" in result_data:
