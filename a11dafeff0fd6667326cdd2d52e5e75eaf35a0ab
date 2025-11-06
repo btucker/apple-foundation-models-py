@@ -1,0 +1,1824 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: agent-8a...
+**Time:** 2025-11-06 19:59:05
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+I'm ready to help you search and explore the codebase in `/Users/btucker/Documents/projects/apple-foundation-models-py`.
+
+I can assist you with:
+- Finding files using glob patterns
+- Searching code and text with regex
+- Reading file contents
+- Analyzing the structure of your project
+
+The repository appears to be a Python project called "apple-foundation-models-py" with recent changes including a module rename from `foundationmodels` to `applefoundationmodels` and migration away from libai to direct bridging.
+
+What would you like me to search for or explore?
+
+---
+
+## Session: agent-c5...
+**Time:** 2025-11-06 19:59:08
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+Hello! I'm Claude Code's file search specialist, ready to help you explore and navigate your codebase.
+
+I can see you're working in the `apple-foundation-models-py` project located at `/Users/btucker/Documents/projects/apple-foundation-models-py`. This appears to be a Python project related to Apple Foundation Models, and your repository is currently on the `main` branch with a clean working status.
+
+I'm equipped to help you with:
+- **Finding files** using glob patterns
+- **Searching code** with regex patterns (grep)
+- **Reading file contents** when you need specific information
+- **Analyzing** your codebase structure
+
+What would you like me to search for or explore in your project?
+
+---
+
+## Session: agent-ef...
+**Time:** 2025-11-06 19:59:37
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+I'll conduct a comprehensive code quality review focusing on DRY violations and refactoring opportunities. Let me start by exploring the codebase structure.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+Now let me read all the main source files and test files to analyze for DRY violations:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me read the test files and examples:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me read the example files:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Let me also check for any constants or configuration files:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+Now let me search for specific patterns of duplication:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+Excellent! Now I have a complete picture of the codebase. Let me create a comprehensive DRY violations and refactoring analysis.
+
+# Comprehensive Code Quality Review: DRY Violations & Refactoring Opportunities
+
+## Overall Assessment
+
+This is a well-structured Python binding library for Apple's FoundationModels framework with approximately 1,768 lines of code. The codebase demonstrates good organization with clear separation of concerns. However, there are several significant DRY violations and refactoring opportunities that would improve maintainability and reduce code duplication.
+
+## Critical DRY Violations
+
+### 1. **CRITICAL: Repeated `from . import _foundationmodels` Pattern**
+
+**Priority: HIGH**
+
+**Location:** Throughout `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/client.py` and `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/session.py`
+
+**Issue:** The import statement `from . import _foundationmodels` appears 10+ times across these files, imported locally within each method rather than at the module level.
+
+**Examples:**
+
+In `client.py`:
+- Line 43: `from . import _foundationmodels` (in `__init__`)
+- Line 84: `from . import _foundationmodels` (in `check_availability`)
+- Line 96: `from . import _foundationmodels` (in `get_availability_reason`)
+- Line 107: `from . import _foundationmodels` (in `is_ready`)
+- Line 118: `from . import _foundationmodels` (in `get_version`)
+- Line 129: `from . import _foundationmodels` (in `get_supported_languages`)
+- Line 164: `from . import _foundationmodels` (in `create_session`)
+- Line 188: `from . import _foundationmodels` (in `get_stats`)
+- Line 197: `from . import _foundationmodels` (in `reset_stats`)
+
+In `session.py`:
+- Line 97: `from . import _foundationmodels` (in `generate`)
+- Line 165: `from applefoundationmodels import _foundationmodels` (in `generate_stream`)
+- Line 206: `from . import _foundationmodels` (in `get_history`)
+- Line 216: `from . import _foundationmodels` (in `clear_history`)
+- Line 230: `from . import _foundationmodels` (in `add_message`)
+
+**Refactoring Suggestion:**
+
+```python
+# At the top of client.py (after line 12)
+from . import _foundationmodels
+
+# Then remove all individual imports within methods
+```
+
+**Benefits:**
+- Reduces 10+ duplicate import statements to 1
+- Improves module load time
+- Makes code cleaner and more maintainable
+- Standard Python practice
+
+---
+
+### 2. **HIGH: Duplicate Default Parameter Logic**
+
+**Priority: HIGH**
+
+**Location:**
+- `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/session.py` lines 94-95 and 153-154
+
+**Issue:** The same default parameter logic is duplicated in both `generate()` and `generate_stream()` methods.
+
+**Code Duplication:**
+
+```python
+# In generate() - lines 94-95
+temp = temperature if temperature is not None else 1.0
+tokens = max_tokens if max_tokens is not None else 1024
+
+# In generate_stream() - lines 153-154
+temp = temperature if temperature is not None else 1.0
+tokens = max_tokens if max_tokens is not None else 1024
+```
+
+**Refactoring Suggestion:**
+
+Create a helper method or use a dataclass for generation parameters:
+
+```python
+# Add to session.py
+def _normalize_generation_params(
+    self,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None
+) -> tuple[float, int]:
+    """Normalize generation parameters with defaults."""
+    temp = temperature if temperature is not None else 1.0
+    tokens = max_tokens if max_tokens is not None else 1024
+    return temp, tokens
+
+# Then in generate():
+self._check_closed()
+temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+from . import _foundationmodels
+return _foundationmodels.generate(prompt, temp, tokens)
+
+# And in generate_stream():
+self._check_closed()
+temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+# ... rest of code
+```
+
+**Benefits:**
+- Single source of truth for default values
+- Easy to update defaults in one place
+- More maintainable
+- Can add validation logic in one place
+
+---
+
+### 3. **HIGH: Repeated Test Assertion Patterns**
+
+**Priority: MEDIUM-HIGH**
+
+**Location:** Throughout test files, especially `/Users/btucker/Documents/projects/apple-foundation-models-py/tests/test_integration.py` and `/Users/btucker/Documents/projects/apple-foundation-models-py/tests/test_session.py`
+
+**Issue:** The pattern of asserting response is a non-empty string appears 32+ times across test files.
+
+**Repeated Pattern:**
+```python
+assert isinstance(response, str)
+assert len(response) > 0
+# or variations like:
+assert response, "Response should not be empty"
+assert isinstance(response, str), "Response should be a string"
+```
+
+**Examples:**
+- `test_integration.py` lines 76-78, 85-86, 95-97, etc.
+- `test_session.py` lines 16-17, 27-28, 32-33, etc.
+
+**Refactoring Suggestion:**
+
+Create shared test helper functions in `conftest.py`:
+
+```python
+# In /Users/btucker/Documents/projects/apple-foundation-models-py/tests/conftest.py
+
+def assert_valid_response(response, min_length=0, message="Response validation failed"):
+    """Assert response is a non-empty string."""
+    assert isinstance(response, str), f"{message}: should be a string"
+    assert len(response) > min_length, f"{message}: should have content (got {len(response)} chars)"
+    return response
+
+def assert_valid_chunks(chunks):
+    """Assert chunks are valid for streaming."""
+    assert len(chunks) > 0, "Should receive at least one chunk"
+    assert all(isinstance(chunk, str) for chunk in chunks), "All chunks should be strings"
+    full_response = ''.join(chunks)
+    assert len(full_response) > 0, "Combined response should not be empty"
+    return full_response
+```
+
+**Usage:**
+```python
+# Instead of:
+response = session.generate("What is 2 + 2?")
+assert isinstance(response, str)
+assert len(response) > 0
+
+# Use:
+response = assert_valid_response(session.generate("What is 2 + 2?"))
+```
+
+**Benefits:**
+- Reduces ~30+ assertion blocks to single function calls
+- Consistent error messages
+- Easy to enhance validation logic
+- More readable tests
+
+---
+
+### 4. **MEDIUM: Duplicate Availability Check Pattern**
+
+**Priority: MEDIUM**
+
+**Location:** Examples and test files
+
+**Issue:** The availability check pattern is repeated in multiple example files with identical logic.
+
+**Examples:**
+
+In `basic_chat.py` (lines 17-22):
+```python
+status = Client.check_availability()
+if status != Availability.AVAILABLE:
+    print("Apple Intelligence is not available:")
+    print(Client.get_availability_reason())
+    return
+```
+
+In `streaming_chat.py` (lines 29-32):
+```python
+if Client.check_availability() != Availability.AVAILABLE:
+    print("Apple Intelligence not available")
+    print(Client.get_availability_reason())
+    return
+```
+
+In `structured_output.py` (lines 17-19):
+```python
+if Client.check_availability() != Availability.AVAILABLE:
+    print("Apple Intelligence not available")
+    return
+```
+
+**Refactoring Suggestion:**
+
+Create a utility module for examples:
+
+```python
+# Create /Users/btucker/Documents/projects/apple-foundation-models-py/examples/utils.py
+
+from applefoundationmodels import Client, Availability
+
+def check_availability_or_exit(verbose=True):
+    """Check availability and exit if not available."""
+    status = Client.check_availability()
+    if status != Availability.AVAILABLE:
+        if verbose:
+            print("Apple Intelligence is not available:")
+            print(Client.get_availability_reason())
+        else:
+            print("Apple Intelligence not available")
+        return False
+    return True
+
+def print_example_header(title):
+    """Print a formatted example header."""
+    print(f"\n{'=' * 60}")
+    print(f"{title}")
+    print(f"{'=' * 60}\n")
+```
+
+**Usage:**
+```python
+from utils import check_availability_or_exit, print_example_header
+
+def main():
+    if not check_availability_or_exit():
+        return
+    # ... rest of example
+```
+
+**Benefits:**
+- Reduces duplication across 3 example files
+- Consistent error messaging
+- Reusable for future examples
+
+---
+
+### 5. **MEDIUM: Duplicate Context Manager Pattern**
+
+**Priority: MEDIUM**
+
+**Location:**
+- `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/client.py` lines 49-55
+- `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/session.py` lines 42-48
+
+**Issue:** Both `Client` and `Session` implement identical context manager methods.
+
+**Code:**
+
+In `client.py`:
+```python
+def __enter__(self) -> "Client":
+    """Context manager entry."""
+    return self
+
+def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    """Context manager exit with automatic cleanup."""
+    self.close()
+```
+
+In `session.py`:
+```python
+def __enter__(self) -> "Session":
+    """Context manager entry."""
+    return self
+
+def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    """Context manager exit with automatic cleanup."""
+    self.close()
+```
+
+**Refactoring Suggestion:**
+
+Create a base mixin class:
+
+```python
+# Create new file: /Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/base.py
+
+from typing import TypeVar, Generic
+from abc import ABC, abstractmethod
+
+T = TypeVar('T')
+
+class ContextManagedResource(ABC):
+    """Base class for resources that support context manager protocol."""
+
+    def __enter__(self: T) -> T:
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Context manager exit with automatic cleanup."""
+        self.close()
+
+    @abstractmethod
+    def close(self) -> None:
+        """Close and cleanup resources."""
+        pass
+```
+
+**Usage:**
+```python
+# In client.py
+from .base import ContextManagedResource
+
+class Client(ContextManagedResource):
+    # ... existing code
+    # Remove __enter__ and __exit__ methods
+
+    def close(self) -> None:
+        """Close the client and cleanup all resources."""
+        for session in self._sessions:
+            session.close()
+        self._sessions.clear()
+```
+
+**Benefits:**
+- Single implementation of context manager protocol
+- Enforces consistent close() method implementation
+- Easy to add future managed resources
+
+---
+
+### 6. **MEDIUM: Duplicate Statistics Display Logic**
+
+**Priority: MEDIUM**
+
+**Location:**
+- `/Users/btucker/Documents/projects/apple-foundation-models-py/examples/basic_chat.py` lines 64-71
+- `/Users/btucker/Documents/projects/apple-foundation-models-py/examples/streaming_chat.py` lines 53-56
+
+**Issue:** Statistics display logic is duplicated with slight variations.
+
+**Code:**
+
+In `basic_chat.py`:
+```python
+stats = client.get_stats()
+print("=" * 60)
+print("Statistics:")
+print("=" * 60)
+print(f"Total requests: {stats['total_requests']}")
+print(f"Successful: {stats['successful_requests']}")
+print(f"Failed: {stats['failed_requests']}")
+print(f"Avg response time: {stats['average_response_time']:.2f}s")
+```
+
+In `streaming_chat.py`:
+```python
+stats = client.get_stats()
+print(f"\n{'=' * 60}")
+print(f"Completed {stats['successful_requests']} requests")
+print(f"Total time: {stats['total_processing_time']:.2f}s")
+```
+
+**Refactoring Suggestion:**
+
+Add to the examples utils module:
+
+```python
+# In examples/utils.py
+def print_stats(client, verbose=True):
+    """Print client statistics in a formatted way."""
+    stats = client.get_stats()
+    print(f"\n{'=' * 60}")
+    if verbose:
+        print("Statistics:")
+        print("=" * 60)
+        print(f"Total requests: {stats['total_requests']}")
+        print(f"Successful: {stats['successful_requests']}")
+        print(f"Failed: {stats['failed_requests']}")
+        print(f"Avg response time: {stats['average_response_time']:.2f}s")
+        print(f"Total processing time: {stats['total_processing_time']:.2f}s")
+    else:
+        print(f"Completed {stats['successful_requests']} requests")
+        print(f"Total time: {stats['total_processing_time']:.2f}s")
+```
+
+---
+
+### 7. **LOW-MEDIUM: Magic Numbers - Default Temperature and Max Tokens**
+
+**Priority: MEDIUM**
+
+**Location:** Multiple files
+
+**Issue:** The default values `1.0` (temperature) and `1024` (max_tokens) are hardcoded in multiple places.
+
+**Occurrences:**
+- `session.py` lines 94-95 (in `generate()`)
+- `session.py` lines 153-154 (in `generate_stream()`)
+- Multiple test files use various temperature values (0.1, 0.3, 0.5, 0.7, 0.8, 1.0, 1.5)
+
+**Refactoring Suggestion:**
+
+Create constants file:
+
+```python
+# Create: /Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/constants.py
+
+"""Constants for applefoundationmodels."""
+
+# Generation defaults
+DEFAULT_TEMPERATURE = 1.0
+DEFAULT_MAX_TOKENS = 1024
+MIN_TEMPERATURE = 0.0
+MAX_TEMPERATURE = 2.0
+
+# Temperature presets for common use cases
+class TemperaturePreset:
+    """Common temperature presets."""
+    DETERMINISTIC = 0.1  # Very low randomness
+    FACTUAL = 0.3       # Low randomness, good for facts
+    BALANCED = 0.7      # Balanced creativity and consistency
+    CREATIVE = 1.0      # More creative
+    VERY_CREATIVE = 1.5 # High creativity
+```
+
+**Usage:**
+```python
+# In session.py
+from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
+
+def _normalize_generation_params(self, temperature, max_tokens):
+    temp = temperature if temperature is not None else DEFAULT_TEMPERATURE
+    tokens = max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS
+    return temp, tokens
+
+# In tests
+from applefoundationmodels.constants import TemperaturePreset
+
+response = session.generate("Test", temperature=TemperaturePreset.FACTUAL)
+```
+
+**Benefits:**
+- Single source of truth for defaults
+- Self-documenting temperature values
+- Easy to update defaults globally
+- Helps users understand temperature ranges
+
+---
+
+### 8. **LOW: Repeated Test Class Docstrings**
+
+**Priority: LOW**
+
+**Location:** Throughout test files
+
+**Issue:** Test class docstrings are minimal and repetitive.
+
+**Examples:**
+```python
+class TestAvailability:
+    """Tests for availability checking."""
+
+class TestClientInfo:
+    """Tests for client information methods."""
+
+class TestSessionGeneration:
+    """Tests for text generation."""
+```
+
+**Refactoring Suggestion:**
+
+While these are acceptable, consider a more DRY approach using decorators or pytest markers:
+
+```python
+# Use pytest markers instead of separate classes
+import pytest
+
+@pytest.mark.availability
+def test_check_availability():
+    """Test availability check returns valid status."""
+    # ...
+
+@pytest.mark.client_info
+def test_get_version(client):
+    """Test version string is returned."""
+    # ...
+```
+
+**Benefits:**
+- Less boilerplate
+- More flexible test organization
+- Easier to run specific test categories
+
+---
+
+### 9. **LOW: Duplicate Exception Documentation**
+
+**Priority: LOW**
+
+**Location:** `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/exceptions.py`
+
+**Issue:** All exception classes have pass statements and identical structure.
+
+**Current Code (lines 20-82):**
+```python
+class InitializationError(FoundationModelsError):
+    """Library initialization failed."""
+    pass
+
+class NotAvailableError(FoundationModelsError):
+    """Apple Intelligence not available on this device."""
+    pass
+
+# ... repeated for 11 more exception classes
+```
+
+**Refactoring Suggestion:**
+
+While the current approach is clean, you could use a factory pattern to reduce boilerplate:
+
+```python
+def create_exception_class(name, docstring):
+    """Factory for creating exception classes."""
+    return type(name, (FoundationModelsError,), {'__doc__': docstring})
+
+# Define exceptions with metadata
+EXCEPTION_SPECS = {
+    'InitializationError': 'Library initialization failed.',
+    'NotAvailableError': 'Apple Intelligence not available on this device.',
+    'InvalidParametersError': 'Invalid parameters provided to function.',
+    # ... etc
+}
+
+# Create exception classes dynamically
+for exc_name, doc in EXCEPTION_SPECS.items():
+    globals()[exc_name] = create_exception_class(exc_name, doc)
+```
+
+**Note:** The current approach is actually cleaner and more maintainable. I recommend **NOT** implementing this refactoring - keeping explicit class definitions is better for IDE support and readability.
+
+---
+
+### 10. **LOW: Duplicate Error Handling Pattern in Examples**
+
+**Priority: LOW**
+
+**Location:** Example files
+
+**Issue:** Similar try-except patterns in examples.
+
+**Example from `basic_chat.py` (lines 73-78):**
+```python
+except NotAvailableError as e:
+    print(f"Error: {e.message}")
+    print("Make sure Apple Intelligence is enabled in System Settings")
+except Exception as e:
+    print(f"Error: {e}")
+    raise
+```
+
+**Refactoring Suggestion:**
+
+Add to examples utils:
+
+```python
+# In examples/utils.py
+import sys
+from applefoundationmodels import NotAvailableError
+
+def handle_example_error(e):
+    """Standard error handling for examples."""
+    if isinstance(e, NotAvailableError):
+        print(f"Error: {e.message}")
+        print("Make sure Apple Intelligence is enabled in System Settings")
+        sys.exit(1)
+    else:
+        print(f"Error: {e}")
+        raise
+```
+
+---
+
+## Additional Refactoring Opportunities
+
+### 11. **Code Organization: Missing Type Hints**
+
+**Priority: LOW**
+
+**Location:** Several places lack complete type hints
+
+**Suggestion:** Add comprehensive type hints using `typing` module:
+
+```python
+# Example improvements for session.py
+from typing import Optional, AsyncIterator
+
+async def generate_stream(
+    self,
+    prompt: str,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+    include_reasoning: Optional[bool] = None,
+    seed: Optional[int] = None
+) -> AsyncIterator[str]:  # This is good
+    # ...
+```
+
+---
+
+### 12. **Boilerplate: Repeated Method Signatures**
+
+**Priority: LOW**
+
+**Location:** `generate()` and `generate_stream()` have nearly identical parameters
+
+**Issue:** Parameter lists are duplicated.
+
+**Refactoring Suggestion:**
+
+Use TypedDict or dataclass for generation parameters:
+
+```python
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class GenerationRequest:
+    """Request parameters for generation."""
+    prompt: str
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    include_reasoning: Optional[bool] = None
+    seed: Optional[int] = None
+
+    def get_normalized_params(self):
+        """Get normalized parameters with defaults."""
+        return (
+            self.temperature if self.temperature is not None else 1.0,
+            self.max_tokens if self.max_tokens is not None else 1024
+        )
+
+# Usage:
+def generate(self, **kwargs) -> str:
+    request = GenerationRequest(**kwargs)
+    temp, tokens = request.get_normalized_params()
+    # ...
+```
+
+---
+
+## Prioritized Refactoring Roadmap
+
+### Phase 1: High Priority (Immediate Impact)
+
+1. **Remove duplicate imports** - Consolidate `from . import _foundationmodels` to module level
+   - Files: `client.py`, `session.py`
+   - Impact: 10+ duplicate imports removed
+   - Effort: 10 minutes
+
+2. **Extract default parameter logic** - Create `_normalize_generation_params()` helper
+   - File: `session.py`
+   - Impact: Eliminates duplicate default logic
+   - Effort: 15 minutes
+
+3. **Create test helper functions** - Add `assert_valid_response()` and related helpers
+   - File: `tests/conftest.py`
+   - Impact: Simplifies 30+ test assertions
+   - Effort: 20 minutes
+
+### Phase 2: Medium Priority (Maintainability Improvements)
+
+4. **Create examples utility module** - Extract common example patterns
+   - File: `examples/utils.py` (new)
+   - Impact: Reduces duplication across 3 example files
+   - Effort: 30 minutes
+
+5. **Extract constants** - Create `constants.py` with defaults and presets
+   - File: `applefoundationmodels/constants.py` (new)
+   - Impact: Single source of truth for magic numbers
+   - Effort: 20 minutes
+
+6. **Base class for context managers** - Create `ContextManagedResource` mixin
+   - File: `applefoundationmodels/base.py` (new)
+   - Impact: Eliminates duplicate context manager code
+   - Effort: 25 minutes
+
+### Phase 3: Low Priority (Nice to Have)
+
+7. **Enhance type hints** - Add comprehensive typing throughout
+   - Impact: Better IDE support and type checking
+   - Effort: 1 hour
+
+8. **Use dataclass for generation parameters** - Reduce parameter list duplication
+   - Impact: More maintainable parameter handling
+   - Effort: 45 minutes
+
+---
+
+## Summary Statistics
+
+**Total DRY Violations Identified:** 12 major categories
+
+**Lines of Code That Could Be Eliminated or Simplified:** ~150-200 lines
+
+**Files Most Affected:**
+1. `session.py` - 5 duplicate import statements, duplicate default logic
+2. `client.py` - 9 duplicate import statements
+3. `test_integration.py` - 16 duplicate assertion patterns
+4. `test_session.py` - 9 duplicate assertion patterns
+5. Example files - Multiple duplicate patterns
+
+**Estimated Refactoring Effort:**
+- Phase 1 (High Priority): ~45 minutes
+- Phase 2 (Medium Priority): ~1 hour 15 minutes
+- Phase 3 (Low Priority): ~1 hour 45 minutes
+- **Total: ~3 hours 45 minutes**
+
+**Expected Benefits:**
+- Reduce codebase by ~8-10%
+- Improve maintainability significantly
+- Single source of truth for defaults and patterns
+- Better test readability
+- Easier to add new features
+
+---
+
+## Recommendations
+
+**Start with Phase 1 items** as they provide immediate value with minimal effort:
+
+1. Move `_foundationmodels` imports to module level (10 min)
+2. Create `_normalize_generation_params()` helper (15 min)
+3. Add test helper functions to `conftest.py` (20 min)
+
+These three changes alone will:
+- Eliminate ~12+ import duplications
+- Remove duplicate default parameter logic
+- Simplify ~30 test assertions
+
+**The codebase is generally well-structured**, but these DRY violations represent low-hanging fruit that would significantly improve maintainability without requiring major architectural changes.
+
+---
+
+## Session: bbbca3af...
+**Time:** 2025-11-06 19:59:19
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 👤 User
+take a deep look at the code, do you see opportunities to DRY it up?
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I'll analyze the codebase for DRY (Don't Repeat Yourself) opportunities. Let me use a specialized agent to thoroughly review the code for duplication and refactoring opportunities.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Task**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Great analysis! I've found several significant DRY opportunities in your codebase. Here are the key findings:
+
+## 🔴 High-Priority Issues (Quick Wins)
+
+### 1. **Repeated imports everywhere** (10+ duplicates)
+You're importing `from . import _foundationmodels` inside every method instead of at the module level:
+- `client.py`: 9 times (lines 43, 84, 96, 107, 118, 129, 164, 188, 197)
+- `session.py`: 5 times (lines 97, 165, 206, 216, 230)
+
+**Fix:** Move to top of each file → saves 14 import statements
+
+### 2. **Duplicate default parameter logic**
+In `session.py`, this exact code appears twice (lines 94-95 and 153-154):
+```python
+temp = temperature if temperature is not None else 1.0
+tokens = max_tokens if max_tokens is not None else 1024
+```
+**Fix:** Extract to `_normalize_generation_params()` helper method
+
+### 3. **Repeated test assertions** (32+ times!)
+This pattern appears throughout your tests:
+```python
+assert isinstance(response, str)
+assert len(response) > 0
+```
+**Fix:** Create `assert_valid_response()` helper in `conftest.py`
+
+## 🟡 Medium-Priority Issues
+
+### 4. **Duplicate context manager code**
+Both `Client` and `Session` have identical `__enter__`/`__exit__` implementations (client.py:49-55, session.py:42-48)
+
+**Fix:** Create a `ContextManagedResource` base mixin class
+
+### 5. **Availability checks repeated in examples**
+The availability check pattern is duplicated across `basic_chat.py`, `streaming_chat.py`, and `structured_output.py`
+
+**Fix:** Create `examples/utils.py` with `check_availability_or_exit()` helper
+
+### 6. **Magic numbers**
+`1.0` (temperature) and `1024` (max_tokens) are hardcoded multiple times
+
+**Fix:** Create `constants.py` with `DEFAULT_TEMPERATURE` and `DEFAULT_MAX_TOKENS`
+
+## 📊 Impact Summary
+
+- **~150-200 lines** could be eliminated or simplified
+- **Estimated refactoring time:** ~45 minutes for Phase 1 (high priority items)
+- **Code reduction:** 8-10% smaller codebase
+- **Most affected files:** `session.py`, `client.py`, test files
+
+## 💡 Recommendation
+
+Start with the three high-priority items - they take about 45 minutes total and provide immediate value. Would you like me to implement any of these refactorings?
+
+### 👤 User
+yes, do that
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! All tests pass. I've successfully completed the high-priority DRY refactorings:
+
+## ✅ Completed Refactorings
+
+### 1. **Consolidated imports** → Removed 14 duplicate imports
+- **client.py**: Moved 9 repeated `from . import _foundationmodels` to module level (line 11)
+- **session.py**: Moved 5 repeated imports to module level (line 13)
+
+### 2. **Extracted parameter normalization** → DRY helper method
+- **session.py:64-81**: Created `_normalize_generation_params()` helper
+- Used in both `generate()` and `generate_stream()` methods
+- Single source of truth for default values (temperature=1.0, max_tokens=1024)
+
+### 3. **Created test helpers** → Reusable assertion functions
+- **tests/conftest.py:37-68**: Added two helper functions:
+  - `assert_valid_response()`: Validates string responses with custom messages
+  - `assert_valid_chunks()`: Validates streaming chunks and returns combined response
+
+## 📊 Impact
+- **Lines removed**: ~20 duplicate lines eliminated
+- **Code reduction**: ~1% smaller codebase
+- **Maintainability**: Single source of truth for defaults and imports
+- **Tests**: All 33 tests pass ✓
+
+The code is now cleaner and easier to maintain. Future changes to defaults or imports only need to be made in one place!
+
+### 👤 User
+continue through the rest of the suggestions
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Write**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Write**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Write**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! All refactorings are complete and tests pass. Let me create a summary document:
+
+## ✅ Phase 2 Refactoring Complete!
+
+I've successfully completed all the medium-priority DRY refactorings. Here's what was done:
+
+### **New Files Created**
+
+#### 1. **`applefoundationmodels/constants.py`**
+- Centralized default values: `DEFAULT_TEMPERATURE = 1.0`, `DEFAULT_MAX_TOKENS = 1024`
+- Temperature bounds: `MIN_TEMPERATURE`, `MAX_TEMPERATURE`
+- `TemperaturePreset` class with semantic presets:
+  - `DETERMINISTIC = 0.1`
+  - `FACTUAL = 0.3`
+  - `BALANCED = 0.7`
+  - `CREATIVE = 1.0`
+  - `VERY_CREATIVE = 1.5`
+
+#### 2. **`applefoundationmodels/base.py`**
+- `ContextManagedResource` abstract base class
+- Provides standard `__enter__` and `__exit__` implementation
+- Eliminates duplicate context manager code
+
+#### 3. **`examples/utils.py`**
+- `check_availability_or_exit()`: Common availability check pattern
+- `print_example_header()`: Formatted headers
+- `print_stats()`: Formatted statistics display (verbose/summary modes)
+- `handle_example_error()`: Standard error handling
+
+### **Files Updated**
+
+#### 4. **`applefoundationmodels/session.py`**
+- ✅ Inherits from `ContextManagedResource` (removed duplicate `__enter__`/`__exit__`)
+- ✅ Uses `DEFAULT_TEMPERATURE` and `DEFAULT_MAX_TOKENS` constants
+- ✅ Updated docstrings to reference constants
+
+#### 5. **`applefoundationmodels/client.py`**
+- ✅ Inherits from `ContextManagedResource` (removed duplicate `__enter__`/`__exit__`)
+
+#### 6. **`applefoundationmodels/__init__.py`**
+- ✅ Exports new constants for public API
+
+#### 7. **Example Files**
+- ✅ `examples/basic_chat.py`: Uses utils helpers
+- ✅ `examples/streaming_chat.py`: Uses utils helpers
+- ✅ `examples/structured_output.py`: Uses utils helpers
+
+### **Impact Summary**
+
+| Metric | Result |
+|--------|--------|
+| **New files** | 3 |
+| **Files updated** | 7 |
+| **Duplicate code eliminated** | ~50+ lines |
+| **Tests passing** | 33/33 ✅ |
+| **Context manager duplication** | Eliminated (2 copies → 1 base class) |
+| **Magic numbers** | Eliminated (now constants) |
+| **Example code duplication** | Eliminated (now utils) |
+
+### **User Benefits**
+
+1. **Single source of truth**: Change defaults in one place
+2. **Semantic presets**: Use `TemperaturePreset.FACTUAL` instead of `0.3`
+3. **Cleaner examples**: Less boilerplate, more focus on functionality
+4. **Better maintainability**: DRY inheritance hierarchy
+5. **Discoverable API**: Constants exported at top level
+
+### **Example Usage**
+
+Users can now write cleaner code:
+
+```python
+from applefoundationmodels import Client, TemperaturePreset
+
+with Client() as client:
+    session = client.create_session()
+
+    # Use semantic presets instead of magic numbers
+    response = session.generate(
+        "Explain quantum physics",
+        temperature=TemperaturePreset.FACTUAL
+    )
+```
+
+All refactorings completed successfully! 🎉
+
+---
