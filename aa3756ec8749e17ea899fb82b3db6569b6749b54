@@ -1,0 +1,1908 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: 652a019d...
+**Time:** 2025-11-05 21:22:10
+**Project:** `/Users/btucker/Documents/projects/libai-py`
+
+### 👤 User
+I'm not clear why this isn't working
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I'd be happy to help you figure out what's going wrong! To assist you better, I need a bit more context:
+
+1. **What are you trying to do?** (e.g., run a specific command, execute code, use a feature)
+2. **What's the expected behavior?**
+3. **What's actually happening?** (e.g., error messages, unexpected output, nothing happening)
+4. **Any relevant details?** (e.g., which file or function, recent changes you made)
+
+You can share error messages, code snippets, or even point me to specific files, and I'll help debug the issue.
+
+### 👤 User
+we're making a python module that exposes libai
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I can see you're working on a Python module for libai. Let me explore the codebase to understand the structure and identify what might not be working.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Task**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Great! I found the issue. Your Python module has a **critical RPATH problem** that's preventing the compiled extension from loading.
+
+## The Problem
+
+The compiled extension `_libai.cpython-314-darwin.so` is failing to load with:
+
+```
+ImportError: dlopen(.../_libai.cpython-314-darwin.so, 0x0002):
+Library not loaded: @rpath/libswift_Concurrency.dylib
+Reason: no LC_RPATH's found
+```
+
+This happens because:
+1. The compiled extension links against Swift libraries (from `libai.a` or system frameworks)
+2. The RPATH (runtime library search path) isn't configured in `setup.py`
+3. At runtime, the dynamic linker can't find the Swift libraries
+
+## The Solution
+
+I need to add the Swift library path to the linker configuration in `setup.py`. Would you like me to:
+
+1. **Fix the `setup.py`** to add `-Wl,-rpath,/usr/lib/swift` to the linker flags
+2. **Rebuild the extension** so it can properly find Swift libraries at runtime
+
+This should make the module importable and working. Shall I go ahead and fix this?
+
+### 👤 User
+yes
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now I'll fix the RPATH issue by adding the Swift library path to the linker arguments:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Great! Now let's rebuild the extension with the updated configuration:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Now let's verify that the module can be imported successfully:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Good! The extension was rebuilt. Let me verify that the RPATH was properly set:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Excellent! The RPATH is now set correctly. Let's test the import again:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Ah! Now I see the real issue. The extension needs the **FoundationModels** framework. Let me check what it's currently linking against:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I can see it's already linking against FoundationModels, but the symbol isn't being found. Let me check if the framework exists and is accessible:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Aha! The FoundationModels framework is missing its binary - it's just a stub. Let me check your macOS version:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+You're on macOS 26.1 which should support Apple Intelligence, but the FoundationModels framework binary is missing. Let me check if Apple Intelligence is enabled:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! I found the issue. The `libai.a` library has undefined symbols from FoundationModels (marked with "U"), including the exact one that's failing: `_$s16FoundationModels10ToolOutputVMn`.
+
+The problem is:
+1. **The RPATH fix worked** - that part is done ✓
+2. **But FoundationModels framework is missing its binary** - Apple Intelligence isn't available/enabled on your system
+
+Let me check if there's an actual FoundationModels binary anywhere:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Now I understand the full picture. Here's what's happening:
+
+## Summary
+
+✅ **RPATH issue is FIXED** - I successfully added the Swift library path to `setup.py:58`
+
+❌ **Apple Intelligence is NOT enabled** on your system - This is why the module can't be imported
+
+## The Issue
+
+Even though you're on macOS 26.1, the FoundationModels framework exists but has no binary implementation because Apple Intelligence isn't enabled. The `libai` library requires Apple Intelligence to be active to work.
+
+## What You Need To Do
+
+According to the README, you need to:
+
+1. **Enable Apple Intelligence**:
+   - Open System Settings
+   - Go to Apple Intelligence settings
+   - Enable Apple Intelligence
+   - Wait for models to download (this can take some time)
+
+2. **Verify it's working**:
+   ```bash
+   python3 -c "from libai import Client; c = Client(); print('Ready!' if c.is_ready() else c.get_availability_reason())"
+   ```
+
+## What I Fixed
+
+The **setup.py:58** now includes the proper RPATH configuration:
+```python
+"-Wl,-rpath,/usr/lib/swift",
+```
+
+This means once Apple Intelligence is enabled and the FoundationModels framework is available, your module should import and work correctly.
+
+---
+
+**Is Apple Intelligence available to enable on your device, or do you need to check if your Mac supports it?**
+
+### 👤 User
+it is enabled
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Let me check if the FoundationModels binary is actually present and accessible:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Let me try a different approach. Let me check if we can directly test loading the libai library itself:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I see the issue now. The `libai.a` static library expects the FoundationModels framework binary to exist, but it's missing from your system even though you have macOS 26.1. This is a **stub framework** - the metadata exists but the actual binary is missing.
+
+Let me try adding weak linking for the FoundationModels framework, which will allow the module to load even if the framework isn't fully available:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let's rebuild with weak linking:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Now let's verify the weak linking and test the import:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Excellent! It's now marked as "weak". Let's test if the module can import:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+The weak linking helped but the symbols from `libai.a` itself are still undefined. Let me try a different approach - allow undefined symbols to be resolved at runtime:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+There's the issue! The extension was built for Python 3.10, but `python3` is 3.14. Let's test with Python 3.10:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+We're back to the missing symbol issue. The `-undefined,dynamic_lookup` flag didn't help because these symbols truly don't exist anywhere on the system.
+
+Let me check if there's a system software update or if Apple Intelligence models need to be downloaded:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 👤 User
+let's try a new approach. rather than using libai, can we link to FOundationModels directly. look at these node bindings for inspiration: https://github.com/Meridius-Labs/apple-on-device-ai/tree/main
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Task**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Based on the Node.js bindings analysis, I now understand a much better approach. Let me present a comprehensive plan to rebuild your Python bindings using the same direct FoundationModels linking strategy.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **ExitPlanMode**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let's start implementing! First, I'll create the Swift source file that directly uses FoundationModels:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Write**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let's create the Swift build script:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Write**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+---
+
+## Session: agent-52...
+**Time:** 2025-11-05 21:22:53
+**Project:** `/Users/btucker/Documents/projects/libai-py`
+
+### 🤖 Assistant
+I'll conduct a thorough exploration of the libai-py project. Let me start by examining the structure and key files.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me read the MANIFEST.in and examine the core module files:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me check the Cython files and example scripts:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+Let me check the example files and the include headers:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me check if there are any issues with the build by examining what was already built:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+Perfect! Now let me create a comprehensive overview document. Let me do one final check on the git status and check if there are any potential issues I should identify:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+Excellent! I found a critical issue. Let me document this comprehensively now:
+
+## Comprehensive Overview: libai-py Project
+
+I've thoroughly explored the libai-py project. Here's what I found:
+
+---
+
+### 1. PROJECT STRUCTURE
+
+The libai-py project is a **Python wrapper for the Apple Intelligence C library (libai)**. Here's the directory layout:
+
+```
+libai-py/
+├── libai/                          # Main Python package
+│   ├── __init__.py                 # Public API exports
+│   ├── client.py                   # High-level Client class
+│   ├── session.py                  # Session management
+│   ├── types.py                    # Type definitions and enums
+│   ├── exceptions.py               # Exception hierarchy
+│   ├── _libai.pyx                  # Cython implementation (binding layer)
+│   ├── _libai.pxd                  # Cython declarations for C API
+│   ├── _libai.c                    # Generated from _libai.pyx
+│   ├── _libai.cpython-310-darwin.so # Compiled extension (arm64)
+│   ├── _libai.cpython-314-darwin.so # Compiled extension (Python 3.14)
+│   └── py.typed                    # PEP 561 marker for type hints
+├── lib/                            # Static C library
+│   └── libai.a                     # libai static library (365 KB)
+├── include/                        # C headers
+│   ├── ai.h                        # Main libai API header
+│   └── ai_bridge.h                 # Apple Intelligence Bridge header
+├── examples/                       # Working examples
+│   ├── basic_chat.py               # Synchronous chat example
+│   ├── streaming_chat.py           # Async streaming example
+│   └── structured_output.py        # JSON schema validation example
+├── scripts/
+│   └── download_libs.sh            # Script to download latest libai release
+├── setup.py                        # Traditional setup configuration
+├── pyproject.toml                  # Modern build configuration
+├── MANIFEST.in                     # Distribution manifest
+├── README.md                       # Project documentation
+└── LICENSE                         # MIT license
+```
+
+---
+
+### 2. WHAT THIS PROJECT DOES
+
+**libai-py** provides a high-level Pythonic interface to Apple's on-device foundation models (Apple Intelligence). Key features:
+
+- **High-level API**: Context managers, async/await support, type hints
+- **Async Streaming**: Native `async for` support for streaming responses
+- **Type Safety**: Full type annotations with mypy support
+- **Session Management**: Maintain conversation history with context
+- **Structured Output**: JSON schema validation for AI-generated content
+- **Memory Safe**: Automatic resource cleanup via context managers
+- **Thread Safe**: All operations are thread-safe
+- **Zero Dependencies**: Only requires Python 3.8+ and typing-extensions
+
+**Requirement**: macOS 26.0 (Sequoia) or later with Apple Intelligence enabled
+
+---
+
+### 3. BUILD SETUP ANALYSIS
+
+#### **setup.py**
+- Uses Cython to compile Cython extensions into C, then to native binaries
+- Links against bundled `libai.a` static library
+- Includes required macOS frameworks:
+  - Foundation
+  - ApplicationServices
+  - CoreFoundation
+- Optimized with `-O3` flag
+- Key check: **Validates that `libai.a` and `ai.h` exist before building**
+
+#### **pyproject.toml**
+- Package name: `libai-py`
+- Version: `0.1.0` (Alpha status)
+- Python: `>=3.8`
+- Minimal runtime dependency: `typing-extensions>=4.0.0`
+- Dev dependencies: pytest, pytest-asyncio, black, mypy
+- Build backend: setuptools with Cython support
+- Includes package data: `py.typed` marker and `.pxd` files
+
+#### **MANIFEST.in**
+Properly includes:
+- C headers (`include/*.h`)
+- Static library (`lib/*.a`)
+- Cython files (`*.pyx`, `*.pxd`)
+- Type marker (`py.typed`)
+- Documentation and license files
+- Excludes: `*.pyc`, `__pycache__`, `.so`, `.DS_Store`
+
+#### **download_libs.sh**
+- Fetches latest libai release from GitHub
+- Automatically detects architecture (arm64 vs x86_64)
+- Downloads from: `https://github.com/6over3/libai/releases/latest/download/libai.tar.gz`
+- Downloads headers directly from main branch
+- Must be run before `pip install -e .`
+
+---
+
+### 4. CORE MODULES
+
+#### **client.py** - High-level Client API
+```python
+class Client:
+    - __init__()           # Auto-initializes libai
+    - __enter__/__exit__() # Context manager support
+    - check_availability() # Static method to check device support
+    - is_ready()          # Check if AI is ready
+    - get_version()       # Get library version
+    - get_supported_languages() # List supported languages
+    - create_session()    # Create new AI session
+    - get_stats()         # Get usage statistics
+    - reset_stats()       # Reset statistics
+    - close()             # Explicit cleanup
+```
+
+#### **session.py** - Session Management
+```python
+class Session:
+    - generate()          # Synchronous text generation
+    - generate_structured() # JSON schema-constrained generation
+    - generate_stream()   # Async streaming generation
+    - get_history()       # Get conversation history
+    - clear_history()     # Clear session history
+    - add_message()       # Manually add messages
+    - close()             # Cleanup session
+```
+
+#### **types.py** - Type Definitions
+- `Result` (IntEnum): Success/failure codes
+- `Availability` (IntEnum): Device capability status
+- `SessionConfig` (TypedDict): Session configuration options
+- `GenerationParams` (TypedDict): Text generation parameters
+- `Stats` (TypedDict): Statistics structure
+- Callback type aliases: `StreamCallback`, `ToolCallback`
+
+#### **exceptions.py** - Exception Hierarchy
+All inherit from `LibAIError`:
+- `InitializationError`
+- `NotAvailableError`
+- `InvalidParametersError`
+- `MemoryError`
+- `JSONParseError`
+- `GenerationError`
+- `TimeoutError`
+- `SessionNotFoundError`
+- `StreamNotFoundError`
+- `GuardrailViolationError`
+- `ToolNotFoundError`
+- `ToolExecutionError`
+- `UnknownError`
+
+---
+
+### 5. CYTHON BINDINGS
+
+#### **_libai.pyx** - Low-level Cython Implementation
+- Wraps the C library (libai.a)
+- Handles memory management and string encoding/decoding
+- Provides callback marshalling for streaming
+- Uses `nogil` (release GIL) for C function calls where possible
+- Implements error checking and exception conversion
+
+#### **_libai.pxd** - C API Declarations
+Declares all C structures and functions from `ai.h`:
+- Result codes, availability status
+- Session config, generation parameters
+- Context management (opaque pointer)
+- Callback function signatures
+- Statistics structure
+- All libai C API functions
+
+---
+
+### 6. EXAMPLE USAGE
+
+Three complete, runnable examples:
+
+1. **basic_chat.py** - Synchronous conversation with history and stats
+2. **streaming_chat.py** - Real-time async streaming responses
+3. **structured_output.py** - JSON schema validation with complex extraction tasks
+
+All examples demonstrate:
+- Availability checking
+- Error handling
+- Session management
+- Statistics collection
+
+---
+
+### 7. IDENTIFIED ISSUES & PROBLEMS
+
+#### **CRITICAL ISSUE: C Extension Runtime Linking Failure**
+
+**Problem**: The compiled extension `.so` file is missing RPATH configuration.
+
+When importing the module with Python 3.14:
+```
+ImportError: dlopen(.../_libai.cpython-314-darwin.so, 0x0002):
+Library not loaded: @rpath/libswift_Concurrency.dylib
+Reason: no LC_RPATH's found
+```
+
+**Root Cause**: The compiled extension links against Swift libraries (likely from libai.a or system frameworks) but the RPATH isn't embedded to find them at runtime.
+
+**Impact**: Module cannot be imported on Python 3.14. The CPU-310 compiled version may work (older Python before recent stdlib changes).
+
+**Solution Needed**:
+- Add `-Wl,-rpath,/usr/lib/swift` to `extra_link_args` in setup.py, OR
+- Rebuild the extension with proper RPATH configuration, OR
+- Ensure bundled libai.a is compiled with all necessary Swift dependencies
+
+---
+
+#### **SECONDARY ISSUE: Python Version Mismatch**
+
+The project has multiple compiled `.so` files:
+- `_libai.cpython-310-darwin.so` (Python 3.10)
+- `_libai.cpython-314-darwin.so` (Python 3.14)
+
+The Python 3.14 version fails due to the RPATH issue above. This suggests:
+- The library was rebuilt for Python 3.14 but incompletely
+- Build configuration may not have been updated for recent Python versions
+
+---
+
+#### **MINOR ISSUE: Incomplete Module Exports**
+
+The `__init__.py` imports `Result` type but doesn't export it in `__all__`, despite it being in the module. While it's still accessible, consistency would improve the API.
+
+---
+
+#### **DESIGN NOTE: Static Library Bundling**
+
+The `libai.a` (365 KB) is committed to the repo rather than downloaded only when needed. This:
+- Increases repo size
+- May become stale if libai updates
+- The `download_libs.sh` script is provided but users must run it manually
+
+**Better approach**: Use `download_libs.sh` in setup.py's `setup.cfg` or as a build step rather than requiring manual execution.
+
+---
+
+### 8. DEPENDENCY ANALYSIS
+
+**Runtime Dependencies:**
+- Python 3.8+ (specified)
+- typing-extensions 4.0.0+
+- macOS 26.0+ (Sequoia)
+- libai C library (bundled)
+- macOS system frameworks (Foundation, ApplicationServices, CoreFoundation)
+
+**Build Dependencies (dev):**
+- Cython >= 3.0.0
+- setuptools >= 61.0
+- wheel
+- pytest, pytest-asyncio, black, mypy (dev only)
+
+**Build Requirements Met:** YES
+- libai.a exists and is valid (365 KB Mach-O object)
+- Headers exist (ai.h and ai_bridge.h properly downloaded)
+- Cython compilation has been done
+
+---
+
+### 9. QUICK START CODE EXAMPLES
+
+**Basic synchronous usage:**
+```python
+from libai import Client
+
+with Client() as client:
+    if client.is_ready():
+        session = client.create_session()
+        response = session.generate("Hello!")
+        print(response)
+```
+
+**Async streaming:**
+```python
+import asyncio
+from libai import Client
+
+async def main():
+    with Client() as client:
+        session = client.create_session()
+        async for chunk in session.generate_stream("Tell me a story"):
+            print(chunk, end='', flush=True)
+
+asyncio.run(main())
+```
+
+**Structured output:**
+```python
+schema = {
+    "type": "object",
+    "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+    "required": ["name", "age"]
+}
+result = session.generate_structured("Extract: John is 30", schema)
+print(result['object'])  # {'name': 'John', 'age': 30}
+```
+
+---
+
+### 10. SUMMARY & RECOMMENDATIONS
+
+**What Works:**
+- Well-organized Python package structure
+- Comprehensive API with good documentation
+- Proper exception hierarchy
+- Type hints throughout
+- Good build configuration in pyproject.toml/setup.py
+- Well-documented examples
+- Memory-safe async/context manager patterns
+
+**What Needs Fixing:**
+1. **URGENT**: Fix RPATH in compiled extension (prevents Python 3.14 import)
+2. Rebuild extension with proper Swift framework linking
+3. Consider automating `download_libs.sh` in the build process
+4. Export `Result` type in `__all__` for completeness
+5. Add CI/CD to rebuild extensions for different Python versions
+
+**Overall Assessment:**
+This is a well-designed Python wrapper around Apple Intelligence with strong fundamentals. The critical runtime linking issue prevents immediate use on Python 3.14, but the architecture is sound and examples are comprehensive.
+
+---
+
+## Session: agent-67...
+**Time:** 2025-11-05 21:21:57
+**Project:** `/Users/btucker/Documents/projects/libai-py`
+
+### 🤖 Assistant
+I'm ready to assist you with file searching and code exploration in your libai-py project!
+
+I can help you:
+- Find files using glob patterns
+- Search code content with regex
+- Read and analyze file contents
+- Navigate your codebase structure
+
+Your project is located at `/Users/btucker/Documents/projects/libai-py` and is a Git repository on the main branch.
+
+What would you like me to search for or explore in your codebase?
+
+---
+
+## Session: agent-cc...
+**Time:** 2025-11-05 22:06:33
+**Project:** `/Users/btucker/Documents/projects/libai-py`
+
+### 🤖 Assistant
+I'll analyze the apple-on-device-ai repository to understand how they bind directly to the FoundationModels framework. Let me start by fetching the repository structure and key files.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Now let me fetch the key binding files - binding.gyp and the native source files:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Excellent! I can see they use Swift and Rust. Let me fetch the actual native source files to understand the FoundationModels API usage:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Now let me get the build script and check for any Cargo.toml or other build configuration files:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Let me check if there are any header files or additional configuration in the repository:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Let me check the build.rs file to see if there are any special build-time configurations:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Perfect! Now I have all the information I need. Let me compile a comprehensive summary of their approach.
+
+## Comprehensive Analysis: How apple-on-device-ai Binds to FoundationModels Framework
+
+Based on my analysis of the Meridius-Labs/apple-on-device-ai repository, here's a complete breakdown of their direct FoundationModels binding approach:
+
+---
+
+### 1. ARCHITECTURE OVERVIEW
+
+They use a **three-layer architecture**:
+
+```
+JavaScript/TypeScript (Node.js/Bun)
+         ↕ (N-API)
+    Rust FFI Bridge
+         ↕ (C ABI)
+   Swift Native Layer
+         ↕
+ FoundationModels Framework
+```
+
+This avoids any intermediate C library - Swift talks directly to FoundationModels, and Rust provides the bridge to Node.js.
+
+---
+
+### 2. BUILD CONFIGURATION
+
+#### **build.sh** - The main build orchestrator:
+
+```bash
+# 1. Swift Compilation (Direct Framework Linking)
+swiftc src/apple-ai.swift \
+    -O \                                    # Optimization
+    -whole-module-optimization \
+    -target arm64-apple-macos26.0 \        # Minimum macOS 26.0
+    -framework Foundation \                 # System framework
+    -framework FoundationModels \          # DIRECT link to FoundationModels
+    -emit-library \                        # Create dynamic library
+    -o build/libappleai.dylib \
+    -emit-module \                         # Generate Swift module metadata
+    -emit-module-path build/apple-ai.swiftmodule \
+    -Xlinker -install_name \
+    -Xlinker @rpath/libappleai.dylib       # Runtime path for loader
+
+# 2. Rust Compilation
+cargo build --release
+
+# 3. Copy final artifacts
+cp native/target/release/libapple_ai_napi.dylib build/apple_ai_napi.node
+```
+
+**Key Points:**
+- Direct `-framework FoundationModels` linking (no intermediate library)
+- Targets minimum macOS 26.0 (when FoundationModels became available)
+- Creates dylib with RPATH for flexible loading
+- Generates Swift module metadata for type information
+
+#### **native/Cargo.toml** - Rust N-API configuration:
+
+```toml
+[lib]
+crate-type = ["cdylib"]  # C-compatible dynamic library for Node.js
+
+[dependencies]
+napi = { version = "2", features = ["tokio_rt", "serde-json"] }
+napi-derive = "2"
+libc = "0.2"
+
+[profile.release]
+codegen-units = 1        # Single codegen for optimization
+lto = "fat"              # Aggressive link-time optimization
+panic = "abort"          # Smaller binary size
+```
+
+#### **native/build.rs** - Rust build-time linking:
+
+```rust
+fn main() {
+    // Link to Swift dylib
+    println!("cargo:rustc-link-search=native=../build");
+    println!("cargo:rustc-link-lib=dylib=appleai");
+
+    // Set RPATH for runtime discovery
+    println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path");
+
+    // Allow deferred N-API symbol resolution from Node.js runtime
+    println!("cargo:rustc-link-arg=-undefined");
+    println!("cargo:rustc-link-arg=dynamic_lookup");
+}
+```
+
+---
+
+### 3. FOUNDATIONMODELS API USAGE (Swift Layer)
+
+#### **Core Imports:**
+```swift
+import Foundation
+import FoundationModels  // Direct framework import
+```
+
+#### **Key FoundationModels APIs They Use:**
+
+1. **SystemLanguageModel** - The main model interface:
+```swift
+let model = SystemLanguageModel.shared
+```
+
+2. **LanguageModelSession** - Session management:
+```swift
+let session = LanguageModelSession(
+    model: model,
+    tools: tools,           // Optional tool array
+    transcript: transcript  // Conversation history
+)
+```
+
+3. **Transcript Structure** - Message formatting:
+```swift
+Transcript.Entry.instructions(text: "System instructions", tools: [tools])
+Transcript.Entry.prompt(text: "User message")
+Transcript.Entry.response(text: "Assistant response")
+Transcript.Entry.toolCalls([ToolCall(...)])
+Transcript.Entry.toolOutput(toolCall: call, result: output)
+```
+
+4. **Generation Methods:**
+```swift
+// Synchronous generation
+let response = try await session.respond(to: transcript)
+
+// Streaming generation
+for try await delta in session.streamResponse(to: transcript) {
+    // Handle delta chunks
+}
+
+// Schema-based generation
+let response = try await session.respond(
+    to: transcript,
+    schema: generationSchema,
+    maxTokens: maxTokens
+)
+```
+
+5. **Tool Protocol** - Custom tool implementation:
+```swift
+struct JSProxyTool: Tool {
+    var description: String
+    var name: String
+    var parameters: [ToolParameter]
+
+    func invoke(arguments: [String: Any]) async throws -> String {
+        // Bridge to JavaScript via callback
+    }
+}
+```
+
+6. **DynamicGenerationSchema** - Structured output:
+```swift
+let schema = DynamicGenerationSchema(
+    name: "ResponseSchema",
+    properties: [
+        "field": .string(description: "A field"),
+        "number": .integer(minimum: 0),
+        "array": .array(itemType: .string())
+    ],
+    requiredProperties: ["field"]
+)
+```
+
+#### **Exported C Functions (via @_cdecl):**
+
+```swift
+@_cdecl("apple_ai_init")
+public func appleAIInit() -> Bool
+
+@_cdecl("apple_ai_check_availability")
+public func appleAICheckAvailability() -> Int32
+
+@_cdecl("apple_ai_generate_unified")
+public func appleAIGenerateUnified(
+    messagesJson: UnsafePointer<CChar>,
+    toolsJson: UnsafePointer<CChar>?,
+    schemaJson: UnsafePointer<CChar>?,
+    temperature: Double,
+    maxTokens: Int32,
+    stream: Bool,
+    stopAfterToolCalls: Bool,
+    onChunk: (@convention(c) (UnsafePointer<CChar>?) -> Void)?
+) -> UnsafePointer<CChar>?
+
+@_cdecl("apple_ai_register_tool_callback")
+public func appleAIRegisterToolCallback(
+    callback: @escaping @convention(c) (UInt64, UnsafePointer<CChar>) -> Void
+)
+```
+
+---
+
+### 4. RUST FFI BRIDGE (native/src/lib.rs)
+
+#### **FFI Declarations:**
+```rust
+#[link(name = "appleai")]
+extern "C" {
+    fn apple_ai_init() -> bool;
+    fn apple_ai_check_availability() -> c_int;
+    fn apple_ai_generate_unified(
+        messages_json: *const c_char,
+        tools_json: *const c_char,
+        schema_json: *const c_char,
+        temperature: f64,
+        max_tokens: i32,
+        stream: bool,
+        stop_after_tool_calls: bool,
+        on_chunk: Option<extern "C" fn(*const c_char)>,
+    ) -> *mut c_char;
+    fn apple_ai_free_string(ptr: *mut c_char);
+}
+```
+
+#### **N-API Exports:**
+```rust
+#[napi]
+pub fn check_availability() -> Result<i32> {
+    ensure_initialized();
+    Ok(unsafe { apple_ai_check_availability() })
+}
+
+#[napi]
+pub async fn generate_unified(options: GenerateOptions) -> Result<String> {
+    let task = GenerateUnifiedTask { options };
+    task.await  // Async task execution
+}
+
+#[napi]
+pub fn generate_unified_stream(
+    options: GenerateOptions,
+    callback: ThreadsafeFunction<String>
+) -> Result<()> {
+    // Stream chunks via callback
+}
+```
+
+#### **Memory Management:**
+```rust
+fn take_c_string(ptr: *mut c_char) -> String {
+    let c_str = unsafe { CStr::from_ptr(ptr) };
+    let result = c_str.to_string_lossy().into_owned();
+    unsafe { apple_ai_free_string(ptr) };  // Free Swift-allocated memory
+    result
+}
+```
+
+---
+
+### 5. KEY DESIGN PATTERNS
+
+#### **1. C ABI as the Bridge:**
+- Swift exports C-compatible functions using `@_cdecl`
+- `@convention(c)` for callback types
+- Manual memory management with `strdup()` and `free()`
+
+#### **2. Async Coordination:**
+- Swift uses `async/await` with FoundationModels APIs
+- Wraps in synchronous C interface using `DispatchSemaphore` or detached `Task`
+- Rust translates to N-API async tasks
+
+#### **3. Bidirectional Callbacks:**
+- Tool calls: Swift → C callback → Rust → JavaScript
+- Results: JavaScript → Rust → Swift (via global callback registration)
+- Uses `ThreadsafeFunction` for cross-thread communication
+
+#### **4. JSON as Data Format:**
+- All complex data (messages, tools, schemas) serialized as JSON
+- Swift parses with `JSONDecoder`
+- Rust uses `serde_json`
+
+#### **5. Streaming Architecture:**
+```
+Swift streamResponse()
+  ↓ (yields deltas)
+C callback invocations
+  ↓
+Rust ThreadsafeFunction
+  ↓
+JavaScript callback
+```
+
+---
+
+### 6. FRAMEWORK LINKING STRATEGY
+
+**No intermediate C library needed** - they link directly:
+
+1. **Swift → FoundationModels:** Native Swift import
+2. **Swift → dylib:** Compiled as `libappleai.dylib` with framework baked in
+3. **Rust → Swift dylib:** Links via `-lappleai` in build.rs
+4. **Node.js → Rust:** Loads `.node` file (renamed dylib)
+
+**Runtime Loading:**
+- `@rpath/libappleai.dylib` allows flexible discovery
+- Rust uses `-Wl,-rpath,@loader_path` to find dylib in same directory
+- Node.js loads with standard `require()` mechanism
+
+---
+
+### 7. APPLYING TO PYTHON/CYTHON
+
+Here's how to adapt this approach:
+
+#### **Option A: Pure Swift → C → Python (Similar Pattern)**
+
+```bash
+# 1. Compile Swift with FoundationModels
+swiftc your_module.swift \
+    -framework Foundation \
+    -framework FoundationModels \
+    -target arm64-apple-macos26.0 \
+    -emit-library \
+    -o build/libai.dylib
+
+# 2. Create Cython wrapper
+# your_module.pyx:
+cdef extern from *:
+    """
+    extern int libai_init();
+    extern char* libai_generate(const char* prompt);
+    """
+    int libai_init()
+    char* libai_generate(const char* prompt)
+
+# 3. Build Python extension
+# setup.py:
+from setuptools import setup, Extension
+from Cython.Build import cythonize
+
+extensions = [
+    Extension(
+        "libai_py",
+        ["your_module.pyx"],
+        extra_link_args=[
+            "-L./build",
+            "-lai",  # Links to libai.dylib
+            "-Wl,-rpath,@loader_path",
+        ]
+    )
+]
+
+setup(ext_modules=cythonize(extensions))
+```
+
+#### **Option B: Skip Rust Layer (Simpler)**
+
+You don't need Rust at all for Python! Go directly:
+```
+Python/Cython
+     ↕ (C ABI)
+Swift Native Layer
+     ↕
+FoundationModels
+```
+
+#### **Key Differences for Python:**
+
+1. **No N-API needed** - Use Python's C API directly
+2. **Cython handles FFI** - Cleaner than manual ctypes
+3. **GIL considerations** - Release GIL during async operations
+4. **Memory management** - Use `PyMem_Free()` or similar
+
+#### **Example Cython Structure:**
+
+```cython
+# libai.pyx
+from libc.stdlib cimport free
+from libc.string cimport strlen
+
+cdef extern from "libai.h":
+    ctypedef void (*ChunkCallback)(const char*)
+
+    bint apple_ai_init()
+    int apple_ai_check_availability()
+    char* apple_ai_generate(
+        const char* messages_json,
+        double temperature,
+        int max_tokens,
+        bint stream,
+        ChunkCallback on_chunk
+    )
+    void apple_ai_free_string(char* ptr)
+
+def init():
+    return apple_ai_init()
+
+def check_availability():
+    return apple_ai_check_availability()
+
+def generate(str messages_json, float temperature=1.0, int max_tokens=1024):
+    cdef bytes messages_bytes = messages_json.encode('utf-8')
+    cdef char* result = apple_ai_generate(
+        messages_bytes,
+        temperature,
+        max_tokens,
+        False,
+        NULL
+    )
+
+    if result == NULL:
+        raise RuntimeError("Generation failed")
+
+    try:
+        return result[:strlen(result)].decode('utf-8')
+    finally:
+        apple_ai_free_string(result)
+```
+
+---
+
+### 8. CRITICAL LEARNINGS FOR YOUR PROJECT
+
+1. **Direct Framework Linking Works:** No need for intermediate C library - link directly to FoundationModels in Swift compilation
+
+2. **Swift is Essential:** FoundationModels is a Swift-first framework with Swift-only APIs (async/await, actors, etc.)
+
+3. **C ABI is Universal:** Use `@_cdecl` to export and standard FFI to import
+
+4. **JSON for Data Transfer:** Simplifies passing complex structures across language boundaries
+
+5. **Memory Management:** Swift allocates with `strdup()`, caller frees with `free()`
+
+6. **RPATH for Deployment:** Use `@loader_path` for portable dylib discovery
+
+7. **Streaming via Callbacks:** Function pointers work across all language boundaries
+
+8. **macOS 26.0+ Required:** FoundationModels only available in latest macOS with Apple Intelligence
+
+9. **No Objective-C Needed:** Pure Swift can export C-compatible interfaces
+
+10. **Build Artifacts:** Commit pre-built binaries since CI/CD can't access macOS 26+ beta
+
+---
+
+This approach eliminates the need for any C library layer - you can compile Swift code that directly uses FoundationModels APIs, export C functions, and call them from Cython/Python. The key is using Swift's `@_cdecl` attribute for C compatibility and proper framework linking during compilation.
+
+---
+
+## Session: agent-d0...
+**Time:** 2025-11-05 21:22:01
+**Project:** `/Users/btucker/Documents/projects/libai-py`
+
+### 🤖 Assistant
+Hello! I'm Claude Code's file search specialist. I'm ready to help you explore your codebase efficiently.
+
+I can see you're working in `/Users/btucker/Documents/projects/libai-py`, which appears to be a Python project with several untracked files including:
+- Python package structure (`libai/`, `setup.py`, `pyproject.toml`)
+- Examples and scripts directories
+- Standard project files (README, LICENSE, etc.)
+
+How can I assist you today? I can:
+- Find files using patterns
+- Search through code with regex
+- Read and analyze specific files
+- Navigate the directory structure
+
+What would you like me to search for or explore?
+
+---
