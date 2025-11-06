@@ -1,14 +1,13 @@
 """
-High-level Client API for libai Python bindings.
+High-level Client API for foundationmodels Python bindings.
 
-Provides a Pythonic interface to the libai library with context managers,
-automatic resource cleanup, and integration with the Session class.
+Provides a Pythonic interface to Apple's FoundationModels framework with
+context managers, automatic resource cleanup, and integration with the Session class.
 """
 
 from typing import Optional, List
 from contextlib import contextmanager
 
-from . import _libai
 from .types import Availability, Stats
 from .session import Session
 
@@ -17,8 +16,8 @@ class Client:
     """
     High-level client for Apple Intelligence operations.
 
-    This class provides a Pythonic interface to the libai library, managing
-    contexts and sessions with automatic resource cleanup.
+    This class provides a Pythonic interface to Apple's FoundationModels framework,
+    managing sessions with automatic resource cleanup.
 
     Usage:
         with Client() as client:
@@ -31,7 +30,7 @@ class Client:
 
     def __init__(self):
         """
-        Create a new libai client.
+        Create a new FoundationModels client.
 
         The library is automatically initialized on first client creation.
 
@@ -41,11 +40,10 @@ class Client:
         """
         # Initialize library on first client creation
         if not Client._initialized:
-            _libai.init()
+            from . import _foundationmodels
+            _foundationmodels.init()
             Client._initialized = True
 
-        # Create context
-        self._context = _libai.Context()
         self._sessions: List[Session] = []
 
     def __enter__(self) -> "Client":
@@ -60,15 +58,12 @@ class Client:
         """
         Close the client and cleanup all resources.
 
-        Destroys all sessions and frees the context.
+        Destroys all sessions.
         """
         # Close all sessions
         for session in self._sessions:
             session.close()
         self._sessions.clear()
-
-        # Context will be freed automatically by Cython __dealloc__
-        self._context = None
 
     @staticmethod
     def check_availability() -> Availability:
@@ -81,12 +76,13 @@ class Client:
             Availability status enum value
 
         Example:
-            >>> from libai import Client, Availability
+            >>> from foundationmodels import Client, Availability
             >>> status = Client.check_availability()
             >>> if status == Availability.AVAILABLE:
             ...     print("Apple Intelligence is available!")
         """
-        return Availability(_libai.check_availability())
+        from . import _foundationmodels
+        return Availability(_foundationmodels.check_availability())
 
     @staticmethod
     def get_availability_reason() -> Optional[str]:
@@ -97,7 +93,8 @@ class Client:
             Detailed status description with actionable guidance,
             or None if library not initialized
         """
-        return _libai.get_availability_reason()
+        from . import _foundationmodels
+        return _foundationmodels.get_availability_reason()
 
     @staticmethod
     def is_ready() -> bool:
@@ -107,7 +104,8 @@ class Client:
         Returns:
             True if ready for use, False otherwise
         """
-        return _libai.is_ready()
+        from . import _foundationmodels
+        return _foundationmodels.is_ready()
 
     @staticmethod
     def get_version() -> str:
@@ -117,7 +115,8 @@ class Client:
         Returns:
             Version string in format "major.minor.patch"
         """
-        return _libai.get_version()
+        from . import _foundationmodels
+        return _foundationmodels.get_version()
 
     @staticmethod
     def get_supported_languages() -> List[str]:
@@ -127,8 +126,9 @@ class Client:
         Returns:
             List of localized language display names
         """
-        count = _libai.get_supported_languages_count()
-        return [_libai.get_supported_language(i) for i in range(count)]
+        from . import _foundationmodels
+        count = _foundationmodels.get_supported_languages_count()
+        return [_foundationmodels.get_supported_language(i) for i in range(count)]
 
     def create_session(
         self,
@@ -153,7 +153,7 @@ class Client:
             New Session instance
 
         Raises:
-            Various LibAIError subclasses on failure
+            Various FoundationModelsError subclasses on failure
 
         Example:
             >>> session = client.create_session(
@@ -161,16 +161,14 @@ class Client:
             ...     enable_guardrails=True
             ... )
         """
+        from . import _foundationmodels
         config = {}
         if instructions is not None:
             config['instructions'] = instructions
-        if tools_json is not None:
-            config['tools_json'] = tools_json
-        config['enable_guardrails'] = enable_guardrails
-        config['prewarm'] = prewarm
+        # Note: tools_json, enable_guardrails, prewarm not supported in simplified API
 
-        session_id = self._context.create_session(config)
-        session = Session(self._context, session_id)
+        session_id = _foundationmodels.create_session(config if config else None)
+        session = Session(session_id)
         self._sessions.append(session)
         return session
 
@@ -187,7 +185,8 @@ class Client:
             >>> print(f"Total requests: {stats['total_requests']}")
             >>> print(f"Average response time: {stats['average_response_time']:.2f}s")
         """
-        return self._context.get_stats()
+        from . import _foundationmodels
+        return _foundationmodels.get_stats()
 
     def reset_stats(self) -> None:
         """
@@ -195,16 +194,8 @@ class Client:
 
         Clears all accumulated statistics, resetting counters to zero.
         """
-        self._context.reset_stats()
-
-    def get_last_error(self) -> str:
-        """
-        Get the last error message for this client.
-
-        Returns:
-            Human-readable error description
-        """
-        return self._context.get_last_error()
+        from . import _foundationmodels
+        _foundationmodels.reset_stats()
 
 
 @contextmanager

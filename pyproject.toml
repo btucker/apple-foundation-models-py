@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel", "Cython>=3.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "libai-py"
+name = "apple-foundation-models-py"
 version = "0.1.0"
-description = "Python bindings for libai - Apple Intelligence C library"
+description = "Python bindings for Apple's FoundationModels framework - on-device AI"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -44,14 +44,29 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/6over3/libai-py"
-Repository = "https://github.com/6over3/libai-py"
-Documentation = "https://github.com/6over3/libai-py#readme"
-Issues = "https://github.com/6over3/libai-py/issues"
+Homepage = "https://github.com/6over3/apple-foundation-models-py"
+Repository = "https://github.com/6over3/apple-foundation-models-py"
+Documentation = "https://github.com/6over3/apple-foundation-models-py#readme"
+Issues = "https://github.com/6over3/apple-foundation-models-py/issues"
 
 [tool.setuptools]
-packages = ["libai"]
+packages = ["foundationmodels"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-libai = ["py.typed", "*.pxd"]
+foundationmodels = ["py.typed", "*.pxd"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+asyncio_mode = "auto"

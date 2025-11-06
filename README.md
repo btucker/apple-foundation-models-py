@@ -1,6 +1,6 @@
-# libai-py
+# apple-foundation-models-py
 
-Python bindings for [libai](https://github.com/6over3/libai) - Apple Intelligence C library for accessing on-device Foundation models.
+Python bindings for Apple's FoundationModels framework - Direct access to on-device Apple Intelligence.
 
 ## Features
 
@@ -24,17 +24,24 @@ Python bindings for [libai](https://github.com/6over3/libai) - Apple Intelligenc
 
 ```bash
 # Clone the repository
-git clone https://github.com/6over3/libai-py.git
-cd libai-py
+git clone https://github.com/6over3/apple-foundation-models-py.git
+cd apple-foundation-models-py
 
-# Install in development mode
+# Install (automatically builds Swift dylib and Cython extension)
 pip install -e .
 ```
+
+**Requirements:**
+- macOS 26.0+ (Sequoia) with Apple Intelligence enabled
+- Xcode command line tools (`xcode-select --install`)
+- Python 3.8 or higher
+
+**Note:** The Swift dylib is built automatically during installation.
 
 ### From PyPI (when available)
 
 ```bash
-pip install libai-py
+pip install apple-foundation-models-py
 ```
 
 ## Quick Start
@@ -42,7 +49,7 @@ pip install libai-py
 ### Basic Usage
 
 ```python
-from libai import Client
+from foundationmodels import Client
 
 # Create a client (library auto-initializes)
 with Client() as client:
@@ -72,7 +79,7 @@ with Client() as client:
 
 ```python
 import asyncio
-from libai import Client
+from foundationmodels import Client
 
 async def main():
     with Client() as client:
@@ -89,7 +96,7 @@ asyncio.run(main())
 ### Structured Output
 
 ```python
-from libai import Client
+from foundationmodels import Client
 
 with Client() as client:
     session = client.create_session()
@@ -248,7 +255,7 @@ class Stats(TypedDict):
 
 ### Exceptions
 
-All exceptions inherit from `LibAIError`:
+All exceptions inherit from `FoundationModelsError`:
 
 - `InitializationError` - Library initialization failed
 - `NotAvailableError` - Apple Intelligence not available
@@ -285,36 +292,61 @@ pip install -e ".[dev]"
 pytest
 
 # Type checking
-mypy libai
+mypy foundationmodels
 
 # Format code
-black libai examples
+black foundationmodels examples
 ```
 
 ### Project Structure
 
 ```
-libai-py/
-├── libai/              # Python package
+apple-foundation-models-py/
+├── foundationmodels/   # Python package
 │   ├── __init__.py     # Public API
-│   ├── _libai.pyx      # Cython bindings
-│   ├── _libai.pxd      # C declarations
+│   ├── _foundationmodels.pyx  # Cython bindings
+│   ├── _foundationmodels.pxd  # C declarations
 │   ├── client.py       # High-level Client
 │   ├── session.py      # Session management
 │   ├── types.py        # Type definitions
-│   └── exceptions.py   # Exception classes
-├── lib/                # Bundled libai.a
-├── include/            # C headers
+│   ├── exceptions.py   # Exception classes
+│   └── swift/          # Swift FoundationModels bindings
+│       ├── foundation_models.swift  # Swift implementation
+│       └── foundation_models.h      # C FFI header
+├── lib/                # Swift dylib and modules (auto-generated)
+│   └── libfoundation_models.dylib    # Compiled Swift library
 ├── examples/           # Example scripts
 └── tests/              # Unit tests
 ```
 
+## Architecture
+
+apple-foundation-models-py uses a layered architecture for optimal performance:
+
+```
+Python API (client.py, session.py)
+         ↓
+    Cython FFI (_foundationmodels.pyx)
+         ↓
+    C FFI Layer (foundation_models.h)
+         ↓
+  Swift Implementation (foundation_models.swift)
+         ↓
+  FoundationModels Framework (Apple Intelligence)
+```
+
+**Key Design Decisions:**
+- **Direct FoundationModels Integration**: No intermediate C library - Swift calls FoundationModels directly
+- **Minimal Overhead**: C FFI layer provides thin wrapper for Python/Swift communication
+- **Async Coordination**: Uses semaphores to bridge Swift's async/await with synchronous C calls
+- **Streaming**: Real-time delta calculation from FoundationModels snapshot-based streaming
+
 ## Performance
 
 - Cython-compiled for near-C performance
-- Statically linked with libai for zero-overhead calls
-- Async streaming with minimal latency
-- No GIL during C library calls (when possible)
+- Direct Swift → FoundationModels calls (no intermediate libraries)
+- Async streaming with delta-based chunk delivery
+- No GIL during Swift library calls (when possible)
 
 ## Troubleshooting
 
@@ -331,7 +363,7 @@ If you get `NotAvailableError`:
 If you get import errors after installation:
 
 ```bash
-# Rebuild the extension
+# Rebuild everything (Swift dylib + Cython extension)
 pip install --force-reinstall --no-cache-dir -e .
 ```
 
@@ -342,6 +374,12 @@ Ensure you have Xcode command line tools:
 ```bash
 xcode-select --install
 ```
+
+If the Swift build fails during installation:
+
+1. Verify macOS version: `sw_vers -productVersion` (should be 26.0+)
+2. Check Swift compiler: `swiftc --version`
+3. Clean and reinstall: `pip install --force-reinstall --no-cache-dir -e .`
 
 ## License
 
@@ -359,10 +397,14 @@ Contributions are welcome! Please:
 
 ## Links
 
-- [libai C library](https://github.com/6over3/libai)
+- [FoundationModels Framework](https://developer.apple.com/documentation/FoundationModels)
 - [Apple Intelligence Documentation](https://developer.apple.com/apple-intelligence/)
-- [Issue Tracker](https://github.com/6over3/libai-py/issues)
+- [Issue Tracker](https://github.com/6over3/apple-foundation-models-py/issues)
 
 ## Acknowledgments
 
-Built on top of [libai](https://github.com/6over3/libai) by 6over3 Institute.
+This project was inspired by and learned from several excellent works:
+
+- **[libai](https://github.com/6over3/libai)** by 6over3 Institute - The original C library wrapper for FoundationModels that demonstrated the possibility of non-Objective-C access to Apple Intelligence. While we ultimately chose a direct Swift integration approach, the libai project's API design and documentation heavily influenced our Python API structure.
+
+- **[apple-on-device-ai](https://github.com/Meridius-Labs/apple-on-device-ai)** by Meridius Labs - The Node.js bindings that showed the path to direct FoundationModels integration via Swift. Their architecture of using Swift → C FFI → JavaScript inspired our Swift → C FFI → Cython → Python approach, and their code examples were invaluable for understanding the FoundationModels API.

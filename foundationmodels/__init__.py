@@ -1,11 +1,11 @@
 """
-libai-py: Python bindings for Apple Intelligence
+foundationmodels: Python bindings for Apple's FoundationModels framework
 
-High-level Pythonic interface to the libai C library for accessing
-Apple Intelligence on-device Foundation models.
+High-level Pythonic interface for accessing Apple Intelligence on-device
+Foundation models.
 
 Basic usage:
-    from libai import Client
+    from foundationmodels import Client
 
     with Client() as client:
         # Check availability
@@ -20,7 +20,7 @@ Basic usage:
 
 Async streaming:
     import asyncio
-    from libai import Client
+    from foundationmodels import Client
 
     async def main():
         with Client() as client:
@@ -46,7 +46,7 @@ from .types import (
     ToolCallback,
 )
 from .exceptions import (
-    LibAIError,
+    FoundationModelsError,
     InitializationError,
     NotAvailableError,
     InvalidParametersError,
@@ -78,7 +78,7 @@ __all__ = [
     "StreamCallback",
     "ToolCallback",
     # Exceptions
-    "LibAIError",
+    "FoundationModelsError",
     "InitializationError",
     "NotAvailableError",
     "InvalidParametersError",

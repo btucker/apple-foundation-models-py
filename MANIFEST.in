@@ -1,17 +1,19 @@
 # Include all necessary files in source distribution
 
-# C headers
-include include/*.h
+# Swift source files
+include foundationmodels/swift/*.swift
+include foundationmodels/swift/*.h
 
-# Static library
-include lib/*.a
+# Dynamic library
+include lib/*.dylib
+include lib/*.swiftmodule
 
 # Cython source files
-include libai/*.pyx
-include libai/*.pxd
+include foundationmodels/*.pyx
+include foundationmodels/*.pxd
 
 # Type stub marker
-include libai/py.typed
+include foundationmodels/py.typed
 
 # Documentation
 include README.md
@@ -22,3 +24,4 @@ global-exclude *.pyc
 global-exclude __pycache__
 global-exclude *.so
 global-exclude .DS_Store
+global-exclude *.a
