@@ -9,16 +9,20 @@ Python bindings for Apple's FoundationModels framework - Direct access to on-dev
 - **Type Safety**: Full type annotations with mypy support
 - **Memory Safe**: Automatic resource cleanup, no manual memory management
 - **Thread Safe**: All operations are thread-safe
-- **Zero Dependencies**: Only requires Python 3.8+ and typing-extensions
 
 ## Requirements
 
 - macOS 26.0+ (macOS Sequoia or later)
 - Python 3.8 or higher
 - Apple Intelligence enabled on your device
-- C compiler (for installation from source)
 
 ## Installation
+
+### From PyPI
+
+```bash
+pip install apple-foundation-models
+```
 
 ### From Source
 
@@ -38,12 +42,6 @@ pip install -e .
 - Python 3.8 or higher
 
 **Note:** The Swift dylib is built automatically during installation.
-
-### From PyPI (when available)
-
-```bash
-pip install apple-foundation-models
-```
 
 ## Quick Start
 
