@@ -3,16 +3,16 @@ requires = ["setuptools>=61.0", "wheel", "Cython>=3.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "apple-foundation-models-py"
+name = "apple-foundation-models"
 version = "0.1.0"
 description = "Python bindings for Apple's FoundationModels framework - on-device AI"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "6over3 Institute"}
+    {name = "Ben Tucker"}
 ]
 maintainers = [
-    {name = "6over3 Institute"}
+    {name = "Ben Tucker"}
 ]
 keywords = ["apple", "intelligence", "ai", "llm", "foundation-models", "on-device"]
 classifiers = [
@@ -44,10 +44,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/6over3/apple-foundation-models-py"
-Repository = "https://github.com/6over3/apple-foundation-models-py"
-Documentation = "https://github.com/6over3/apple-foundation-models-py#readme"
-Issues = "https://github.com/6over3/apple-foundation-models-py/issues"
+Homepage = "https://github.com/btucker/apple-foundation-models-py"
+Repository = "https://github.com/btucker/apple-foundation-models-py"
+Documentation = "https://github.com/btucker/apple-foundation-models-py#readme"
+Issues = "https://github.com/btucker/apple-foundation-models-py/issues"
 
 [tool.setuptools]
 packages = ["foundationmodels"]

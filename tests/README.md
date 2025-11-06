@@ -2,7 +2,7 @@
 
 ## Overview
 
-The test suite for `apple-foundation-models-py` is organized into unit tests and integration tests.
+The test suite for `apple-foundation-models` is organized into unit tests and integration tests.
 
 ## Test Files
 

@@ -24,7 +24,7 @@ Python bindings for Apple's FoundationModels framework - Direct access to on-dev
 
 ```bash
 # Clone the repository
-git clone https://github.com/6over3/apple-foundation-models-py.git
+git clone https://github.com/btucker/apple-foundation-models-py.git
 cd apple-foundation-models-py
 
 # Install (automatically builds Swift dylib and Cython extension)
@@ -32,6 +32,7 @@ pip install -e .
 ```
 
 **Requirements:**
+
 - macOS 26.0+ (Sequoia) with Apple Intelligence enabled
 - Xcode command line tools (`xcode-select --install`)
 - Python 3.8 or higher
@@ -41,7 +42,7 @@ pip install -e .
 ### From PyPI (when available)
 
 ```bash
-pip install apple-foundation-models-py
+pip install apple-foundation-models
 ```
 
 ## Quick Start
@@ -336,6 +337,7 @@ Python API (client.py, session.py)
 ```
 
 **Key Design Decisions:**
+
 - **Direct FoundationModels Integration**: No intermediate C library - Swift calls FoundationModels directly
 - **Minimal Overhead**: C FFI layer provides thin wrapper for Python/Swift communication
 - **Async Coordination**: Uses semaphores to bridge Swift's async/await with synchronous C calls
@@ -399,7 +401,7 @@ Contributions are welcome! Please:
 
 - [FoundationModels Framework](https://developer.apple.com/documentation/FoundationModels)
 - [Apple Intelligence Documentation](https://developer.apple.com/apple-intelligence/)
-- [Issue Tracker](https://github.com/6over3/apple-foundation-models-py/issues)
+- [Issue Tracker](https://github.com/btucker/apple-foundation-models-py/issues)
 
 ## Acknowledgments
 
