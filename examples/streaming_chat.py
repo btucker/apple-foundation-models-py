@@ -9,7 +9,7 @@ Demonstrates:
 """
 
 import asyncio
-from foundationmodels import Client, Availability
+from applefoundationmodels import Client, Availability
 
 
 async def stream_question(session, question: str):

@@ -9,7 +9,7 @@ Demonstrates:
 """
 
 import json
-from foundationmodels import Client, Availability
+from applefoundationmodels import Client, Availability
 
 
 def main():

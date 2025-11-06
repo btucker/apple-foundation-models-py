@@ -1,5 +1,5 @@
 """
-Session API for foundationmodels Python bindings.
+Session API for applefoundationmodels Python bindings.
 
 Provides session management, text generation, and async streaming support.
 """
@@ -162,7 +162,7 @@ class Session:
         # Run streaming in a background thread
         def run_stream():
             try:
-                from foundationmodels import _foundationmodels
+                from applefoundationmodels import _foundationmodels
                 _foundationmodels.generate_stream(prompt, callback, temp, tokens)
             except Exception as e:
                 queue.put(e)

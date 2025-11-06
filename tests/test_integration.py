@@ -4,8 +4,8 @@ Comprehensive integration tests for apple-foundation-models-py
 """
 
 import asyncio
-import foundationmodels
-from foundationmodels import Availability
+import applefoundationmodels
+from applefoundationmodels import Availability
 
 def test_availability():
     """Test availability checking"""
@@ -13,9 +13,9 @@ def test_availability():
     print("TEST 1: Availability Check")
     print("=" * 60)
 
-    status = foundationmodels.Client.check_availability()
-    reason = foundationmodels.Client.get_availability_reason()
-    is_ready = foundationmodels.Client.is_ready()
+    status = applefoundationmodels.Client.check_availability()
+    reason = applefoundationmodels.Client.get_availability_reason()
+    is_ready = applefoundationmodels.Client.is_ready()
 
     print(f"Status: {status} ({status.name if hasattr(status, 'name') else status})")
     print(f"Reason: {reason}")
@@ -42,7 +42,7 @@ def test_version():
     print("TEST 2: Version Information")
     print("=" * 60)
 
-    with foundationmodels.Client() as client:
+    with applefoundationmodels.Client() as client:
         version = client.get_version()
         print(f"Version: {version}")
 
@@ -66,7 +66,7 @@ def test_basic_generation():
     print("TEST 3: Basic Text Generation")
     print("=" * 60)
 
-    with foundationmodels.Client() as client:
+    with applefoundationmodels.Client() as client:
         session = client.create_session()
 
         # Test simple math
@@ -106,7 +106,7 @@ def test_conversation_context():
     print("TEST 4: Conversation Context")
     print("=" * 60)
 
-    with foundationmodels.Client() as client:
+    with applefoundationmodels.Client() as client:
         session = client.create_session(
             instructions="You are a helpful assistant. Remember information from previous messages."
         )
@@ -146,7 +146,7 @@ async def test_streaming():
     print("TEST 5: Streaming Generation")
     print("=" * 60)
 
-    client = foundationmodels.Client()
+    client = applefoundationmodels.Client()
     session = client.create_session()
 
     print("Prompt: Tell me a short story about a robot learning to paint (2 sentences)")
@@ -180,7 +180,7 @@ def test_temperature_variations():
     print("TEST 6: Temperature Variations")
     print("=" * 60)
 
-    with foundationmodels.Client() as client:
+    with applefoundationmodels.Client() as client:
         session = client.create_session()
 
         prompt = "Complete this sentence: The sky is"
@@ -220,7 +220,7 @@ def test_session_management():
     print("TEST 7: Session Management")
     print("=" * 60)
 
-    client = foundationmodels.Client()
+    client = applefoundationmodels.Client()
 
     # Create multiple sessions
     session1 = client.create_session(instructions="You are a math tutor.")
@@ -262,7 +262,7 @@ def test_error_handling():
     print("TEST 8: Error Handling")
     print("=" * 60)
 
-    client = foundationmodels.Client()
+    client = applefoundationmodels.Client()
     session = client.create_session()
 
     # Try with empty prompt
@@ -309,7 +309,7 @@ def test_context_manager():
     print("=" * 60)
 
     # Test client context manager
-    with foundationmodels.Client() as client:
+    with applefoundationmodels.Client() as client:
         assert client is not None, "Client should be created"
         with client.create_session() as session:
             assert session is not None, "Session should be created"

@@ -50,11 +50,11 @@ Documentation = "https://github.com/btucker/apple-foundation-models-py#readme"
 Issues = "https://github.com/btucker/apple-foundation-models-py/issues"
 
 [tool.setuptools]
-packages = ["foundationmodels"]
+packages = ["applefoundationmodels"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-foundationmodels = ["py.typed", "*.pxd"]
+applefoundationmodels = ["py.typed", "*.pxd"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

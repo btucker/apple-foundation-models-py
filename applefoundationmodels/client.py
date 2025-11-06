@@ -1,5 +1,5 @@
 """
-High-level Client API for foundationmodels Python bindings.
+High-level Client API for applefoundationmodels Python bindings.
 
 Provides a Pythonic interface to Apple's FoundationModels framework with
 context managers, automatic resource cleanup, and integration with the Session class.
@@ -76,7 +76,7 @@ class Client:
             Availability status enum value
 
         Example:
-            >>> from foundationmodels import Client, Availability
+            >>> from applefoundationmodels import Client, Availability
             >>> status = Client.check_availability()
             >>> if status == Availability.AVAILABLE:
             ...     print("Apple Intelligence is available!")

@@ -1,19 +1,19 @@
 # Include all necessary files in source distribution
 
 # Swift source files
-include foundationmodels/swift/*.swift
-include foundationmodels/swift/*.h
+include applefoundationmodels/swift/*.swift
+include applefoundationmodels/swift/*.h
 
 # Dynamic library
 include lib/*.dylib
 include lib/*.swiftmodule
 
 # Cython source files
-include foundationmodels/*.pyx
-include foundationmodels/*.pxd
+include applefoundationmodels/*.pyx
+include applefoundationmodels/*.pxd
 
 # Type stub marker
-include foundationmodels/py.typed
+include applefoundationmodels/py.typed
 
 # Documentation
 include README.md

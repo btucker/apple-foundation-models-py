@@ -17,7 +17,7 @@ from Cython.Build import cythonize
 # Determine paths
 REPO_ROOT = Path(__file__).parent.resolve()
 LIB_DIR = REPO_ROOT / "lib"
-SWIFT_DIR = REPO_ROOT / "foundationmodels" / "swift"
+SWIFT_DIR = REPO_ROOT / "applefoundationmodels" / "swift"
 SWIFT_SRC = SWIFT_DIR / "foundation_models.swift"
 DYLIB_PATH = LIB_DIR / "libfoundation_models.dylib"
 SWIFTMODULE_PATH = LIB_DIR / "foundation_models.swiftmodule"
@@ -113,8 +113,8 @@ class BuildSwiftThenExt(_build_ext):
 # Define the Cython extension
 extensions = [
     Extension(
-        name="foundationmodels._foundationmodels",
-        sources=["foundationmodels/_foundationmodels.pyx"],
+        name="applefoundationmodels._foundationmodels",
+        sources=["applefoundationmodels/_foundationmodels.pyx"],
         include_dirs=[str(SWIFT_DIR)],  # Include Swift header directory
         library_dirs=[str(LIB_DIR)],
         libraries=["foundation_models"],  # Link against libfoundation_models.dylib

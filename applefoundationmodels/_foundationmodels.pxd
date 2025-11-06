@@ -11,7 +11,7 @@ from libc.stdlib cimport malloc, free
 
 
 # Error codes and status enums matching Swift enums
-cdef extern from "../foundationmodels/swift/foundation_models.h":
+cdef extern from "../applefoundationmodels/swift/foundation_models.h":
     # Result codes
     ctypedef enum ai_result_t:
         AI_SUCCESS = 0

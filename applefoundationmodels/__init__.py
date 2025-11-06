@@ -1,11 +1,11 @@
 """
-foundationmodels: Python bindings for Apple's FoundationModels framework
+applefoundationmodels: Python bindings for Apple's FoundationModels framework
 
 High-level Pythonic interface for accessing Apple Intelligence on-device
 Foundation models.
 
 Basic usage:
-    from foundationmodels import Client
+    from applefoundationmodels import Client
 
     with Client() as client:
         # Check availability
@@ -20,7 +20,7 @@ Basic usage:
 
 Async streaming:
     import asyncio
-    from foundationmodels import Client
+    from applefoundationmodels import Client
 
     async def main():
         with Client() as client:

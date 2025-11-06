@@ -1,10 +1,10 @@
 """
-Unit tests for foundationmodels.Client
+Unit tests for appleapplefoundationmodels.Client
 """
 
 import pytest
-import foundationmodels
-from foundationmodels import Availability
+import applefoundationmodels
+from applefoundationmodels import Availability
 
 
 class TestAvailability:
@@ -12,7 +12,7 @@ class TestAvailability:
 
     def test_check_availability(self):
         """Test availability check returns valid status."""
-        status = foundationmodels.Client.check_availability()
+        status = applefoundationmodels.Client.check_availability()
         assert isinstance(status, Availability)
         assert status in [
             Availability.AVAILABLE,
@@ -23,13 +23,13 @@ class TestAvailability:
 
     def test_get_availability_reason(self):
         """Test availability reason returns a string."""
-        reason = foundationmodels.Client.get_availability_reason()
+        reason = applefoundationmodels.Client.get_availability_reason()
         assert isinstance(reason, str)
         assert len(reason) > 0
 
     def test_is_ready(self):
         """Test is_ready returns a boolean."""
-        ready = foundationmodels.Client.is_ready()
+        ready = applefoundationmodels.Client.is_ready()
         assert isinstance(ready, bool)
 
 
@@ -57,14 +57,14 @@ class TestClientLifecycle:
 
     def test_client_context_manager(self):
         """Test client works as context manager."""
-        with foundationmodels.Client() as client:
+        with applefoundationmodels.Client() as client:
             assert client is not None
             version = client.get_version()
             assert isinstance(version, str)
 
     def test_client_close(self):
         """Test explicit client close."""
-        client = foundationmodels.Client()
+        client = applefoundationmodels.Client()
         version = client.get_version()
         assert isinstance(version, str)
         assert len(version) > 0
@@ -73,8 +73,8 @@ class TestClientLifecycle:
 
     def test_multiple_clients(self):
         """Test multiple clients can be created."""
-        client1 = foundationmodels.Client()
-        client2 = foundationmodels.Client()
+        client1 = applefoundationmodels.Client()
+        client2 = applefoundationmodels.Client()
 
         v1 = client1.get_version()
         v2 = client2.get_version()

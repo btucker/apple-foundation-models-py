@@ -50,7 +50,7 @@ pip install apple-foundation-models
 ### Basic Usage
 
 ```python
-from foundationmodels import Client
+from applefoundationmodels import Client
 
 # Create a client (library auto-initializes)
 with Client() as client:
@@ -80,7 +80,7 @@ with Client() as client:
 
 ```python
 import asyncio
-from foundationmodels import Client
+from applefoundationmodels import Client
 
 async def main():
     with Client() as client:
@@ -97,7 +97,7 @@ asyncio.run(main())
 ### Structured Output
 
 ```python
-from foundationmodels import Client
+from applefoundationmodels import Client
 
 with Client() as client:
     session = client.create_session()
@@ -293,17 +293,17 @@ pip install -e ".[dev]"
 pytest
 
 # Type checking
-mypy foundationmodels
+mypy applefoundationmodels
 
 # Format code
-black foundationmodels examples
+black applefoundationmodels examples
 ```
 
 ### Project Structure
 
 ```
 apple-foundation-models-py/
-├── foundationmodels/   # Python package
+├── applefoundationmodels/   # Python package
 │   ├── __init__.py     # Public API
 │   ├── _foundationmodels.pyx  # Cython bindings
 │   ├── _foundationmodels.pxd  # C declarations

@@ -1,10 +1,10 @@
 """
-Unit tests for foundationmodels.Session
+Unit tests for applefoundationmodels.Session
 """
 
 import pytest
 import asyncio
-import foundationmodels
+import applefoundationmodels
 
 
 class TestSessionGeneration:

@@ -13,7 +13,7 @@ Pytest configuration and shared fixtures:
 - `session`: Provides a Session instance
 
 ### `test_client.py` (Unit Tests)
-Tests for `foundationmodels.Client`:
+Tests for `applefoundationmodels.Client`:
 - **Availability checking**: `check_availability()`, `get_availability_reason()`, `is_ready()`
 - **Client information**: `get_version()`, `get_supported_languages()`
 - **Lifecycle management**: Context managers, `close()`, multiple clients
@@ -21,7 +21,7 @@ Tests for `foundationmodels.Client`:
 - **Statistics**: `get_stats()`, `reset_stats()`
 
 ### `test_session.py` (Unit Tests)
-Tests for `foundationmodels.Session`:
+Tests for `applefoundationmodels.Session`:
 - **Text generation**: Basic generation, temperature control, token limits
 - **Streaming**: Async streaming, temperature variations
 - **History management**: `get_history()`, `clear_history()`, `add_message()`
@@ -60,7 +60,7 @@ pytest tests/test_integration.py
 ### Run with coverage:
 ```bash
 pip install pytest-cov
-pytest --cov=foundationmodels --cov-report=html
+pytest --cov=applefoundationmodels --cov-report=html
 ```
 
 ### Skip tests if Apple Intelligence unavailable:

@@ -1,5 +1,5 @@
 """
-Exception hierarchy for foundationmodels Python bindings.
+Exception hierarchy for applefoundationmodels Python bindings.
 
 All exceptions raised by the library inherit from FoundationModelsError.
 Each exception corresponds to a specific error code from the Swift API.

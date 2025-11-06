@@ -9,7 +9,7 @@ Demonstrates:
 - Error handling
 """
 
-from foundationmodels import Client, NotAvailableError, Availability
+from applefoundationmodels import Client, NotAvailableError, Availability
 
 
 def main():
