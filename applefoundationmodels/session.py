@@ -117,21 +117,39 @@ class Session(ContextManagedResource):
         """
         Generate structured JSON output matching a schema.
 
-        Note: Not yet implemented in simplified API.
-
         Args:
             prompt: Input text prompt
             schema: JSON schema the output must conform to
-            temperature: Sampling temperature (0.0-2.0)
-            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature (0.0-2.0, default: DEFAULT_TEMPERATURE)
+            max_tokens: Maximum tokens to generate (default: DEFAULT_MAX_TOKENS)
 
         Returns:
             Dictionary with 'object' key containing parsed JSON
 
         Raises:
-            NotImplementedError: Feature not yet implemented
+            RuntimeError: If session is closed
+            GenerationError: If generation fails
+            JSONParseError: If schema or response is invalid JSON
+
+        Example:
+            >>> schema = {
+            ...     "type": "object",
+            ...     "properties": {
+            ...         "name": {"type": "string"},
+            ...         "age": {"type": "integer"}
+            ...     },
+            ...     "required": ["name", "age"]
+            ... }
+            >>> result = session.generate_structured(
+            ...     "Extract: Alice is 28",
+            ...     schema=schema
+            ... )
+            >>> print(result['object'])
+            {'name': 'Alice', 'age': 28}
         """
-        raise NotImplementedError("Structured generation not yet implemented in Swift API")
+        self._check_closed()
+        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+        return _foundationmodels.generate_structured(prompt, schema, temp, tokens)
 
     async def generate_stream(
         self,

@@ -300,6 +300,92 @@ public func appleAIGenerateStream(
     return AIResult.errorNotAvailable.rawValue
 }
 
+// MARK: - Structured Generation
+
+@_cdecl("apple_ai_generate_structured")
+public func appleAIGenerateStructured(
+    prompt: UnsafePointer<CChar>,
+    schemaJson: UnsafePointer<CChar>,
+    temperature: Double,
+    maxTokens: Int32
+) -> UnsafeMutablePointer<CChar>? {
+    guard isInitialized else {
+        return strdup("{\"error\": \"Not initialized\"}")
+    }
+
+    #if canImport(FoundationModels)
+    if #available(macOS 26.0, *) {
+        let promptString = String(cString: prompt)
+        let schemaString = String(cString: schemaJson)
+
+        // Parse schema JSON to dictionary
+        guard let schemaData = schemaString.data(using: .utf8),
+              let schemaDict = try? JSONSerialization.jsonObject(with: schemaData) as? [String: Any] else {
+            return strdup("{\"error\": \"Invalid schema JSON\"}")
+        }
+
+        // Use semaphore for async coordination
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: String = ""
+
+        Task {
+            do {
+                // Get or create session
+                let session = currentSession ?? LanguageModelSession(
+                    model: SystemLanguageModel.default
+                )
+                currentSession = session
+
+                // Configure generation options
+                let options = GenerationOptions(
+                    temperature: temperature
+                )
+
+                // For now, inject schema into prompt since GenerationSchema requires @Generable types
+                // This is a temporary solution until we can properly map JSON Schema to GenerationSchema
+                let enhancedPrompt = """
+                \(promptString)
+
+                Please respond with valid JSON that conforms to this schema:
+                \(schemaString)
+
+                Return ONLY the JSON object, no additional text.
+                """
+
+                // Generate response with schema in prompt
+                let response = try await session.respond(
+                    to: enhancedPrompt,
+                    options: options
+                )
+
+                // The response.content should be a JSON string matching the schema
+                let responseContent = response.content
+
+                // Try to parse as JSON and wrap in "object" key
+                if let contentData = responseContent.data(using: .utf8),
+                   let parsedObject = try? JSONSerialization.jsonObject(with: contentData),
+                   let wrappedData = try? JSONSerialization.data(withJSONObject: ["object": parsedObject]),
+                   let wrappedString = String(data: wrappedData, encoding: .utf8) {
+                    result = wrappedString
+                } else {
+                    // Fallback: wrap raw content as string (might need cleaning)
+                    let cleanContent = responseContent.trimmingCharacters(in: .whitespacesAndNewlines)
+                    result = "{\"object\": \(cleanContent)}"
+                }
+            } catch {
+                result = "{\"error\": \"\(error.localizedDescription)\"}"
+            }
+            semaphore.signal()
+        }
+
+        semaphore.wait()
+        return strdup(result)
+    }
+    #endif
+
+    return strdup("{\"error\": \"FoundationModels not available\"}")
+}
+
 // MARK: - Memory Management
 
 @_cdecl("apple_ai_free_string")

@@ -1,4 +1,4 @@
-# apple-foundation-models-py
+# apple-foundation-models
 
 Python bindings for Apple's FoundationModels framework - Direct access to on-device Apple Intelligence.
 

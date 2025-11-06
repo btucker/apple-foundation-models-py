@@ -246,6 +246,74 @@ def generate(
 
 
 # ============================================================================
+# Structured generation
+# ============================================================================
+
+def generate_structured(
+    prompt: str,
+    schema: Dict[str, Any],
+    temperature: float = 1.0,
+    max_tokens: int = 1024
+) -> Dict[str, Any]:
+    """
+    Generate structured JSON output matching a schema.
+
+    Args:
+        prompt: Input text prompt
+        schema: JSON schema the output must conform to
+        temperature: Sampling temperature (0.0-2.0)
+        max_tokens: Maximum tokens to generate
+
+    Returns:
+        Dictionary with 'object' key containing parsed JSON matching schema
+
+    Raises:
+        GenerationError: If generation fails
+        InvalidParametersError: If parameters are invalid
+        JSONParseError: If schema or response is invalid JSON
+    """
+    cdef bytes prompt_bytes = _encode_string(prompt)
+    cdef const char *prompt_c = prompt_bytes
+
+    # Convert schema dict to JSON string
+    schema_json_str = json.dumps(schema)
+    cdef bytes schema_bytes = _encode_string(schema_json_str)
+    cdef const char *schema_c = schema_bytes
+
+    cdef char *result_c
+    cdef str result_str
+    cdef double temp_c = temperature
+    cdef int32_t tokens_c = max_tokens
+
+    with nogil:
+        result_c = apple_ai_generate_structured(prompt_c, schema_c, temp_c, tokens_c)
+
+    if result_c == NULL:
+        raise RuntimeError("Structured generation returned NULL")
+
+    # Get result string
+    result_str = _decode_string(result_c)
+    apple_ai_free_string(result_c)
+
+    # DEBUG: Print the raw response to stderr
+    import sys
+    sys.stderr.write(f"DEBUG: Raw response from Swift: {repr(result_str)}\n")
+    sys.stderr.flush()
+
+    # Parse JSON response
+    try:
+        result_data = json.loads(result_str)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Failed to parse response JSON: {e}\nRaw response: {repr(result_str)}")
+
+    # Check for error in response
+    if "error" in result_data:
+        raise RuntimeError(result_data["error"])
+
+    return result_data
+
+
+# ============================================================================
 # Streaming generation
 # ============================================================================
 
