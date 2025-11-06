@@ -44,7 +44,8 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run pytest tests/ -v --tb=short
+          # Tests will auto-skip if Apple Intelligence is unavailable
+          uv run pytest tests/ -v --tb=short -ra
 
       - name: Run tests with coverage (Python 3.11 only)
         if: matrix.python-version == '3.11'
