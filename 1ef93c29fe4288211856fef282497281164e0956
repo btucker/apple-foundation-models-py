@@ -1,0 +1,2 @@
+- the tests need to run on macos-26
+- Run black --check applefoundationmodels/ tests/
