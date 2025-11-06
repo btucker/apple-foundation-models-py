@@ -5,7 +5,7 @@ Provides a Pythonic interface to Apple's FoundationModels framework with
 context managers, automatic resource cleanup, and integration with the Session class.
 """
 
-from typing import Optional, List
+from typing import Optional, List, cast
 from contextlib import contextmanager
 
 from . import _foundationmodels
@@ -116,7 +116,11 @@ class Client(ContextManagedResource):
             List of localized language display names
         """
         count = _foundationmodels.get_supported_languages_count()
-        return [_foundationmodels.get_supported_language(i) for i in range(count)]
+        return [
+            lang
+            for i in range(count)
+            if (lang := _foundationmodels.get_supported_language(i)) is not None
+        ]
 
     def create_session(
         self,
@@ -172,7 +176,7 @@ class Client(ContextManagedResource):
             >>> print(f"Total requests: {stats['total_requests']}")
             >>> print(f"Average response time: {stats['average_response_time']:.2f}s")
         """
-        return _foundationmodels.get_stats()
+        return cast(Stats, _foundationmodels.get_stats())
 
     def reset_stats(self) -> None:
         """
