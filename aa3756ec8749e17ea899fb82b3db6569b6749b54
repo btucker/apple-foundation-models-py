@@ -1,0 +1,7 @@
+- I'm not clear why this isn't working
+- we're making a python module that exposes libai
+- yes
+- it is enabled
+- let's try a new approach. rather than using libai, can we link to
+  FOundationModels directly. look at these node bindings for inspiration:
+  https://github.com/Meridius-Labs/apple-on-device-ai/tree/main
