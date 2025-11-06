@@ -1,0 +1,4 @@
+- The build is now working, but the Publish to PyPI is failing because that has
+  to run on linux. can we set this up do to the build on macos, save the assets,
+  and then run the Pushlish to PyPI on linux?
+- can you update .git/config to automatically push main to origin?
