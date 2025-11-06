@@ -9,7 +9,8 @@ Demonstrates:
 """
 
 import asyncio
-from applefoundationmodels import Client, Availability
+from applefoundationmodels import Client
+from utils import check_availability_or_exit, print_stats
 
 
 async def stream_question(session, question: str):
@@ -26,9 +27,7 @@ async def stream_question(session, question: str):
 
 async def main():
     # Check availability
-    if Client.check_availability() != Availability.AVAILABLE:
-        print("Apple Intelligence not available")
-        print(Client.get_availability_reason())
+    if not check_availability_or_exit(verbose=False):
         return
 
     # Create client and session
@@ -50,10 +49,7 @@ async def main():
             await asyncio.sleep(0.5)
 
         # Show final statistics
-        stats = client.get_stats()
-        print(f"\n{'=' * 60}")
-        print(f"Completed {stats['successful_requests']} requests")
-        print(f"Total time: {stats['total_processing_time']:.2f}s")
+        print_stats(client, verbose=False)
 
 
 if __name__ == "__main__":

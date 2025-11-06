@@ -10,10 +10,13 @@ from typing import Optional, Dict, Any, AsyncIterator, Callable
 from queue import Queue, Empty
 import threading
 
+from . import _foundationmodels
+from .base import ContextManagedResource
+from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
 from .types import GenerationParams
 
 
-class Session:
+class Session(ContextManagedResource):
     """
     AI session for maintaining conversation state.
 
@@ -39,14 +42,6 @@ class Session:
         self._session_id = session_id
         self._closed = False
 
-    def __enter__(self) -> "Session":
-        """Context manager entry."""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Context manager exit with automatic cleanup."""
-        self.close()
-
     def close(self) -> None:
         """
         Close the session and cleanup resources.
@@ -59,6 +54,25 @@ class Session:
         """Raise error if session is closed."""
         if self._closed:
             raise RuntimeError("Session is closed")
+
+    def _normalize_generation_params(
+        self,
+        temperature: Optional[float],
+        max_tokens: Optional[int]
+    ) -> tuple[float, int]:
+        """
+        Normalize generation parameters with defaults.
+
+        Args:
+            temperature: Optional temperature value
+            max_tokens: Optional max tokens value
+
+        Returns:
+            Tuple of (temperature, max_tokens) with defaults applied
+        """
+        temp = temperature if temperature is not None else DEFAULT_TEMPERATURE
+        tokens = max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS
+        return temp, tokens
 
     def generate(
         self,
@@ -73,8 +87,8 @@ class Session:
 
         Args:
             prompt: Input text prompt
-            temperature: Sampling temperature (0.0-2.0, default 1.0)
-            max_tokens: Maximum tokens to generate (default 1024)
+            temperature: Sampling temperature (0.0-2.0, default: DEFAULT_TEMPERATURE)
+            max_tokens: Maximum tokens to generate (default: DEFAULT_MAX_TOKENS)
             include_reasoning: Include reasoning steps (not supported)
             seed: Random seed for reproducibility (not supported)
 
@@ -90,11 +104,7 @@ class Session:
             >>> print(response)
         """
         self._check_closed()
-
-        temp = temperature if temperature is not None else 1.0
-        tokens = max_tokens if max_tokens is not None else 1024
-
-        from . import _foundationmodels
+        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
         return _foundationmodels.generate(prompt, temp, tokens)
 
     def generate_structured(
@@ -136,8 +146,8 @@ class Session:
 
         Args:
             prompt: Input text prompt
-            temperature: Sampling temperature (0.0-2.0, default 1.0)
-            max_tokens: Maximum tokens to generate (default 1024)
+            temperature: Sampling temperature (0.0-2.0, default: DEFAULT_TEMPERATURE)
+            max_tokens: Maximum tokens to generate (default: DEFAULT_MAX_TOKENS)
             include_reasoning: Include reasoning steps (not supported)
             seed: Random seed (not supported)
 
@@ -149,9 +159,7 @@ class Session:
             ...     print(chunk, end='', flush=True)
         """
         self._check_closed()
-
-        temp = temperature if temperature is not None else 1.0
-        tokens = max_tokens if max_tokens is not None else 1024
+        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
 
         # Use a queue to bridge the sync callback and async iterator
         queue: Queue = Queue()
@@ -162,7 +170,6 @@ class Session:
         # Run streaming in a background thread
         def run_stream():
             try:
-                from applefoundationmodels import _foundationmodels
                 _foundationmodels.generate_stream(prompt, callback, temp, tokens)
             except Exception as e:
                 queue.put(e)
@@ -203,7 +210,6 @@ class Session:
             ...     print(f"{msg['role']}: {msg['content']}")
         """
         self._check_closed()
-        from . import _foundationmodels
         return _foundationmodels.get_history()
 
     def clear_history(self) -> None:
@@ -213,7 +219,6 @@ class Session:
         Removes all messages from the session while keeping the session active.
         """
         self._check_closed()
-        from . import _foundationmodels
         _foundationmodels.clear_history()
 
     def add_message(self, role: str, content: str) -> None:
@@ -227,5 +232,4 @@ class Session:
             content: Message content
         """
         self._check_closed()
-        from . import _foundationmodels
         _foundationmodels.add_message(role, content)

@@ -8,11 +8,13 @@ context managers, automatic resource cleanup, and integration with the Session c
 from typing import Optional, List
 from contextlib import contextmanager
 
+from . import _foundationmodels
+from .base import ContextManagedResource
 from .types import Availability, Stats
 from .session import Session
 
 
-class Client:
+class Client(ContextManagedResource):
     """
     High-level client for Apple Intelligence operations.
 
@@ -40,19 +42,10 @@ class Client:
         """
         # Initialize library on first client creation
         if not Client._initialized:
-            from . import _foundationmodels
             _foundationmodels.init()
             Client._initialized = True
 
         self._sessions: List[Session] = []
-
-    def __enter__(self) -> "Client":
-        """Context manager entry."""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Context manager exit with automatic cleanup."""
-        self.close()
 
     def close(self) -> None:
         """
@@ -81,7 +74,6 @@ class Client:
             >>> if status == Availability.AVAILABLE:
             ...     print("Apple Intelligence is available!")
         """
-        from . import _foundationmodels
         return Availability(_foundationmodels.check_availability())
 
     @staticmethod
@@ -93,7 +85,6 @@ class Client:
             Detailed status description with actionable guidance,
             or None if library not initialized
         """
-        from . import _foundationmodels
         return _foundationmodels.get_availability_reason()
 
     @staticmethod
@@ -104,7 +95,6 @@ class Client:
         Returns:
             True if ready for use, False otherwise
         """
-        from . import _foundationmodels
         return _foundationmodels.is_ready()
 
     @staticmethod
@@ -115,7 +105,6 @@ class Client:
         Returns:
             Version string in format "major.minor.patch"
         """
-        from . import _foundationmodels
         return _foundationmodels.get_version()
 
     @staticmethod
@@ -126,7 +115,6 @@ class Client:
         Returns:
             List of localized language display names
         """
-        from . import _foundationmodels
         count = _foundationmodels.get_supported_languages_count()
         return [_foundationmodels.get_supported_language(i) for i in range(count)]
 
@@ -161,7 +149,6 @@ class Client:
             ...     enable_guardrails=True
             ... )
         """
-        from . import _foundationmodels
         config = {}
         if instructions is not None:
             config['instructions'] = instructions
@@ -185,7 +172,6 @@ class Client:
             >>> print(f"Total requests: {stats['total_requests']}")
             >>> print(f"Average response time: {stats['average_response_time']:.2f}s")
         """
-        from . import _foundationmodels
         return _foundationmodels.get_stats()
 
     def reset_stats(self) -> None:
@@ -194,7 +180,6 @@ class Client:
 
         Clears all accumulated statistics, resetting counters to zero.
         """
-        from . import _foundationmodels
         _foundationmodels.reset_stats()
 
 

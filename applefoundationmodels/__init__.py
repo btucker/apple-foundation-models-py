@@ -36,6 +36,13 @@ __version__ = "0.1.0"
 # Public API exports
 from .client import Client, client
 from .session import Session
+from .constants import (
+    DEFAULT_TEMPERATURE,
+    DEFAULT_MAX_TOKENS,
+    MIN_TEMPERATURE,
+    MAX_TEMPERATURE,
+    TemperaturePreset,
+)
 from .types import (
     Result,
     Availability,
@@ -69,6 +76,12 @@ __all__ = [
     "Client",
     "Session",
     "client",
+    # Constants
+    "DEFAULT_TEMPERATURE",
+    "DEFAULT_MAX_TOKENS",
+    "MIN_TEMPERATURE",
+    "MAX_TEMPERATURE",
+    "TemperaturePreset",
     # Type definitions
     "Result",
     "Availability",

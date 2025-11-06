@@ -9,13 +9,13 @@ Demonstrates:
 """
 
 import json
-from applefoundationmodels import Client, Availability
+from applefoundationmodels import Client
+from utils import check_availability_or_exit
 
 
 def main():
     # Check availability
-    if Client.check_availability() != Availability.AVAILABLE:
-        print("Apple Intelligence not available")
+    if not check_availability_or_exit(verbose=False):
         return
 
     with Client() as client:

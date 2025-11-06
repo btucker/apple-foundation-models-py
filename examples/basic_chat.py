@@ -9,16 +9,14 @@ Demonstrates:
 - Error handling
 """
 
-from applefoundationmodels import Client, NotAvailableError, Availability
+from applefoundationmodels import Client, NotAvailableError
+from utils import check_availability_or_exit, print_stats, handle_example_error
 
 
 def main():
     try:
         # Check availability before creating client
-        status = Client.check_availability()
-        if status != Availability.AVAILABLE:
-            print("Apple Intelligence is not available:")
-            print(Client.get_availability_reason())
+        if not check_availability_or_exit():
             return
 
         print(f"libai version: {Client.get_version()}")
@@ -61,21 +59,12 @@ def main():
                 print()
 
             # Show statistics
-            stats = client.get_stats()
-            print("=" * 60)
-            print("Statistics:")
-            print("=" * 60)
-            print(f"Total requests: {stats['total_requests']}")
-            print(f"Successful: {stats['successful_requests']}")
-            print(f"Failed: {stats['failed_requests']}")
-            print(f"Avg response time: {stats['average_response_time']:.2f}s")
+            print_stats(client, verbose=True)
 
     except NotAvailableError as e:
-        print(f"Error: {e.message}")
-        print("Make sure Apple Intelligence is enabled in System Settings")
+        handle_example_error(e)
     except Exception as e:
-        print(f"Error: {e}")
-        raise
+        handle_example_error(e)
 
 
 if __name__ == "__main__":
