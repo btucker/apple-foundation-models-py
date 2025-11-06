@@ -1,2 +1,0 @@
-- I'm not sure we need the -py in the module name on pypi? should we just call
-  it "apple-foundation-models"?
