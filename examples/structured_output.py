@@ -9,7 +9,7 @@ Demonstrates:
 """
 
 import json
-from libai import Client, Availability
+from foundationmodels import Client, Availability
 
 
 def main():
@@ -31,18 +31,18 @@ def main():
                 "name": {"type": "string"},
                 "age": {"type": "integer"},
                 "city": {"type": "string"},
-                "occupation": {"type": "string"}
+                "occupation": {"type": "string"},
             },
-            "required": ["name", "age", "city"]
+            "required": ["name", "age", "city"],
         }
 
         result = session.generate_structured(
             "Extract person info: Alice is 28 years old, lives in Paris, and works as a software engineer.",
-            schema=person_schema
+            schema=person_schema,
         )
 
         print("Extracted data:")
-        print(json.dumps(result['object'], indent=2))
+        print(json.dumps(result["object"], indent=2))
         print()
 
         # Example 2: Extract list of items
@@ -59,21 +59,23 @@ def main():
                         "properties": {
                             "name": {"type": "string"},
                             "quantity": {"type": "integer"},
-                            "category": {"type": "string"}
-                        }
-                    }
+                            "category": {"type": "string"},
+                        },
+                    },
                 }
-            }
+            },
         }
 
         result = session.generate_structured(
             "I need to buy: 2 apples, 1 loaf of bread, 3 bottles of milk, and 1 box of eggs.",
-            schema=shopping_schema
+            schema=shopping_schema,
         )
 
         print("Shopping list:")
-        for item in result['object']['items']:
-            print(f"  - {item['quantity']} x {item['name']} ({item.get('category', 'N/A')})")
+        for item in result["object"]["items"]:
+            print(
+                f"  - {item['quantity']} x {item['name']} ({item.get('category', 'N/A')})"
+            )
         print()
 
         # Example 3: Sentiment analysis
@@ -85,35 +87,29 @@ def main():
             "properties": {
                 "sentiment": {
                     "type": "string",
-                    "enum": ["positive", "negative", "neutral"]
+                    "enum": ["positive", "negative", "neutral"],
                 },
-                "confidence": {
-                    "type": "number",
-                    "minimum": 0.0,
-                    "maximum": 1.0
-                },
-                "keywords": {
-                    "type": "array",
-                    "items": {"type": "string"}
-                }
+                "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                "keywords": {"type": "array", "items": {"type": "string"}},
             },
-            "required": ["sentiment", "confidence"]
+            "required": ["sentiment", "confidence"],
         }
 
         texts = [
             "This product is amazing! I love it!",
             "Terrible experience, would not recommend.",
-            "It's okay, nothing special."
+            "It's okay, nothing special.",
         ]
 
         for text in texts:
             result = session.generate_structured(
-                f"Analyze sentiment of: {text}",
-                schema=sentiment_schema
+                f"Analyze sentiment of: {text}", schema=sentiment_schema
             )
-            data = result['object']
+            data = result["object"]
             print(f"Text: {text}")
-            print(f"  Sentiment: {data['sentiment']} ({data['confidence']:.2f} confidence)")
+            print(
+                f"  Sentiment: {data['sentiment']} ({data['confidence']:.2f} confidence)"
+            )
             print(f"  Keywords: {', '.join(data.get('keywords', []))}")
             print()
 

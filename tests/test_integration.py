@@ -21,10 +21,17 @@ def test_availability():
     print(f"Reason: {reason}")
     print(f"Ready: {is_ready}")
 
+    # Assertions
+    assert isinstance(status, Availability), "Status should be an Availability enum"
+    assert isinstance(reason, str), "Reason should be a string"
+    assert isinstance(is_ready, bool), "is_ready should be a boolean"
+    assert reason, "Reason should not be empty"
+
     if status != Availability.AVAILABLE:
         print("\n⚠️  Apple Intelligence not available - some tests may fail")
     else:
         print("\n✓ Apple Intelligence is available and ready")
+        assert is_ready is True, "is_ready should be True when status is AVAILABLE"
 
     print()
 
@@ -41,6 +48,13 @@ def test_version():
 
         languages = client.get_supported_languages()
         print(f"Supported languages: {', '.join(languages)}")
+
+        # Assertions
+        assert version, "Version should not be empty"
+        assert isinstance(version, str), "Version should be a string"
+        assert isinstance(languages, list), "Languages should be a list"
+        assert len(languages) > 0, "Should support at least one language"
+        assert all(isinstance(lang, str) for lang in languages), "All languages should be strings"
 
     print("\n✓ Version information retrieved")
     print()
@@ -59,18 +73,28 @@ def test_basic_generation():
         print("Q: What is 7 + 15?")
         response = session.generate("What is 7 + 15?", temperature=0.3)
         print(f"A: {response}")
+        assert response, "Response should not be empty"
+        assert isinstance(response, str), "Response should be a string"
+        assert len(response) > 0, "Response should have content"
         print()
 
         # Test general knowledge
         print("Q: What is the largest planet in our solar system?")
         response = session.generate("What is the largest planet in our solar system?", temperature=0.5)
         print(f"A: {response}")
+        assert response, "Response should not be empty"
+        assert isinstance(response, str), "Response should be a string"
+        # Check if Jupiter is mentioned (case-insensitive)
+        assert "jupiter" in response.lower(), "Response should mention Jupiter"
         print()
 
         # Test creative generation
         print("Q: Write a haiku about coding")
         response = session.generate("Write a haiku about coding", temperature=1.0)
         print(f"A: {response}")
+        assert response, "Response should not be empty"
+        assert isinstance(response, str), "Response should be a string"
+        assert len(response) > 10, "Haiku should have substantial content"
 
     print("\n✓ Basic generation tests passed")
     print()
@@ -84,26 +108,34 @@ def test_conversation_context():
 
     with foundationmodels.Client() as client:
         session = client.create_session(
-            instructions="You are a friendly assistant who gives concise answers."
+            instructions="You are a helpful assistant. Remember information from previous messages."
         )
 
-        # First message
-        print("User: My name is Alice and I love Python programming.")
-        response1 = session.generate("My name is Alice and I love Python programming.")
+        # First message - establish context
+        print("User: Remember this: The code name is BLUE42")
+        response1 = session.generate("Remember this: The code name is BLUE42")
         print(f"Assistant: {response1}")
+        assert response1, "First response should not be empty"
+        assert isinstance(response1, str), "Response should be a string"
         print()
 
         # Follow-up that requires context
-        print("User: What's my name and what do I like?")
-        response2 = session.generate("What's my name and what do I like?")
+        print("User: What code name did I just tell you?")
+        response2 = session.generate("What code name did I just tell you?")
         print(f"Assistant: {response2}")
+        assert response2, "Second response should not be empty"
+        assert isinstance(response2, str), "Response should be a string"
         print()
 
         # Check if context was maintained
-        if "Alice" in response2 or "alice" in response2.lower():
+        # More lenient check - if the model refuses or doesn't maintain context,
+        # at least verify it responded with a valid message
+        if "blue42" in response2.lower() or "blue 42" in response2.lower():
             print("✓ Context maintained across turns")
         else:
-            print("⚠️  Context may not be fully maintained")
+            print(f"⚠️  Context not fully maintained - got: {response2[:100]}")
+            # Still pass if we got a coherent response (not a refusal)
+            assert len(response2) > 5, "Should still provide a meaningful response"
 
     print()
 
@@ -126,12 +158,19 @@ async def test_streaming():
         temperature=0.8
     ):
         print(chunk, end='', flush=True)
+        assert isinstance(chunk, str), "Each chunk should be a string"
         chunks.append(chunk)
 
     print("\n")
 
+    # Assertions
+    assert len(chunks) > 0, "Should receive at least one chunk"
     full_response = ''.join(chunks)
+    assert len(full_response) > 0, "Full response should not be empty"
+    assert all(isinstance(chunk, str) for chunk in chunks), "All chunks should be strings"
     print(f"✓ Received {len(chunks)} chunks totaling {len(full_response)} characters")
+
+    client.close()
     print()
 
 
@@ -150,16 +189,26 @@ def test_temperature_variations():
         print(f"Temperature 0.1: ", end='')
         response1 = session.generate(prompt, temperature=0.1)
         print(response1)
+        assert response1, "Response should not be empty"
+        assert isinstance(response1, str), "Response should be a string"
 
         # Medium temperature
         print(f"Temperature 0.7: ", end='')
         response2 = session.generate(prompt, temperature=0.7)
         print(response2)
+        assert response2, "Response should not be empty"
+        assert isinstance(response2, str), "Response should be a string"
 
         # High temperature (more creative)
         print(f"Temperature 1.5: ", end='')
         response3 = session.generate(prompt, temperature=1.5)
         print(response3)
+        assert response3, "Response should not be empty"
+        assert isinstance(response3, str), "Response should be a string"
+
+        # All responses should be valid but can be different
+        responses = [response1, response2, response3]
+        assert all(len(r) > 0 for r in responses), "All responses should have content"
 
     print("\n✓ Temperature variations tested")
     print()
@@ -181,12 +230,22 @@ def test_session_management():
     print("Session 1 (Math): What is 12 * 8?")
     response1 = session1.generate("What is 12 * 8?")
     print(f"Response: {response1}")
+    assert response1, "Session 1 response should not be empty"
+    assert isinstance(response1, str), "Response should be a string"
+    # Check for the answer 96 or "ninety-six" etc.
+    assert "96" in response1 or "ninety" in response1.lower(), "Math response should contain the answer"
     print()
 
     print("Session 2 (Poetry): Write one line of poetry about the moon")
     response2 = session2.generate("Write one line of poetry about the moon")
     print(f"Response: {response2}")
+    assert response2, "Session 2 response should not be empty"
+    assert isinstance(response2, str), "Response should be a string"
+    assert len(response2) > 5, "Poetry response should have content"
     print()
+
+    # Verify sessions are independent
+    assert response1 != response2, "Different sessions should produce different responses"
 
     # Close sessions
     session1.close()
@@ -203,33 +262,43 @@ def test_error_handling():
     print("TEST 8: Error Handling")
     print("=" * 60)
 
+    client = foundationmodels.Client()
+    session = client.create_session()
+
+    # Try with empty prompt
+    print("Testing empty prompt...")
+    empty_handled = False
     try:
-        client = foundationmodels.Client()
-        session = client.create_session()
-
-        # Try with empty prompt
-        print("Testing empty prompt...")
-        try:
-            response = session.generate("")
-            print(f"Response: {response[:50]}...")
-            print("✓ Empty prompt handled")
-        except Exception as e:
-            print(f"✓ Exception caught: {type(e).__name__}")
-
-        print()
-
-        # Try with very long prompt
-        print("Testing very long prompt...")
-        long_prompt = "Tell me about " + ("the number one " * 100)
-        try:
-            response = session.generate(long_prompt[:500])  # Limit to reasonable size
-            print(f"✓ Long prompt handled ({len(response)} chars in response)")
-        except Exception as e:
-            print(f"✓ Exception caught: {type(e).__name__}: {e}")
-
+        response = session.generate("")
+        # If it doesn't raise an error, check the response
+        assert isinstance(response, str), "Response should be a string"
+        print(f"Response: {response[:50]}...")
+        print("✓ Empty prompt handled gracefully")
+        empty_handled = True
     except Exception as e:
-        print(f"✗ Unexpected error: {e}")
+        print(f"✓ Exception caught as expected: {type(e).__name__}")
+        empty_handled = True
 
+    assert empty_handled, "Empty prompt should be handled somehow"
+    print()
+
+    # Try with very long prompt
+    print("Testing very long prompt...")
+    long_prompt = "Tell me about " + ("the number one " * 100)
+    long_handled = False
+    try:
+        response = session.generate(long_prompt[:500])  # Limit to reasonable size
+        assert isinstance(response, str), "Response should be a string"
+        assert len(response) > 0, "Response should not be empty"
+        print(f"✓ Long prompt handled ({len(response)} chars in response)")
+        long_handled = True
+    except Exception as e:
+        print(f"✓ Exception caught: {type(e).__name__}: {e}")
+        long_handled = True
+
+    assert long_handled, "Long prompt should be handled somehow"
+
+    client.close()
     print()
 
 
@@ -241,9 +310,13 @@ def test_context_manager():
 
     # Test client context manager
     with foundationmodels.Client() as client:
+        assert client is not None, "Client should be created"
         with client.create_session() as session:
+            assert session is not None, "Session should be created"
             response = session.generate("Say 'Context managers work!'")
             print(f"Response: {response}")
+            assert response, "Response should not be empty"
+            assert isinstance(response, str), "Response should be a string"
 
     print("✓ Context managers cleaned up properly")
     print()

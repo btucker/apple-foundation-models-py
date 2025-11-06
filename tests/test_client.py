@@ -46,9 +46,10 @@ class TestClientInfo:
         """Test supported languages returns a list."""
         languages = client.get_supported_languages()
         assert isinstance(languages, list)
-        # May be empty if not available
+        assert len(languages) > 0, "Should support at least one language"
         for lang in languages:
             assert isinstance(lang, str)
+            assert len(lang) > 0, "Language code should not be empty"
 
 
 class TestClientLifecycle:
@@ -66,8 +67,9 @@ class TestClientLifecycle:
         client = foundationmodels.Client()
         version = client.get_version()
         assert isinstance(version, str)
+        assert len(version) > 0
         client.close()
-        # Should not raise
+        # Close should complete without error
 
     def test_multiple_clients(self):
         """Test multiple clients can be created."""
@@ -77,7 +79,11 @@ class TestClientLifecycle:
         v1 = client1.get_version()
         v2 = client2.get_version()
 
-        assert v1 == v2
+        assert isinstance(v1, str)
+        assert isinstance(v2, str)
+        assert len(v1) > 0
+        assert len(v2) > 0
+        assert v1 == v2, "Both clients should report same version"
 
         client1.close()
         client2.close()
@@ -127,5 +133,14 @@ class TestStats:
 
     def test_reset_stats(self, client):
         """Test resetting statistics."""
+        # Get initial stats
+        initial_stats = client.get_stats()
+
+        # Reset stats
         client.reset_stats()
-        # Should not raise
+
+        # Get stats after reset
+        reset_stats = client.get_stats()
+        assert isinstance(reset_stats, dict)
+        # All counters should be 0 or minimal after reset
+        assert reset_stats["total_requests"] == 0 or reset_stats["total_requests"] <= initial_stats["total_requests"]

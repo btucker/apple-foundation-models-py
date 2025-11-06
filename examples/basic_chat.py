@@ -9,7 +9,7 @@ Demonstrates:
 - Error handling
 """
 
-from libai import Client, NotAvailableError, Availability
+from foundationmodels import Client, NotAvailableError, Availability
 
 
 def main():
@@ -30,7 +30,7 @@ def main():
             # Create a session with instructions
             session = client.create_session(
                 instructions="You are a helpful assistant. Be concise.",
-                enable_guardrails=True
+                enable_guardrails=True,
             )
 
             # Have a conversation
@@ -55,8 +55,8 @@ def main():
             print("=" * 60)
             history = session.get_history()
             for msg in history:
-                role = msg['role'].capitalize()
-                content = msg['content']
+                role = msg["role"].capitalize()
+                content = msg["content"]
                 print(f"{role}: {content[:100]}...")
                 print()
 
