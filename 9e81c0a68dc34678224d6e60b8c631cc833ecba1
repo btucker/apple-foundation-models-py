@@ -1,0 +1,8 @@
+- what would 1 look like?
+- Is there a way to combine how structured outputs work with tool call
+  parameters to get around this issue?
+- how does this work with the foundationsmodels tool calling sdk?
+- take a look in
+  /Applications/Xcode.app/Contents/Developer/Documentation/DocSets/
+- yes, and then make an end-to-end test that shows it actually works with a few
+  different tools that use different signatures
