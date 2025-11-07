@@ -31,7 +31,9 @@ def python_type_to_json_schema(python_type: Any) -> Dict[str, Any]:
     origin = get_origin(python_type)
 
     # Handle Optional[X] as union of X and null
-    if origin is type(None) or (hasattr(python_type, "__origin__") and python_type.__origin__ is type(None)):
+    if origin is type(None) or (
+        hasattr(python_type, "__origin__") and python_type.__origin__ is type(None)
+    ):
         return {"type": "null"}
 
     # Handle basic types
@@ -148,7 +150,9 @@ def extract_function_schema(func: Callable) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        raise ToolCallError(f"Failed to extract schema from function '{func.__name__}': {e}")
+        raise ToolCallError(
+            f"Failed to extract schema from function '{func.__name__}': {e}"
+        )
 
 
 def tool(

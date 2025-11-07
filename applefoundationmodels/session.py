@@ -6,7 +6,16 @@ Provides session management, text generation, and async streaming support.
 
 import asyncio
 import json
-from typing import Optional, Dict, Any, AsyncIterator, Callable, Union, TYPE_CHECKING, List
+from typing import (
+    Optional,
+    Dict,
+    Any,
+    AsyncIterator,
+    Callable,
+    Union,
+    TYPE_CHECKING,
+    List,
+)
 from queue import Queue, Empty
 import threading
 
