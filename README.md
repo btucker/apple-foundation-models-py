@@ -1,10 +1,11 @@
-# apple-foundation-models-py
+# apple-foundation-models
 
 Python bindings for Apple's FoundationModels framework - Direct access to on-device Apple Intelligence.
 
 ## Features
 
 - **High-level Pythonic API**: Context managers, async/await, type hints
+- **Structured Outputs**: JSON Schema and Pydantic model support
 - **Async Streaming**: Native `async for` support for streaming responses
 - **Type Safety**: Full type annotations with mypy support
 - **Memory Safe**: Automatic resource cleanup, no manual memory management
@@ -22,6 +23,13 @@ Python bindings for Apple's FoundationModels framework - Direct access to on-dev
 
 ```bash
 pip install apple-foundation-models
+```
+
+**Optional dependencies:**
+
+```bash
+# For Pydantic model support in structured outputs
+pip install apple-foundation-models[pydantic]
 ```
 
 ### From Source
@@ -117,7 +125,36 @@ with Client() as client:
         schema=schema
     )
 
-    print(result['object'])  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
+    print(result)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
+```
+
+#### Using Pydantic Models
+
+You can also use Pydantic models for structured outputs (requires `pip install pydantic>=2.0`):
+
+```python
+from applefoundationmodels import Client
+from pydantic import BaseModel
+
+class Person(BaseModel):
+    name: str
+    age: int
+    city: str
+
+with Client() as client:
+    session = client.create_session()
+
+    # Pass Pydantic model directly - no need for JSON schema!
+    result = session.generate_structured(
+        "Extract person info: Alice is 28 and lives in Paris",
+        schema=Person
+    )
+
+    print(result)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
+
+    # Parse directly into a Pydantic model for validation
+    person = Person(**result)
+    print(person.name, person.age, person.city)  # Alice 28 Paris
 ```
 
 ### Generation Parameters

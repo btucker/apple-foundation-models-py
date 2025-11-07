@@ -24,7 +24,7 @@ class TemperaturePreset:
     """
 
     DETERMINISTIC = 0.1  # Very low randomness, highly consistent
-    FACTUAL = 0.3        # Low randomness, good for factual responses
-    BALANCED = 0.7       # Balanced creativity and consistency
-    CREATIVE = 1.0       # More creative responses
+    FACTUAL = 0.3  # Low randomness, good for factual responses
+    BALANCED = 0.7  # Balanced creativity and consistency
+    CREATIVE = 1.0  # More creative responses
     VERY_CREATIVE = 1.5  # High creativity and variety

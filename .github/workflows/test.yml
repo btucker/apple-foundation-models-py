@@ -1,0 +1,105 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  test:
+    name: Run tests on macOS
+    runs-on: macos-26
+
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Check macOS version
+        run: |
+          echo "macOS version:"
+          sw_vers
+          echo "Architecture:"
+          uname -m
+
+      - name: Install dependencies and build extensions
+        run: |
+          uv sync --extra dev
+
+      - name: Check Apple Intelligence availability
+        run: |
+          uv run python -c "
+          import applefoundationmodels as afm
+          status = afm.Client.check_availability()
+          reason = afm.Client.get_availability_reason()
+          print(f'Availability Status: {status}')
+          print(f'Reason: {reason}')
+          print(f'Available: {status == afm.Availability.AVAILABLE}')
+          "
+        continue-on-error: true
+
+      - name: Run tests
+        run: |
+          # Tests will auto-skip if Apple Intelligence is unavailable
+          uv run pytest tests/ -v --tb=short -ra
+
+      - name: Run tests with coverage (Python 3.11 only)
+        if: matrix.python-version == '3.11'
+        run: |
+          uv run pytest tests/ --cov=applefoundationmodels --cov-report=xml --cov-report=term
+
+      - name: Upload coverage reports
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
+    name: Lint and format check
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --extra dev
+
+      - name: Check formatting with black
+        run: |
+          uv run black --check applefoundationmodels/ tests/
+
+      - name: Type check with mypy
+        run: |
+          uv run mypy applefoundationmodels/
+        continue-on-error: true

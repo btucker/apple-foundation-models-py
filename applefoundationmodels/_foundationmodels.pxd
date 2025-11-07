@@ -58,6 +58,12 @@ cdef extern from "../applefoundationmodels/swift/foundation_models.h":
                                     int32_t max_tokens,
                                     ai_stream_callback_t callback) nogil
 
+    # Structured generation
+    char *apple_ai_generate_structured(const char *prompt,
+                                       const char *schema_json,
+                                       double temperature,
+                                       int32_t max_tokens) nogil
+
     # History management
     char *apple_ai_get_history() nogil
     void apple_ai_clear_history() nogil

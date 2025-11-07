@@ -40,6 +40,12 @@ int32_t apple_ai_generate_stream(const char *prompt,
                                 int32_t max_tokens,
                                 ai_stream_callback_t callback);
 
+// Structured generation
+char *apple_ai_generate_structured(const char *prompt,
+                                   const char *schema_json,
+                                   double temperature,
+                                   int32_t max_tokens);
+
 // History management
 char *apple_ai_get_history(void);
 void apple_ai_clear_history(void);
