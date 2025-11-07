@@ -14,7 +14,7 @@ Python bindings for Apple's FoundationModels framework - Direct access to on-dev
 ## Requirements
 
 - macOS 26.0+ (macOS Sequoia or later)
-- Python 3.8 or higher
+- Python 3.9 or higher
 - Apple Intelligence enabled on your device
 
 ## Installation
@@ -47,7 +47,7 @@ pip install -e .
 
 - macOS 26.0+ (Sequoia) with Apple Intelligence enabled
 - Xcode command line tools (`xcode-select --install`)
-- Python 3.8 or higher
+- Python 3.9 or higher
 
 **Note:** The Swift dylib is built automatically during installation.
 
@@ -320,17 +320,34 @@ See the `examples/` directory for complete working examples:
 
 ### Building from Source
 
+This project uses [uv](https://docs.astral.sh/uv/) for fast, reliable builds and dependency management:
+
 ```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Install development dependencies
-pip install -e ".[dev]"
+uv sync --extra dev
 
 # Run tests
-pytest
+uv run pytest
 
 # Type checking
-mypy applefoundationmodels
+uv run mypy applefoundationmodels
 
 # Format code
+uv run black applefoundationmodels examples
+
+# Build wheels
+uv build --wheel
+```
+
+You can also use pip if preferred:
+
+```bash
+pip install -e ".[dev]"
+pytest
+mypy applefoundationmodels
 black applefoundationmodels examples
 ```
 

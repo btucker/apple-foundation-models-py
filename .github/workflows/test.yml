@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
       fail-fast: false
 
     steps:
@@ -38,13 +38,20 @@ jobs:
           echo "Architecture:"
           uname -m
 
-      - name: Install dependencies and build extensions
+      - name: Build wheel
         run: |
-          uv sync --extra dev
+          uv build --wheel
+
+      - name: Install wheel and test dependencies
+        run: |
+          uv venv .test-venv
+          source .test-venv/bin/activate
+          uv pip install dist/*.whl pytest pytest-asyncio pytest-cov
 
       - name: Check Apple Intelligence availability
         run: |
-          uv run python -c "
+          source .test-venv/bin/activate
+          python -c "
           import applefoundationmodels as afm
           status = afm.Client.check_availability()
           reason = afm.Client.get_availability_reason()
@@ -54,15 +61,19 @@ jobs:
           "
         continue-on-error: true
 
-      - name: Run tests
+      - name: Run tests from installed wheel
         run: |
-          # Tests will auto-skip if Apple Intelligence is unavailable
-          uv run pytest tests/ -v --tb=short -ra
+          source .test-venv/bin/activate
+          cd /tmp
+          pytest ${{ github.workspace }}/tests/ -v --tb=short -ra
 
       - name: Run tests with coverage (Python 3.11 only)
         if: matrix.python-version == '3.11'
         run: |
-          uv run pytest tests/ --cov=applefoundationmodels --cov-report=xml --cov-report=term
+          source .test-venv/bin/activate
+          cd /tmp
+          pytest ${{ github.workspace }}/tests/ --cov=applefoundationmodels --cov-report=xml --cov-report=term
+          cp coverage.xml ${{ github.workspace }}/
 
       - name: Upload coverage reports
         if: matrix.python-version == '3.11'

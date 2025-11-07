@@ -1,27 +1,16 @@
-# Include all necessary files in source distribution
-
-# Swift source files
-include applefoundationmodels/swift/*.swift
-include applefoundationmodels/swift/*.h
-
-# Dynamic library
-include lib/*.dylib
-include lib/*.swiftmodule
-
-# Cython source files
-include applefoundationmodels/*.pyx
-include applefoundationmodels/*.pxd
-
-# Type stub marker
-include applefoundationmodels/py.typed
+# This file is for sdist builds only (not used for wheels)
+# Wheels use pyproject.toml [tool.setuptools.package-data] instead
 
 # Documentation
 include README.md
 include LICENSE
 
-# Exclude unnecessary files
+# Exclude build artifacts and source files from wheels
 global-exclude *.pyc
 global-exclude __pycache__
 global-exclude *.so
 global-exclude .DS_Store
 global-exclude *.a
+global-exclude *.swift
+global-exclude *.h
+global-exclude lib/*
