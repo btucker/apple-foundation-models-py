@@ -102,10 +102,13 @@ jobs:
           echo "Verifying each wheel contains dylib:"
           for wheel in dist/*.whl; do
             echo "Checking $wheel:"
+            ls -lh "$wheel"
             if unzip -l "$wheel" | grep -q "libfoundation_models.dylib"; then
               echo "  ✓ dylib present"
             else
-              echo "  ✗ ERROR: dylib missing!"
+              echo "  ✗ ERROR: dylib missing in $wheel!"
+              echo "Wheel contents:"
+              unzip -l "$wheel"
               exit 1
             fi
           done
