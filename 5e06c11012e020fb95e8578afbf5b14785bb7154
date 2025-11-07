@@ -1,0 +1,1 @@
+- In tests/test_tools.py around lines 169 to 184, the operations dict only
