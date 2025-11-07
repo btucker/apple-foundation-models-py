@@ -38,18 +38,24 @@ jobs:
           echo "Python version:"
           python --version
 
-      - name: Install build dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build wheel setuptools Cython>=3.0.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
       - name: Build wheel
-        env:
-          MACOSX_DEPLOYMENT_TARGET: "11.0"
-          ARCHFLAGS: "-arch arm64"
-          _PYTHON_HOST_PLATFORM: "macosx-11.0-arm64"
         run: |
-          python -m build --wheel
+          uv build --wheel
+
+      - name: Test wheel installation
+        run: |
+          # Create a test environment and install the wheel
+          uv venv .test-venv
+          source .test-venv/bin/activate
+          uv pip install dist/*.whl
+          python -c "import applefoundationmodels; print(f'Version: {applefoundationmodels.__version__}')"
+          deactivate
+          rm -rf .test-venv
 
       - name: Verify wheel contents
         run: |
