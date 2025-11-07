@@ -53,8 +53,22 @@ public typealias ToolCallback = @convention(c) (
     Int32  // buffer_size
 ) -> Int32
 
-/// Store tool callback globally
-private var toolCallback: ToolCallback?
+/// Store tool callback globally with thread-safe access
+private let toolCallbackLock = NSLock()
+private var _toolCallback: ToolCallback?
+
+private var toolCallback: ToolCallback? {
+    get {
+        toolCallbackLock.lock()
+        defer { toolCallbackLock.unlock() }
+        return _toolCallback
+    }
+    set {
+        toolCallbackLock.lock()
+        defer { toolCallbackLock.unlock() }
+        _toolCallback = newValue
+    }
+}
 
 /// Python tool wrapper that bridges Swift Tool protocol to Python callbacks
 @available(macOS 26.0, *)
