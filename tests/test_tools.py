@@ -171,6 +171,7 @@ class TestToolRegistration:
                 "add": x + y,
                 "subtract": x - y,
                 "multiply": x * y,
+                "times": x * y,
             }
             result = operations.get(operation, "unknown")
             return f"Result: {result}"
