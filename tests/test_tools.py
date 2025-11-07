@@ -264,6 +264,11 @@ class TestTranscript:
         entry_types = [entry.get("type") for entry in transcript]
         assert "instructions" in entry_types
         assert "prompt" in entry_types
+        # Verify tool_call and tool_output entries are present
+        assert "tool_call" in entry_types, "transcript should contain tool_call entries"
+        assert (
+            "tool_output" in entry_types
+        ), "transcript should contain tool_output entries"
 
     def test_transcript_structure(self, session):
         """Test that transcript entries have expected structure."""
@@ -278,10 +283,62 @@ class TestTranscript:
         for entry in transcript:
             assert "type" in entry
             # Each entry type should have appropriate fields
-            if entry["type"] == "tool_calls":
-                assert "tool_calls" in entry
+            if entry["type"] == "tool_call":
+                # Individual tool call entries
+                assert "tool_id" in entry
+                assert "tool_name" in entry
+                assert "arguments" in entry
+            elif entry["type"] == "tool_output":
+                # Tool output entries
+                assert "tool_id" in entry
+                assert "content" in entry
             elif entry["type"] in ("prompt", "response", "instructions"):
                 assert "content" in entry
+
+    def test_transcript_tool_call_shape(self, session):
+        """Test exact shape and content of tool_call and tool_output entries."""
+
+        @session.tool(description="Calculate sum")
+        def calculate_sum(a: int, b: int) -> str:
+            return f"Result: {a + b}"
+
+        session.generate("What is 5 plus 3?")
+
+        transcript = session.transcript
+
+        # Find tool_call entry
+        tool_calls = [e for e in transcript if e["type"] == "tool_call"]
+        assert len(tool_calls) > 0, "Should have at least one tool_call entry"
+
+        tool_call = tool_calls[0]
+        # Validate required fields
+        assert "tool_id" in tool_call, "tool_call must have tool_id"
+        assert "tool_name" in tool_call, "tool_call must have tool_name"
+        assert "arguments" in tool_call, "tool_call must have arguments"
+
+        # Validate tool_name is correct
+        assert tool_call["tool_name"] == "calculate_sum"
+
+        # Validate arguments is a JSON string
+        import json
+
+        args = json.loads(tool_call["arguments"])
+        assert isinstance(args, dict), "arguments should be a JSON object"
+
+        # Find tool_output entry
+        tool_outputs = [e for e in transcript if e["type"] == "tool_output"]
+        assert len(tool_outputs) > 0, "Should have at least one tool_output entry"
+
+        tool_output = tool_outputs[0]
+        # Validate required fields
+        assert "tool_id" in tool_output, "tool_output must have tool_id"
+        assert "content" in tool_output, "tool_output must have content"
+
+        # Validate content is not empty
+        assert tool_output["content"], "tool_output content should not be empty"
+        assert (
+            "Result:" in tool_output["content"]
+        ), "tool_output should contain actual result"
 
 
 @pytest.mark.skipif(not Client.is_ready(), reason="Apple Intelligence not available")

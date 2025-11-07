@@ -591,21 +591,37 @@ public func appleAIGetTranscript() -> UnsafeMutablePointer<CChar>? {
                         entryDict["content"] = String(describing: text) as NSString
 
                     case .toolCalls(let toolCalls):
-                        entryDict["type"] = "tool_calls" as NSString
-                        // Convert tool calls to JSON array
-                        var callsArray: [[String: Any]] = []
+                        // Create individual entries for each tool call
                         for call in toolCalls {
-                            callsArray.append([
-                                "id": String(describing: call.id) as NSString
-                            ])
+                            var callDict: [String: Any] = [:]
+                            callDict["type"] = "tool_call" as NSString
+                            callDict["tool_id"] = String(describing: call.id) as NSString
+                            callDict["tool_name"] = call.toolName as NSString
+                            // Serialize arguments as JSON string
+                            callDict["arguments"] = call.arguments.jsonString as NSString
+                            entries.append(callDict as NSDictionary)
                         }
-                        entryDict["tool_calls"] = callsArray as NSArray
+                        // Skip adding entryDict since we added individual entries
+                        continue
 
                     case .toolOutput(let output):
                         entryDict["type"] = "tool_output" as NSString
                         entryDict["tool_id"] = String(describing: output.id) as NSString
-                        // Note: Additional properties may be available in final API
-                        entryDict["content"] = "" as NSString
+
+                        // Extract content from segments
+                        var contentParts: [String] = []
+                        for segment in output.segments {
+                            switch segment {
+                            case .text(let textSegment):
+                                contentParts.append(textSegment.content)
+                            case .structure(let structuredSegment):
+                                // For structured segments, use the JSON representation
+                                contentParts.append(structuredSegment.content.jsonString)
+                            @unknown default:
+                                break
+                            }
+                        }
+                        entryDict["content"] = contentParts.joined() as NSString
 
                     @unknown default:
                         entryDict["type"] = "unknown" as NSString
