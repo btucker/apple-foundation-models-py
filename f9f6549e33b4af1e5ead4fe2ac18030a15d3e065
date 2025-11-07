@@ -1,0 +1,2 @@
+- I don't think we need @TOOL_CALLING.md & it's out-of-date anyway. make sure
+  all the docs are covered by what's in @README.md
