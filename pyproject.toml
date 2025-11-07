@@ -51,7 +51,7 @@ packages = ["applefoundationmodels"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-applefoundationmodels = ["py.typed", "*.pxd", "*.dylib"]
+applefoundationmodels = ["py.typed", "*.pxd", "*.dylib", "swift/*.swift", "swift/*.h"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -44,6 +44,9 @@ jobs:
           pip install build wheel setuptools Cython>=3.0.0
 
       - name: Build wheel
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "26.0"
+          ARCHFLAGS: "-arch arm64"
         run: |
           python -m build --wheel
 
