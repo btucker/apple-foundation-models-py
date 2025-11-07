@@ -45,7 +45,9 @@ class TestSessionGeneration:
 
         # Generate with higher token limit on same prompt
         response_long = session.generate(
-            "Write a long story about space exploration", max_tokens=200, temperature=0.5
+            "Write a long story about space exploration",
+            max_tokens=200,
+            temperature=0.5,
         )
         assert_valid_response(response_long)
 
