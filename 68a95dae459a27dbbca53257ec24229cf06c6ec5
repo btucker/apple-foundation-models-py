@@ -1,0 +1,3 @@
+- actually, before you remove it, can you confirm that the FoundationModels SDK
+  doesn't support it?
+- it looks like it should be maximumResponseTokens
