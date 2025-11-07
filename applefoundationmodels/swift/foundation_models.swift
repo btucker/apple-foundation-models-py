@@ -319,7 +319,9 @@ private func convertJSONSchemaToDynamic(_ schema: [String: Any], name: String = 
 
         for (propName, propSchema) in properties {
             guard let propDynamicSchema = convertJSONSchemaToDynamic(propSchema, name: propName) else {
-                continue
+                // Fail fast if property conversion fails - don't produce incomplete schemas
+                print("ERROR: Failed to convert property '\(propName)' in schema '\(name)'")
+                return nil
             }
 
             let description = propSchema["description"] as? String
@@ -341,8 +343,9 @@ private func convertJSONSchemaToDynamic(_ schema: [String: Any], name: String = 
     case "array":
         guard let items = schema["items"] as? [String: Any],
               let itemSchema = convertJSONSchemaToDynamic(items, name: "\(name)Item") else {
-            // Fallback to string if items not properly specified
-            return DynamicGenerationSchema(type: String.self)
+            // Fail fast - don't silently fall back to String type for malformed arrays
+            print("ERROR: Array schema missing or invalid 'items' specification for '\(name)'")
+            return nil
         }
 
         // Extract min/max items if specified
@@ -472,7 +475,7 @@ public func appleAIGenerateStructured(
 
                 // Extract JSON from GeneratedContent
                 let jsonObject = try extractJSON(from: response.content)
-                let jsonData = try JSONSerialization.data(withJSONObject: ["object": jsonObject])
+                let jsonData = try JSONSerialization.data(withJSONObject: jsonObject)
                 if let jsonString = String(data: jsonData, encoding: .utf8) {
                     result = jsonString
                 } else {

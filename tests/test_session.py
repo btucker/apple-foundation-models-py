@@ -163,15 +163,10 @@ class TestStructuredOutput:
 
         # Verify response structure
         assert isinstance(result, dict), "Result should be a dictionary"
-        assert "object" in result, "Result should have 'object' key"
-
-        # Verify the structured data
-        data = result["object"]
-        assert isinstance(data, dict), "Object should be a dictionary"
-        assert "name" in data, "Object should have 'name' field"
-        assert "age" in data, "Object should have 'age' field"
-        assert isinstance(data["name"], str), "Name should be a string"
-        assert isinstance(data["age"], int), "Age should be an integer"
+        assert "name" in result, "Result should have 'name' field"
+        assert "age" in result, "Result should have 'age' field"
+        assert isinstance(result["name"], str), "Name should be a string"
+        assert isinstance(result["age"], int), "Age should be an integer"
 
     def test_generate_structured_pydantic(self, session):
         """Test structured output with Pydantic model."""
@@ -190,12 +185,12 @@ class TestStructuredOutput:
 
         # Verify response structure
         assert isinstance(result, dict), "Result should be a dictionary"
-        assert "object" in result, "Result should have 'object' key"
+        assert "name" in result, "Result should have 'name' field"
+        assert "age" in result, "Result should have 'age' field"
+        assert isinstance(result["name"], str), "Name should be a string"
+        assert isinstance(result["age"], int), "Age should be an integer"
 
-        # Verify the structured data
-        data = result["object"]
-        assert isinstance(data, dict), "Object should be a dictionary"
-        assert "name" in data, "Object should have 'name' field"
-        assert "age" in data, "Object should have 'age' field"
-        assert isinstance(data["name"], str), "Name should be a string"
-        assert isinstance(data["age"], int), "Age should be an integer"
+        # Should be able to parse directly into Pydantic model
+        person = Person(**result)
+        assert person.name == result["name"]
+        assert person.age == result["age"]

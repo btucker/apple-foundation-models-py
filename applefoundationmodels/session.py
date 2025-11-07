@@ -126,7 +126,7 @@ class Session(ContextManagedResource):
             max_tokens: Maximum tokens to generate (default: DEFAULT_MAX_TOKENS)
 
         Returns:
-            Dictionary with 'object' key containing parsed JSON
+            Dictionary containing the parsed JSON matching the schema
 
         Raises:
             RuntimeError: If session is closed
@@ -148,7 +148,7 @@ class Session(ContextManagedResource):
             ...     "Extract: Alice is 28",
             ...     schema=schema
             ... )
-            >>> print(result['object'])
+            >>> print(result)
             {'name': 'Alice', 'age': 28}
 
         Example (Pydantic):
@@ -160,8 +160,9 @@ class Session(ContextManagedResource):
             ...     "Extract: Alice is 28",
             ...     schema=Person
             ... )
-            >>> print(result['object'])
-            {'name': 'Alice', 'age': 28}
+            >>> person = Person(**result)  # Parse directly into Pydantic model
+            >>> print(person.name, person.age)
+            Alice 28
         """
         self._check_closed()
         temp, tokens = self._normalize_generation_params(temperature, max_tokens)

@@ -125,7 +125,7 @@ with Client() as client:
         schema=schema
     )
 
-    print(result['object'])  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
+    print(result)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
 ```
 
 #### Using Pydantic Models
@@ -150,10 +150,10 @@ with Client() as client:
         schema=Person
     )
 
-    print(result['object'])  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
+    print(result)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
 
-    # Or parse it back into a Pydantic model for validation
-    person = Person(**result['object'])
+    # Parse directly into a Pydantic model for validation
+    person = Person(**result)
     print(person.name, person.age, person.city)  # Alice 28 Paris
 ```
 

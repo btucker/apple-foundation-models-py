@@ -62,7 +62,6 @@ jobs:
       - name: Run tests with coverage (Python 3.11 only)
         if: matrix.python-version == '3.11'
         run: |
-          uv pip install pytest-cov
           uv run pytest tests/ --cov=applefoundationmodels --cov-report=xml --cov-report=term
 
       - name: Upload coverage reports
@@ -102,5 +101,5 @@ jobs:
 
       - name: Type check with mypy
         run: |
-          uv run mypy applefoundationmodels/ --ignore-missing-imports
+          uv run mypy applefoundationmodels/
         continue-on-error: true

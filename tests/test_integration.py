@@ -193,21 +193,21 @@ def test_temperature_variations():
         prompt = "Complete this sentence: The sky is"
 
         # Low temperature (more deterministic)
-        print(f"Temperature 0.1: ", end="")
+        print("Temperature 0.1: ", end="")
         response1 = session.generate(prompt, temperature=0.1)
         print(response1)
         assert response1, "Response should not be empty"
         assert isinstance(response1, str), "Response should be a string"
 
         # Medium temperature
-        print(f"Temperature 0.7: ", end="")
+        print("Temperature 0.7: ", end="")
         response2 = session.generate(prompt, temperature=0.7)
         print(response2)
         assert response2, "Response should not be empty"
         assert isinstance(response2, str), "Response should be a string"
 
         # High temperature (more creative)
-        print(f"Temperature 1.5: ", end="")
+        print("Temperature 1.5: ", end="")
         response3 = session.generate(prompt, temperature=1.5)
         print(response3)
         assert response3, "Response should not be empty"
