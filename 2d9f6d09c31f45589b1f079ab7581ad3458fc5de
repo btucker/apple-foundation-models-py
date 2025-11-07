@@ -1,0 +1,2 @@
+- the github actions are both running on the PR and also on the push, I think we
+  only need the PR
