@@ -138,6 +138,9 @@ class TestToolRegistration:
         assert "category" in called
         assert called["query"] == "authentication"
         assert called["category"] == "API"
+        # Validate response is a non-empty string with expected content
+        assert isinstance(response, str), "Response should be a string"
+        assert response, "Response should not be empty"
         assert "5 documents" in response or "authentication" in response.lower()
 
     def test_tool_with_mixed_types(self, session):
