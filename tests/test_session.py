@@ -37,8 +37,24 @@ class TestSessionGeneration:
 
     def test_generate_with_max_tokens(self, session, check_availability):
         """Test generation with token limit."""
-        response = session.generate("Tell me a story", max_tokens=50, temperature=0.5)
-        assert_valid_response(response)
+        # Generate with very low token limit
+        response_short = session.generate(
+            "Write a long story about space exploration", max_tokens=20, temperature=0.5
+        )
+        assert_valid_response(response_short)
+
+        # Generate with higher token limit on same prompt
+        response_long = session.generate(
+            "Write a long story about space exploration", max_tokens=200, temperature=0.5
+        )
+        assert_valid_response(response_long)
+
+        # The longer response should be significantly longer
+        # (accounting for some variance, but should be noticeably different)
+        assert len(response_long) > len(response_short), (
+            f"Higher max_tokens should produce longer response: "
+            f"short={len(response_short)} chars, long={len(response_long)} chars"
+        )
 
 
 class TestSessionStreaming:

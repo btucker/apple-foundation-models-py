@@ -231,6 +231,12 @@ public func appleAICreateSession(
 
 // MARK: - Generation
 
+/// Generate text response
+/// - Parameters:
+///   - prompt: User prompt as C string
+///   - temperature: Sampling temperature (0.0 to 2.0)
+///   - maxTokens: Maximum tokens to generate
+/// - Returns: JSON response or error message
 @_cdecl("apple_ai_generate")
 public func appleAIGenerate(
     prompt: UnsafePointer<CChar>,
@@ -256,9 +262,9 @@ public func appleAIGenerate(
 
                 // Configure generation options
                 let options = GenerationOptions(
-                    temperature: temperature
+                    temperature: temperature,
+                    maximumResponseTokens: Int(maxTokens)
                 )
-                // Note: maxTokens not supported in GenerationOptions
 
                 // Generate response
                 let response = try await session.respond(
@@ -268,7 +274,13 @@ public func appleAIGenerate(
 
                 result = response.content
             } catch {
-                result = "{\"error\": \"\(error.localizedDescription)\"}"
+                // Use safe JSON serialization for error messages
+                if let errorJson = createErrorResponse(error.localizedDescription) {
+                    result = String(cString: errorJson)
+                    free(errorJson)
+                } else {
+                    result = "{\"error\":\"An error occurred\"}"
+                }
             }
             semaphore.signal()
         }
@@ -284,6 +296,13 @@ public func appleAIGenerate(
 // Streaming callback type
 public typealias StreamCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
 
+/// Generate streaming text response
+/// - Parameters:
+///   - prompt: User prompt as C string
+///   - temperature: Sampling temperature (0.0 to 2.0)
+///   - maxTokens: Maximum tokens to generate
+///   - callback: Callback function to receive text chunks (receives nil to signal end)
+/// - Returns: Result code (0 = success, negative = error)
 @_cdecl("apple_ai_generate_stream")
 public func appleAIGenerateStream(
     prompt: UnsafePointer<CChar>,
@@ -309,9 +328,9 @@ public func appleAIGenerateStream(
 
                 // Configure generation options
                 let options = GenerationOptions(
-                    temperature: temperature
+                    temperature: temperature,
+                    maximumResponseTokens: Int(maxTokens)
                 )
-                // Note: maxTokens not supported in GenerationOptions
 
                 // Stream response
                 let stream = try await session.streamResponse(
@@ -339,7 +358,14 @@ public func appleAIGenerateStream(
                 cb(nil)
 
             } catch {
-                cb(strdup("Error: \(error.localizedDescription)"))
+                // Use safe JSON serialization for error messages
+                let errorMessage = "Error: \(error.localizedDescription)"
+                if let errorJson = createErrorResponse(errorMessage) {
+                    cb(errorJson)
+                    // Note: callback takes ownership, will be freed by caller
+                } else {
+                    cb(strdup("{\"error\":\"An error occurred\"}"))
+                }
                 cb(nil)
                 resultCode = .errorGeneration
             }
@@ -475,6 +501,13 @@ private func extractValue(from content: GeneratedContent) throws -> Any {
     }
 }
 
+/// Generate structured output conforming to JSON Schema
+/// - Parameters:
+///   - prompt: User prompt as C string
+///   - schemaJson: JSON Schema as C string
+///   - temperature: Sampling temperature (0.0 to 2.0)
+///   - maxTokens: Maximum tokens to generate
+/// - Returns: JSON object conforming to schema, or error message
 @_cdecl("apple_ai_generate_structured")
 public func appleAIGenerateStructured(
     prompt: UnsafePointer<CChar>,
@@ -513,7 +546,8 @@ public func appleAIGenerateStructured(
 
                 // Configure generation options
                 let options = GenerationOptions(
-                    temperature: temperature
+                    temperature: temperature,
+                    maximumResponseTokens: Int(maxTokens)
                 )
 
                 // Create GenerationSchema from DynamicGenerationSchema
