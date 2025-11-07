@@ -48,10 +48,16 @@ Issues = "https://github.com/btucker/apple-foundation-models-py/issues"
 
 [tool.setuptools]
 packages = ["applefoundationmodels"]
-include-package-data = true
 
 [tool.setuptools.package-data]
-applefoundationmodels = ["py.typed", "*.pxd", "*.dylib", "swift/*.swift", "swift/*.h"]
+applefoundationmodels = [
+    "py.typed",
+    "*.pxd",
+    "*.pyx",
+    "*.dylib",
+    "swift/*.swift",
+    "swift/*.h",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
