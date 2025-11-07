@@ -1,0 +1,1252 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: 007c472b...
+**Time:** 2025-11-06 23:20:14
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Fixed and committed. **Commit**: `6839428`
+
+## Issue
+The `is_pydantic_model` function was using `isinstance(obj, type)` and `issubclass(obj, BaseModel)` checks, which failed because Pydantic uses a custom metaclass (`ModelMetaclass`). The type check wasn't reliably catching Pydantic model classes.
+
+## Solution
+Simplified the detection to use:
+```python
+if hasattr(obj, "model_json_schema"):
+    return True
+```
+
+This works reliably for both Pydantic model classes and instances, since all Pydantic v2 models have the `model_json_schema()` method.
+
+## Result
+Both structured output tests now pass:
+✅ `test_generate_structured_basic` - JSON Schema dict
+✅ `test_generate_structured_pydantic` - Pydantic model class
+
+### 👤 User
+take deep look at all the changes in this branch. are there opporunities to make the code more DRY?
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Let me analyze all the changes in this branch for DRY opportunities:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Task**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Excellent deep dive! I found **11 significant DRY opportunities** that could eliminate **~150-200 lines** of duplicated code. Here are the key findings:
+
+## 🔴 HIGH PRIORITY (High Impact, Low Complexity)
+
+### 1. **Swift Session Creation Pattern** (foundation_models.swift)
+**Duplicated 4 times** across different functions. Extract into:
+```swift
+private func getOrCreateSession() -> LanguageModelSession
+```
+**Impact**: Removes ~30 lines, makes session management consistent
+
+### 2. **Swift Error Response Formatting** (foundation_models.swift)
+**11 locations** with repeated `strdup("{\"error\": \"...\""})` pattern. Extract into:
+```swift
+private func createErrorResponse(_ message: String) -> UnsafeMutablePointer<CChar>?
+```
+**Impact**: Centralizes error formatting, easier to maintain
+
+### 3. **Tests NOT Using Existing Helpers** (test files)
+The codebase **already has** `assert_valid_response()` and `assert_valid_chunks()` helpers in `conftest.py`, but **tests aren't using them!** There are ~40-50 lines of repeated assertions like:
+```python
+assert isinstance(response, str)
+assert len(response) > 0
+```
+**Impact**: Huge - could eliminate 40-50 lines of repeated assertions
+
+## 🟡 MEDIUM PRIORITY
+
+### 4. **Pydantic Availability Check** (pydantic_compat.py)
+Extract repeated ImportError pattern into `require_pydantic()` helper
+
+### 5. **Integration Test Validation** (test_integration.py)
+Consistently use validation helpers instead of manual assertions
+
+## 🟢 NICE TO HAVE
+
+### 6. **Session State Decorator** (session.py)
+Optional: Replace repeated `self._check_closed()` with `@require_open_session` decorator
+
+### 7. **Other Minor Items**
+- GenerationOptions creation helper
+- Standardize error messages across Swift/Python boundary
+
+---
+
+## My Recommendation
+
+Focus on **items 1-3** first - they're low risk, high impact, and can be done quickly. Would you like me to implement:
+
+**A)** All 3 high-priority items?
+**B)** Just specific ones (which)?
+**C)** Skip for now and merge as-is?
+
+The branch is already in great shape - these are optimization opportunities, not blockers.
+
+### 👤 User
+let's do the 4 high-pri
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I'll continue updating test_session.py to use the assertion helpers. Let me replace all the manual response validations systematically.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me update test_integration.py to use the assertion helpers:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me run the tests to verify all the DRY refactorings work:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+---
+
+## Session: agent-ae...
+**Time:** 2025-11-07 00:21:02
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+I'll analyze the code changes in your current branch for DRY opportunities. Let me start by examining the diff and then diving into the specific files you mentioned.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+Now let me read the key files to analyze for DRY opportunities:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me examine the test files for patterns:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Let me also check the client.py and exceptions.py files:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me check the diff to see what was actually added in this branch:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+Perfect! Now I have enough context. Let me analyze the code for DRY opportunities. Let me create a comprehensive analysis report.
+
+## DRY Analysis Report: apple-foundation-models-py Feature Branch
+
+Based on my analysis of the structured outputs implementation, I've identified several concrete opportunities to reduce duplication and improve maintainability. Here are the findings:
+
+---
+
+## 1. SWIFT CODE (foundation_models.swift)
+
+### 1.1 Repeated Session Creation Pattern
+**Location**: Lines 192-196, 248-252, 455-459, 530-540
+**Severity**: HIGH
+**Description**: The pattern of getting or creating a session with optional instructions is duplicated 4 times across different functions.
+
+**Current Code** (repeated in `appleAIGenerate`, `appleAIGenerateStream`, `appleAIGenerateStructured`, `appleAIClearHistory`):
+```swift
+let session = currentSession ?? LanguageModelSession(
+    model: SystemLanguageModel.default
+)
+currentSession = session
+```
+
+**Refactoring Suggestion**:
+```swift
+@available(macOS 26.0, *)
+private func getOrCreateSession() -> LanguageModelSession {
+    if let session = currentSession {
+        return session
+    }
+
+    let session: LanguageModelSession
+    if let instructions = sessionInstructions {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default,
+            instructions: { instructions }
+        )
+    } else {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default
+        )
+    }
+    currentSession = session
+    return session
+}
+```
+
+**Usage**:
+```swift
+// In appleAIGenerate, appleAIGenerateStream, appleAIGenerateStructured:
+let session = getOrCreateSession()
+```
+
+**Estimated Complexity**: LOW
+**Impact**: Removes ~30 lines of duplicated code, makes session creation consistent
+
+---
+
+### 1.2 Repeated Error Response Pattern
+**Location**: Lines 179, 212, 222, 286-287, 298-299, 430, 441, 446, 482, 485, 495
+**Severity**: MEDIUM
+**Description**: Error responses are formatted as JSON strings using `strdup` repeatedly with similar patterns.
+
+**Current Code** (various locations):
+```swift
+return strdup("{\"error\": \"Not initialized\"}")
+return strdup("{\"error\": \"FoundationModels not available\"}")
+return strdup("{\"error\": \"Invalid schema JSON\"}")
+return strdup("{\"error\": \"\(error.localizedDescription)\"}")
+```
+
+**Refactoring Suggestion**:
+```swift
+private func createErrorResponse(_ message: String) -> UnsafeMutablePointer<CChar>? {
+    let errorJson = "{\"error\": \"\(message)\"}"
+    return strdup(errorJson)
+}
+```
+
+**Usage**:
+```swift
+guard isInitialized else {
+    return createErrorResponse("Not initialized")
+}
+
+// In catch blocks:
+catch {
+    return createErrorResponse(error.localizedDescription)
+}
+```
+
+**Estimated Complexity**: LOW
+**Impact**: Centralizes error formatting, makes it easier to change error response structure
+
+---
+
+### 1.3 Repeated GenerationOptions Configuration
+**Location**: Lines 199-202, 255-258, 462-464
+**Severity**: LOW
+**Description**: Creation of `GenerationOptions` with temperature is repeated across all generation functions.
+
+**Current Code**:
+```swift
+let options = GenerationOptions(
+    temperature: temperature
+)
+// Note: maxTokens not supported in GenerationOptions
+```
+
+**Refactoring Suggestion**:
+```swift
+@available(macOS 26.0, *)
+private func createGenerationOptions(temperature: Double, maxTokens: Int32) -> GenerationOptions {
+    // Note: maxTokens not currently supported by GenerationOptions
+    return GenerationOptions(temperature: temperature)
+}
+```
+
+**Estimated Complexity**: LOW
+**Impact**: Minimal, but provides single point to add maxTokens support when available
+
+---
+
+### 1.4 Repeated Availability Check Pattern
+**Location**: Lines 50-64, 79-100, 106-119
+**Severity**: MEDIUM
+**Description**: The pattern of checking `#if canImport(FoundationModels)` and `#available(macOS 26.0, *)` is repeated throughout.
+
+**Note**: This is somewhat necessary due to Swift's compilation model, but could be centralized for runtime checks.
+
+**Refactoring Suggestion**:
+```swift
+@available(macOS 26.0, *)
+private func checkFoundationModelsAvailable() -> Bool {
+    #if canImport(FoundationModels)
+    return true
+    #else
+    return false
+    #endif
+}
+
+@available(macOS 26.0, *)
+private func getSystemModel() -> SystemLanguageModel? {
+    #if canImport(FoundationModels)
+    return SystemLanguageModel.default
+    #else
+    return nil
+    #endif
+}
+```
+
+**Estimated Complexity**: MEDIUM
+**Impact**: Limited due to Swift compiler requirements, but clarifies intent
+
+---
+
+### 1.5 Duplicate Session Creation Logic in appleAIClearHistory
+**Location**: Lines 530-541
+**Severity**: HIGH
+**Description**: The session creation logic in `appleAIClearHistory` duplicates the conditional logic from `appleAICreateSession` (lines 150-161).
+
+**Current Code**:
+```swift
+if let instructions = sessionInstructions {
+    currentSession = LanguageModelSession(
+        model: SystemLanguageModel.default,
+        instructions: { instructions }
+    )
+} else {
+    currentSession = LanguageModelSession(
+        model: SystemLanguageModel.default
+    )
+}
+```
+
+**Refactoring Suggestion**: Use the `getOrCreateSession()` helper suggested in 1.1, but with a `forceNew` parameter:
+```swift
+@available(macOS 26.0, *)
+private func createNewSession() -> LanguageModelSession {
+    if let instructions = sessionInstructions {
+        return LanguageModelSession(
+            model: SystemLanguageModel.default,
+            instructions: { instructions }
+        )
+    } else {
+        return LanguageModelSession(
+            model: SystemLanguageModel.default
+        )
+    }
+}
+
+@_cdecl("apple_ai_clear_history")
+public func appleAIClearHistory() {
+    #if canImport(FoundationModels)
+    if #available(macOS 26.0, *) {
+        currentSession = createNewSession()
+    }
+    #endif
+}
+```
+
+**Estimated Complexity**: LOW
+**Impact**: Eliminates 12 lines of duplication
+
+---
+
+### 1.6 extractValue Function Recursion - Structure Case Duplication
+**Location**: Lines 405-410 vs 380-392
+**Severity**: LOW
+**Description**: The `.structure` case in `extractValue` duplicates the logic of `extractJSON`.
+
+**Current Code**:
+```swift
+// In extractJSON:
+for (key, value) in properties {
+    result[key] = try extractValue(from: value)
+}
+
+// In extractValue .structure case:
+for (key, value) in properties {
+    result[key] = try extractValue(from: value)
+}
+```
+
+**Refactoring Suggestion**:
+```swift
+@available(macOS 26.0, *)
+private func extractJSON(from content: GeneratedContent) throws -> [String: Any] {
+    guard case let .structure(properties, _) = content.kind else {
+        throw NSError(domain: "FoundationModels", code: -1, userInfo: [NSLocalizedDescriptionKey: "Expected structure content"])
+    }
+    return try extractStructureProperties(properties)
+}
+
+@available(macOS 26.0, *)
+private func extractStructureProperties(_ properties: [String: GeneratedContent]) throws -> [String: Any] {
+    var result: [String: Any] = [:]
+    for (key, value) in properties {
+        result[key] = try extractValue(from: value)
+    }
+    return result
+}
+
+@available(macOS 26.0, *)
+private func extractValue(from content: GeneratedContent) throws -> Any {
+    switch content.kind {
+    case .string(let str):
+        return str
+    case .number(let num):
+        return num
+    case .bool(let bool):
+        return bool
+    case .null:
+        return NSNull()
+    case .structure(let properties, _):
+        return try extractStructureProperties(properties)
+    case .array(let items):
+        var result: [Any] = []
+        for item in items {
+            result.append(try extractValue(from: item))
+        }
+        return result
+    @unknown default:
+        throw NSError(domain: "FoundationModels", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unsupported GeneratedContent kind"])
+    }
+}
+```
+
+**Estimated Complexity**: LOW
+**Impact**: Minor, but improves code organization
+
+---
+
+## 2. PYTHON CODE (session.py)
+
+### 2.1 Repeated Parameter Normalization Pattern
+**Location**: Lines 109, 168, 201
+**Severity**: LOW
+**Description**: The same pattern of calling `_normalize_generation_params` appears in all generation methods.
+
+**Current Code**:
+```python
+temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+```
+
+**Observation**: This is actually appropriate use of DRY principles - the helper function exists and is used consistently. **NO ACTION NEEDED**.
+
+---
+
+### 2.2 Repeated Closed State Check
+**Location**: Lines 108, 167, 200, 251, 260, 273
+**Severity**: LOW
+**Description**: `self._check_closed()` is called at the start of every public method.
+
+**Observation**: This is a standard pattern for resource management and should be kept as-is. Could be replaced with a decorator, but that adds complexity. **NO ACTION NEEDED** unless you want a decorator pattern.
+
+**Optional Decorator Suggestion** (MEDIUM complexity):
+```python
+def require_open_session(func):
+    """Decorator to check if session is closed before method execution."""
+    def wrapper(self, *args, **kwargs):
+        self._check_closed()
+        return func(self, *args, **kwargs)
+    return wrapper
+
+class Session(ContextManagedResource):
+    @require_open_session
+    def generate(self, prompt: str, ...):
+        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+        return _foundationmodels.generate(prompt, temp, tokens)
+```
+
+---
+
+## 3. PYTHON CODE (pydantic_compat.py)
+
+### 3.1 Repeated PYDANTIC_AVAILABLE Check
+**Location**: Lines 45-48, 95-96
+**Severity**: LOW
+**Description**: The pattern of checking if Pydantic is available and raising ImportError is similar.
+
+**Current Code**:
+```python
+if not PYDANTIC_AVAILABLE:
+    raise ImportError(
+        "Pydantic is not installed. Install it with: pip install pydantic>=2.0"
+    )
+```
+
+**Refactoring Suggestion**:
+```python
+def require_pydantic() -> None:
+    """Raise ImportError if Pydantic is not available."""
+    if not PYDANTIC_AVAILABLE:
+        raise ImportError(
+            "Pydantic is not installed. Install it with: pip install pydantic>=2.0"
+        )
+
+def model_to_schema(model: "BaseModel") -> Dict[str, Any]:
+    require_pydantic()
+
+    if not hasattr(model, "model_json_schema"):
+        raise ValueError(
+            f"Expected Pydantic BaseModel, got {type(model).__name__}. "
+            "Make sure your model inherits from pydantic.BaseModel"
+        )
+    # ... rest of function
+```
+
+**Estimated Complexity**: LOW
+**Impact**: Minor, only 2 occurrences
+
+---
+
+## 4. TEST CODE
+
+### 4.1 Repeated Assertion Patterns
+**Location**: Throughout test_session.py and test_integration.py
+**Severity**: MEDIUM
+**Description**: Similar assertion patterns are repeated across many tests.
+
+**Current Code** (appears ~20+ times):
+```python
+assert isinstance(response, str)
+assert len(response) > 0
+```
+
+**Observation**: The `conftest.py` file already has `assert_valid_response` and `assert_valid_chunks` helpers (lines 40-77), but they're **not being used** in the actual tests!
+
+**Refactoring Suggestion**: USE THE EXISTING HELPERS:
+
+```python
+# In test_session.py line 15-17:
+# BEFORE:
+response = session.generate("What is 2 + 2?", temperature=0.3)
+assert isinstance(response, str)
+assert len(response) > 0
+
+# AFTER:
+response = session.generate("What is 2 + 2?", temperature=0.3)
+assert_valid_response(response)
+```
+
+**Estimated Complexity**: LOW
+**Impact**: HIGH - Would eliminate ~40-50 lines of repeated assertions across test files
+
+---
+
+### 4.2 Repeated Test Setup Pattern
+**Location**: test_integration.py lines 72-73, 86-88, 98-99, 114-117, etc.
+**Severity**: LOW
+**Description**: The pattern of creating client and session is repeated in non-fixture tests.
+
+**Current Code**:
+```python
+with applefoundationmodels.Client() as client:
+    session = client.create_session()
+```
+
+**Observation**: The fixtures in `conftest.py` already provide `client` and `session`, but `test_integration.py` doesn't use them. **Consider refactoring integration tests to use fixtures** or creating additional fixtures for specific scenarios.
+
+**Estimated Complexity**: MEDIUM
+**Impact**: Would make tests more consistent and maintainable
+
+---
+
+### 4.3 Repeated Response Validation in test_integration.py
+**Location**: Lines 79, 89-92, 101-102, 124, 131-132, etc.
+**Severity**: MEDIUM
+**Description**: Every test manually validates response structure.
+
+**Current Code** (repeated pattern):
+```python
+assert response, "Response should not be empty"
+assert isinstance(response, str), "Response should be a string"
+assert len(response) > 0, "Response should have content"
+```
+
+**Refactoring Suggestion**: Use the `assert_valid_response` helper from conftest:
+```python
+from conftest import assert_valid_response
+
+# Instead of 3 lines:
+response = session.generate(...)
+assert_valid_response(response, message="Basic generation failed")
+```
+
+**Estimated Complexity**: LOW
+**Impact**: Would eliminate ~30+ lines across integration tests
+
+---
+
+## 5. CROSS-CUTTING PATTERNS
+
+### 5.1 Similar Error Messages
+**Location**: Swift (foundation_models.swift) and exceptions.py
+**Severity**: LOW
+**Description**: Error messages could be more consistent between Swift and Python layers.
+
+**Observation**: Currently:
+- Swift: `"Not initialized"`
+- Python: `"Library initialization failed"`
+
+**Suggestion**: Create a constants file for error messages to ensure consistency across language boundaries.
+
+**Estimated Complexity**: LOW
+**Impact**: Improves user experience with consistent error messages
+
+---
+
+## PRIORITY RECOMMENDATIONS
+
+### Must Fix (High Impact, Low Complexity):
+1. **Swift 1.1**: Extract session creation pattern into `getOrCreateSession()` helper
+2. **Swift 1.5**: Use extracted helper in `appleAIClearHistory`
+3. **Tests 4.1**: Actually USE the existing `assert_valid_response` helpers in tests
+4. **Swift 1.2**: Extract error response formatting into `createErrorResponse()`
+
+### Should Fix (Medium Impact, Low-Medium Complexity):
+5. **Tests 4.3**: Consistently use validation helpers in integration tests
+6. **Swift 1.3**: Extract GenerationOptions creation
+7. **Python 3.1**: Extract Pydantic availability check
+
+### Nice to Have (Low Impact or High Complexity):
+8. **Python 2.2**: Decorator for session state checking (optional)
+9. **Tests 4.2**: Refactor integration tests to use fixtures
+10. **Cross-cutting 5.1**: Standardize error messages
+
+---
+
+## SUMMARY
+
+**Total DRY Violations Found**: 11 significant opportunities
+**Lines of Code That Could Be Eliminated**: ~150-200 lines
+**Highest Impact**: Swift session creation pattern and test assertion helpers
+**Lowest Risk**: Error response formatting and test helpers
+
+The most valuable refactorings are in the Swift code (items 1.1, 1.2, 1.5) and making the existing test helpers actually useful (items 4.1, 4.3). These would provide immediate value with minimal risk.
+
+---
