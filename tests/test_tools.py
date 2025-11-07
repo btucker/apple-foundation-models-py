@@ -396,6 +396,20 @@ class TestToolIntegration:
             # Verify the tool was called
             assert called.get("invoked"), "Tool should have been called"
 
+            # Get the transcript to verify the actual tool output
+            transcript = session.transcript
+            tool_outputs = [e for e in transcript if e.get("type") == "tool_output"]
+            assert len(tool_outputs) > 0, "Should have at least one tool output in transcript"
+
+            # Get the actual tool output content
+            tool_output_content = tool_outputs[0]["content"]
+
             # Verify output wasn't truncated - check for both start and end markers
-            # The response should reference or contain evidence of the large data
-            assert len(response) > 100, "Response should contain content from the tool"
+            assert "START-" in tool_output_content, "Tool output should contain START marker"
+            assert "-END" in tool_output_content, "Tool output should contain END marker"
+
+            # Verify the output length is close to expected (20KB)
+            assert len(tool_output_content) >= 20480, f"Tool output should be at least 20KB, got {len(tool_output_content)} bytes"
+
+            # Verify the exact data was preserved
+            assert tool_output_content == large_data, "Tool output should exactly match the returned data"
