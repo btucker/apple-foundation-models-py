@@ -1,0 +1,37 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: 6a74371a...
+**Time:** 2025-11-07 00:53:58
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! The commit was successful. Here's what was committed:
+
+**Commit:** `b396e8e` - "fix: include libfoundation_models.dylib in wheels and build for multiple Python versions"
+
+**Files changed:**
+- `.github/workflows/publish-to-pypi.yml` - Multi-Python wheel builds with dylib verification
+- `pyproject.toml` - Added `*.dylib` to package data
+- `setup.py` - Copies dylib to package directory during build
+
+**Note:** `uv.lock` has a minor change (version number update) but I left it uncommitted. You can commit it separately if needed, or just leave it for now.
+
+The changes are now ready to push. When you create a new release, the GitHub Actions workflow will:
+1. Build wheels for Python 3.9, 3.10, 3.11, 3.12, and 3.13
+2. Verify each wheel contains `libfoundation_models.dylib`
+3. Build a source distribution
+4. Publish everything to PyPI
+
+Would you like to push this to GitHub?
+
+---
