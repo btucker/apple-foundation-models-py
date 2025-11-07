@@ -95,15 +95,10 @@ def is_pydantic_model(obj: Any) -> bool:
     if not PYDANTIC_AVAILABLE:
         return False
 
-    try:
-        # Check if it's a BaseModel class
-        if isinstance(obj, type) and issubclass(obj, BaseModel):
-            return True
-        # Check if it's a BaseModel instance
-        if isinstance(obj, BaseModel):
-            return True
-    except (TypeError, AttributeError):
-        pass
+    # Check if it has the Pydantic model_json_schema method
+    # This works for both classes and instances
+    if hasattr(obj, "model_json_schema"):
+        return True
 
     return False
 
