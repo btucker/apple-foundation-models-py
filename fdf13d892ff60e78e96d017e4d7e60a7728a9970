@@ -1,0 +1,23 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: d0666f1e...
+**Time:** 2025-11-07 01:09:13
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! I've fixed the flaky test (commit `f36b9ca`). The test is now much more reliable:
+
+**Changes made:**
+1. **Added invocation tracking** - Uses `called` dict to explicitly verify the tool was invoked
+2. **Better tool description** - "Get system diagnostic data that includes large logs" gives the model a clear purpose
+3. **More explicit prompt** - "Use the get_system_logs tool to retrieve..." directly instructs the model to call the tool
+4. **Stronger assertions**:
+   - First verifies `called["invoked"]` to ensure the tool was actually called
+   - Then checks response has substantial content
+5. **Added data markers** - `START-` and `-END` markers in the 20KB data to help detect truncation
+
+All 13 tests now pass consistently. The test reliably verifies that the dynamic buffer resizing works correctly for large tool outputs.
+
+---
