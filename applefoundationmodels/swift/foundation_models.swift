@@ -289,18 +289,32 @@ public func appleAIRegisterTools(
         // Clear existing tools
         registeredTools.removeAll()
 
-        // Create PythonToolWrapper for each tool
-        for toolDef in toolsArray {
-            guard let name = toolDef["name"] as? String,
-                  let description = toolDef["description"] as? String,
-                  let parameters = toolDef["parameters"] as? [String: Any] else {
-                continue
+        // Create PythonToolWrapper for each tool - fail fast on any error
+        for (index, toolDef) in toolsArray.enumerated() {
+            // Validate required fields
+            guard let name = toolDef["name"] as? String else {
+                print("ERROR: Tool at index \(index) missing required 'name' field")
+                registeredTools.removeAll()
+                return AIResult.errorInvalidParams.rawValue
             }
 
-            // Convert JSON Schema to DynamicGenerationSchema
+            guard let description = toolDef["description"] as? String else {
+                print("ERROR: Tool '\(name)' at index \(index) missing required 'description' field")
+                registeredTools.removeAll()
+                return AIResult.errorInvalidParams.rawValue
+            }
+
+            guard let parameters = toolDef["parameters"] as? [String: Any] else {
+                print("ERROR: Tool '\(name)' at index \(index) missing required 'parameters' field")
+                registeredTools.removeAll()
+                return AIResult.errorInvalidParams.rawValue
+            }
+
+            // Convert JSON Schema to DynamicGenerationSchema - fail fast if conversion fails
             guard let dynamicSchema = convertJSONSchemaToDynamic(parameters, name: "\(name)_params") else {
-                print("ERROR: Failed to convert schema for tool '\(name)'")
-                continue
+                print("ERROR: Failed to convert JSON schema for tool '\(name)' at index \(index)")
+                registeredTools.removeAll()
+                return AIResult.errorJSONParse.rawValue
             }
 
             let tool = PythonToolWrapper(
