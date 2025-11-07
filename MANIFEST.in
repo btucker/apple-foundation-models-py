@@ -1,16 +1,12 @@
-# This file is for sdist builds only (not used for wheels)
-# Wheels use pyproject.toml [tool.setuptools.package-data] instead
+# Controls what goes into the source distribution (.tar.gz)
+# The source distribution must contain all files needed to build the wheel
 
 # Documentation
 include README.md
 include LICENSE
 
-# Exclude build artifacts and source files from wheels
-global-exclude *.pyc
-global-exclude __pycache__
-global-exclude *.so
-global-exclude .DS_Store
-global-exclude *.a
-global-exclude *.swift
-global-exclude *.h
-global-exclude lib/*
+# Swift source needed for compilation
+include applefoundationmodels/swift/*.swift
+
+# Exclude the lib build directory if it exists
+prune lib
