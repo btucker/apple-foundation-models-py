@@ -1,0 +1,4 @@
+- I'm not sure the sdist build will work not on macos?
+- look in .github
+- we have MANIFEST.in, why do we need the sdist?
+- let's skip it
