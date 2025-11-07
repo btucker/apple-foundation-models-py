@@ -146,9 +146,29 @@ class TestSessionLifecycle:
 class TestStructuredOutput:
     """Tests for structured output generation."""
 
-    def test_generate_structured_not_implemented(self, session):
-        """Test that structured generation raises NotImplementedError."""
-        schema = {"type": "object", "properties": {"name": {"type": "string"}}}
+    def test_generate_structured_basic(self, session):
+        """Test basic structured output generation."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},
+            },
+            "required": ["name", "age"],
+        }
 
-        with pytest.raises(NotImplementedError):
-            session.generate_structured("Extract name: John", schema=schema)
+        result = session.generate_structured(
+            "Extract information: John is 30 years old", schema=schema
+        )
+
+        # Verify response structure
+        assert isinstance(result, dict), "Result should be a dictionary"
+        assert "object" in result, "Result should have 'object' key"
+
+        # Verify the structured data
+        data = result["object"]
+        assert isinstance(data, dict), "Object should be a dictionary"
+        assert "name" in data, "Object should have 'name' field"
+        assert "age" in data, "Object should have 'age' field"
+        assert isinstance(data["name"], str), "Name should be a string"
+        assert isinstance(data["age"], int), "Age should be an integer"
