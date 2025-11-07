@@ -228,8 +228,6 @@ class TestToolExecution:
 
     def test_tool_with_optional_type_annotation(self, session):
         """Test that Optional[...] type annotations are properly handled."""
-        from typing import Optional
-
         called = {}
 
         @session.tool(description="Get weather for a location")
