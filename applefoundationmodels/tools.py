@@ -6,7 +6,16 @@ and managing tool registrations.
 """
 
 import inspect
-from typing import Callable, Dict, Any, Optional, get_type_hints, get_origin, get_args, Union
+from typing import (
+    Callable,
+    Dict,
+    Any,
+    Optional,
+    get_type_hints,
+    get_origin,
+    get_args,
+    Union,
+)
 from .exceptions import ToolCallError
 
 

@@ -28,17 +28,18 @@ class ToolTestHarness:
 
         Returns the wrapped function for further inspection if needed.
         """
+
         def decorator(func: Callable) -> Callable:
             original_func = func
 
             @wraps(func)
             def wrapper(*args, **kwargs):
                 call_info = {
-                    'args': args,
-                    'kwargs': kwargs,
+                    "args": args,
+                    "kwargs": kwargs,
                 }
                 result = original_func(*args, **kwargs)
-                call_info['result'] = result
+                call_info["result"] = result
                 self.calls.append(call_info)
                 return result
 
@@ -61,15 +62,16 @@ class ToolTestHarness:
         """Assert tool was called once with specific kwargs."""
         call = self.assert_called_once()
         for key, expected_value in expected_kwargs.items():
-            assert key in call['kwargs'], f"Expected kwarg '{key}' not found"
-            assert call['kwargs'][key] == expected_value, \
-                f"Expected {key}={expected_value}, got {call['kwargs'][key]}"
+            assert key in call["kwargs"], f"Expected kwarg '{key}' not found"
+            assert (
+                call["kwargs"][key] == expected_value
+            ), f"Expected {key}={expected_value}, got {call['kwargs'][key]}"
         return call
 
     def get_call_kwargs(self) -> Dict[str, Any]:
         """Get the kwargs from the single call."""
         call = self.assert_called_once()
-        return call['kwargs']
+        return call["kwargs"]
 
 
 @pytest.fixture
@@ -97,12 +99,12 @@ class TestToolRegistration:
         @session.tool(description="Get the current time")
         def get_time() -> str:
             """Get current time."""
-            called['get_time'] = True
+            called["get_time"] = True
             return "2:30 PM"
 
         response = session.generate("What time is it?")
 
-        assert 'get_time' in called
+        assert "get_time" in called
         assert "2:30" in response or "time" in response.lower()
 
     def test_tool_with_single_string_parameter(self, session):
@@ -116,7 +118,7 @@ class TestToolRegistration:
 
         response = session.generate("What's the weather in Paris?")
 
-        harness.assert_called_with(location='Paris')
+        harness.assert_called_with(location="Paris")
         assert "72°F" in response or "sunny" in response.lower()
 
     def test_tool_with_multiple_parameters(self, session):
@@ -126,16 +128,16 @@ class TestToolRegistration:
         @session.tool(description="Search documentation")
         def search_docs(query: str, category: str) -> str:
             """Search the documentation database."""
-            called['query'] = query
-            called['category'] = category
+            called["query"] = query
+            called["category"] = category
             return f"Found 5 documents about '{query}' in {category}"
 
         response = session.generate("Search for 'authentication' in the API category")
 
-        assert 'query' in called
-        assert 'category' in called
-        assert called['query'] == 'authentication'
-        assert called['category'] == 'API'
+        assert "query" in called
+        assert "category" in called
+        assert called["query"] == "authentication"
+        assert called["category"] == "API"
 
     def test_tool_with_mixed_types(self, session):
         """Test tool with mixed parameter types (string and int)."""
@@ -150,7 +152,7 @@ class TestToolRegistration:
         response = session.generate("Show me the top 3 products")
 
         kwargs = harness.get_call_kwargs()
-        assert kwargs['count'] == 3
+        assert kwargs["count"] == 3
         assert "Item 1" in response or "top" in response.lower()
 
     def test_tool_with_optional_parameters(self, session):
@@ -160,9 +162,9 @@ class TestToolRegistration:
         @session.tool(description="Perform mathematical calculation")
         def calculate(x: int, y: int, operation: str = "add") -> str:
             """Perform a calculation."""
-            called['x'] = x
-            called['y'] = y
-            called['operation'] = operation
+            called["x"] = x
+            called["y"] = y
+            called["operation"] = operation
 
             operations = {
                 "add": x + y,
@@ -174,11 +176,11 @@ class TestToolRegistration:
 
         response = session.generate("What is 15 times 7?")
 
-        assert 'x' in called
-        assert 'y' in called
-        assert 'operation' in called
+        assert "x" in called
+        assert "y" in called
+        assert "operation" in called
         # Should use multiply operation
-        assert called['operation'] in ['multiply', 'times']
+        assert called["operation"] in ["multiply", "times"]
         assert "105" in response
 
 
@@ -191,12 +193,12 @@ class TestToolExecution:
 
         @session.tool(description="Get time")
         def get_time() -> str:
-            calls.append('get_time')
+            calls.append("get_time")
             return "2:30 PM"
 
         @session.tool(description="Get date")
         def get_date() -> str:
-            calls.append('get_date')
+            calls.append("get_date")
             return "November 7, 2024"
 
         # This might call one or both depending on the prompt
@@ -211,12 +213,12 @@ class TestToolExecution:
 
         @session.tool(description="Get status")
         def get_status() -> str:
-            called['invoked'] = True
+            called["invoked"] = True
             return "System operational"
 
         response = session.generate("What's the system status?")
         # Verify tool was called and response contains relevant content
-        assert called.get('invoked'), "Tool should have been called"
+        assert called.get("invoked"), "Tool should have been called"
         assert "operational" in response.lower() or "status" in response.lower()
 
     def test_tool_with_optional_type_annotation(self, session):
@@ -228,8 +230,8 @@ class TestToolExecution:
         @session.tool(description="Get weather for a location")
         def get_weather(location: Optional[str] = None, units: str = "celsius") -> str:
             """Get weather information."""
-            called['location'] = location
-            called['units'] = units
+            called["location"] = location
+            called["units"] = units
 
             if location is None:
                 return "Weather for current location: 20°C, cloudy"
@@ -238,8 +240,8 @@ class TestToolExecution:
         response = session.generate("What's the weather in Paris?")
 
         # Verify the tool was called with location set
-        assert 'location' in called
-        assert called['location'] == 'Paris'
+        assert "location" in called
+        assert called["location"] == "Paris"
         assert "22°" in response or "sunny" in response.lower()
 
 
@@ -259,9 +261,9 @@ class TestTranscript:
         assert len(transcript) > 0
 
         # Check that we have expected entry types
-        entry_types = [entry.get('type') for entry in transcript]
-        assert 'instructions' in entry_types
-        assert 'prompt' in entry_types
+        entry_types = [entry.get("type") for entry in transcript]
+        assert "instructions" in entry_types
+        assert "prompt" in entry_types
 
     def test_transcript_structure(self, session):
         """Test that transcript entries have expected structure."""
@@ -274,18 +276,15 @@ class TestTranscript:
 
         transcript = session.transcript
         for entry in transcript:
-            assert 'type' in entry
+            assert "type" in entry
             # Each entry type should have appropriate fields
-            if entry['type'] == 'tool_calls':
-                assert 'tool_calls' in entry
-            elif entry['type'] in ('prompt', 'response', 'instructions'):
-                assert 'content' in entry
+            if entry["type"] == "tool_calls":
+                assert "tool_calls" in entry
+            elif entry["type"] in ("prompt", "response", "instructions"):
+                assert "content" in entry
 
 
-@pytest.mark.skipif(
-    not Client.is_ready(),
-    reason="Apple Intelligence not available"
-)
+@pytest.mark.skipif(not Client.is_ready(), reason="Apple Intelligence not available")
 class TestToolIntegration:
     """Integration tests requiring Apple Intelligence."""
 
@@ -298,7 +297,7 @@ class TestToolIntegration:
 
             @session.tool(description="Calculate math expression")
             def calculate(expression: str) -> str:
-                results['called'] = True
+                results["called"] = True
                 # Simple calculator (in real code, use safe evaluation)
                 if "2 + 2" in expression:
                     return "4"
@@ -306,5 +305,5 @@ class TestToolIntegration:
 
             response = session.generate("What is 2 + 2?")
 
-            assert results.get('called') == True
+            assert results.get("called") == True
             assert "4" in response
