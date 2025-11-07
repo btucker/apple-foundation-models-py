@@ -42,6 +42,18 @@ jobs:
         run: |
           uv sync --extra dev
 
+      - name: Check Apple Intelligence availability
+        run: |
+          uv run python -c "
+          import applefoundationmodels as afm
+          status = afm.Client.check_availability()
+          reason = afm.Client.get_availability_reason()
+          print(f'Availability Status: {status}')
+          print(f'Reason: {reason}')
+          print(f'Available: {status == afm.Availability.AVAILABLE}')
+          "
+        continue-on-error: true
+
       - name: Run tests
         run: |
           # Tests will auto-skip if Apple Intelligence is unavailable
