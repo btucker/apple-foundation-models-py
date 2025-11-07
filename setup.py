@@ -8,6 +8,7 @@ import os
 import sys
 import platform
 import subprocess
+import shutil
 from pathlib import Path
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
@@ -17,10 +18,12 @@ from Cython.Build import cythonize
 # Determine paths
 REPO_ROOT = Path(__file__).parent.resolve()
 LIB_DIR = REPO_ROOT / "lib"
-SWIFT_DIR = REPO_ROOT / "applefoundationmodels" / "swift"
+PKG_DIR = REPO_ROOT / "applefoundationmodels"
+SWIFT_DIR = PKG_DIR / "swift"
 SWIFT_SRC = SWIFT_DIR / "foundation_models.swift"
 DYLIB_PATH = LIB_DIR / "libfoundation_models.dylib"
 SWIFTMODULE_PATH = LIB_DIR / "foundation_models.swiftmodule"
+PKG_DYLIB_PATH = PKG_DIR / "libfoundation_models.dylib"
 
 # Detect architecture
 ARCH = platform.machine()
@@ -99,6 +102,11 @@ class BuildSwiftThenExt(_build_ext):
 
             print(f"✓ Successfully built: {DYLIB_PATH}")
             print(f"  Size: {DYLIB_PATH.stat().st_size / 1024:.1f} KB")
+
+            # Copy dylib to package directory so it's included in wheels
+            print(f"Copying dylib to package directory: {PKG_DYLIB_PATH}")
+            shutil.copy2(DYLIB_PATH, PKG_DYLIB_PATH)
+            print(f"✓ Dylib copied to package directory")
 
         except subprocess.CalledProcessError as e:
             print(f"✗ Swift compilation failed")
