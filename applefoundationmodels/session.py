@@ -15,6 +15,7 @@ from typing import (
     Union,
     TYPE_CHECKING,
     List,
+    cast,
 )
 from queue import Queue, Empty
 import threading
@@ -379,4 +380,5 @@ class Session(ContextManagedResource):
             ...     print(f"{entry['type']}: {entry.get('content', '')}")
         """
         self._check_closed()
-        return _foundationmodels.get_transcript()
+        # Explicit cast to ensure type checkers see the correct return type
+        return cast(List[Dict[str, Any]], _foundationmodels.get_transcript())
