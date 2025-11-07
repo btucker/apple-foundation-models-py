@@ -56,8 +56,6 @@ applefoundationmodels = [
     "*.pxd",
     "*.pyx",
     "*.dylib",
-    "swift/*.swift",
-    "swift/*.h",
 ]
 
 [tool.pytest.ini_options]
