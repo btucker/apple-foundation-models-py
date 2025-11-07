@@ -1,0 +1,5 @@
+- In applefoundationmodels/swift/foundation_models.swift around lines 593 to
+  608,
+- In tests/test_tools.py around lines 307 to 310, replace the boolean equality
+- In applefoundationmodels/session.py around line 386, the return value of
+- commit the latest
