@@ -21,10 +21,9 @@ import threading
 
 from . import _foundationmodels
 from .base import ContextManagedResource
-from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
-from .types import GenerationParams
+from .types import GenerationParams, NormalizedGenerationParams
 from .pydantic_compat import normalize_schema
-from .tools import extract_function_schema
+from .tools import extract_function_schema, attach_tool_metadata
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -75,7 +74,7 @@ class Session(ContextManagedResource):
 
     def _normalize_generation_params(
         self, temperature: Optional[float], max_tokens: Optional[int]
-    ) -> tuple[float, int]:
+    ) -> NormalizedGenerationParams:
         """
         Normalize generation parameters with defaults.
 
@@ -84,11 +83,9 @@ class Session(ContextManagedResource):
             max_tokens: Optional max tokens value
 
         Returns:
-            Tuple of (temperature, max_tokens) with defaults applied
+            NormalizedGenerationParams with defaults applied
         """
-        temp = temperature if temperature is not None else DEFAULT_TEMPERATURE
-        tokens = max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS
-        return temp, tokens
+        return NormalizedGenerationParams.from_optional(temperature, max_tokens)
 
     def generate(
         self,
@@ -120,8 +117,8 @@ class Session(ContextManagedResource):
             >>> print(response)
         """
         self._check_closed()
-        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
-        return _foundationmodels.generate(prompt, temp, tokens)
+        params = self._normalize_generation_params(temperature, max_tokens)
+        return _foundationmodels.generate(prompt, params.temperature, params.max_tokens)
 
     def generate_structured(
         self,
@@ -179,12 +176,14 @@ class Session(ContextManagedResource):
             Alice 28
         """
         self._check_closed()
-        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+        params = self._normalize_generation_params(temperature, max_tokens)
 
         # Normalize schema to JSON Schema dict (handles Pydantic models)
         json_schema = normalize_schema(schema)
 
-        return _foundationmodels.generate_structured(prompt, json_schema, temp, tokens)
+        return _foundationmodels.generate_structured(
+            prompt, json_schema, params.temperature, params.max_tokens
+        )
 
     async def generate_stream(
         self,
@@ -212,7 +211,7 @@ class Session(ContextManagedResource):
             ...     print(chunk, end='', flush=True)
         """
         self._check_closed()
-        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+        params = self._normalize_generation_params(temperature, max_tokens)
 
         # Use a queue to bridge the sync callback and async iterator
         queue: Queue = Queue()
@@ -223,7 +222,9 @@ class Session(ContextManagedResource):
         # Run streaming in a background thread
         def run_stream():
             try:
-                _foundationmodels.generate_stream(prompt, callback, temp, tokens)
+                _foundationmodels.generate_stream(
+                    prompt, callback, params.temperature, params.max_tokens
+                )
             except Exception as e:
                 queue.put(e)
 
@@ -315,25 +316,13 @@ class Session(ContextManagedResource):
         """
 
         def decorator(func: Callable) -> Callable:
-            # Extract schema from function
+            # Extract schema and attach metadata using shared helper
             schema = extract_function_schema(func)
+            final_schema = attach_tool_metadata(func, schema, description, name)
 
-            # Override with provided values
-            if description is not None:
-                schema["description"] = description
-            if name is not None:
-                schema["name"] = name
-
-            # Store tool function
-            tool_name = schema["name"]
+            # Session-specific logic: store and register tool
+            tool_name = final_schema["name"]
             self._tools[tool_name] = func
-
-            # Attach metadata to function
-            func._tool_name = schema["name"]
-            func._tool_description = schema["description"]
-            func._tool_parameters = schema["parameters"]
-
-            # Register tools if not already done
             self._register_tools()
 
             return func

@@ -6,7 +6,70 @@ with various parameter signatures and types.
 """
 
 import pytest
+from typing import Callable, Dict, Any
+from functools import wraps
 from applefoundationmodels import Client
+
+
+class ToolTestHarness:
+    """Helper for testing tool calling with less boilerplate."""
+
+    def __init__(self, session):
+        self.session = session
+        self.calls = []
+
+    def register_tool(self, description: str = None):
+        """
+        Decorator to register a tool and wrap it to capture calls.
+
+        Can be used with or without description parameter:
+            @harness.register_tool()
+            @harness.register_tool(description="...")
+
+        Returns the wrapped function for further inspection if needed.
+        """
+        def decorator(func: Callable) -> Callable:
+            original_func = func
+
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                call_info = {
+                    'args': args,
+                    'kwargs': kwargs,
+                }
+                result = original_func(*args, **kwargs)
+                call_info['result'] = result
+                self.calls.append(call_info)
+                return result
+
+            # Copy function metadata for schema extraction
+            wrapper.__name__ = original_func.__name__
+            wrapper.__annotations__ = original_func.__annotations__
+            wrapper.__doc__ = original_func.__doc__
+
+            decorated = self.session.tool(description=description)(wrapper)
+            return decorated
+
+        return decorator
+
+    def assert_called_once(self) -> Dict[str, Any]:
+        """Assert tool was called exactly once and return the call info."""
+        assert len(self.calls) == 1, f"Expected 1 call, got {len(self.calls)}"
+        return self.calls[0]
+
+    def assert_called_with(self, **expected_kwargs) -> Dict[str, Any]:
+        """Assert tool was called once with specific kwargs."""
+        call = self.assert_called_once()
+        for key, expected_value in expected_kwargs.items():
+            assert key in call['kwargs'], f"Expected kwarg '{key}' not found"
+            assert call['kwargs'][key] == expected_value, \
+                f"Expected {key}={expected_value}, got {call['kwargs'][key]}"
+        return call
+
+    def get_call_kwargs(self) -> Dict[str, Any]:
+        """Get the kwargs from the single call."""
+        call = self.assert_called_once()
+        return call['kwargs']
 
 
 @pytest.fixture
@@ -44,18 +107,16 @@ class TestToolRegistration:
 
     def test_tool_with_single_string_parameter(self, session):
         """Test tool with a single string parameter."""
-        called = {}
+        harness = ToolTestHarness(session)
 
-        @session.tool(description="Get weather for a location")
+        @harness.register_tool(description="Get weather for a location")
         def get_weather(location: str) -> str:
             """Get weather information."""
-            called['location'] = location
             return f"Weather in {location}: 72°F, sunny"
 
         response = session.generate("What's the weather in Paris?")
 
-        assert 'location' in called
-        assert called['location'] == 'Paris'
+        harness.assert_called_with(location='Paris')
         assert "72°F" in response or "sunny" in response.lower()
 
     def test_tool_with_multiple_parameters(self, session):
@@ -78,21 +139,18 @@ class TestToolRegistration:
 
     def test_tool_with_mixed_types(self, session):
         """Test tool with mixed parameter types (string and int)."""
-        called = {}
+        harness = ToolTestHarness(session)
 
-        @session.tool(description="Get top N items from a category")
+        @harness.register_tool(description="Get top N items from a category")
         def get_top_items(category: str, count: int) -> str:
             """Get top items."""
-            called['category'] = category
-            called['count'] = count
             items = [f"Item {i+1}" for i in range(count)]
             return f"Top {count} in {category}: {', '.join(items)}"
 
         response = session.generate("Show me the top 3 products")
 
-        assert 'category' in called
-        assert 'count' in called
-        assert called['count'] == 3
+        kwargs = harness.get_call_kwargs()
+        assert kwargs['count'] == 3
         assert "Item 1" in response or "top" in response.lower()
 
     def test_tool_with_optional_parameters(self, session):
@@ -149,13 +207,40 @@ class TestToolExecution:
 
     def test_tool_return_types(self, session):
         """Test tools can return different types."""
+        called = {}
 
         @session.tool(description="Get status")
         def get_status() -> str:
-            return "OK"
+            called['invoked'] = True
+            return "System operational"
 
         response = session.generate("What's the system status?")
-        assert "OK" in response or "status" in response.lower()
+        # Verify tool was called and response contains relevant content
+        assert called.get('invoked'), "Tool should have been called"
+        assert "operational" in response.lower() or "status" in response.lower()
+
+    def test_tool_with_optional_type_annotation(self, session):
+        """Test that Optional[...] type annotations are properly handled."""
+        from typing import Optional
+
+        called = {}
+
+        @session.tool(description="Get weather for a location")
+        def get_weather(location: Optional[str] = None, units: str = "celsius") -> str:
+            """Get weather information."""
+            called['location'] = location
+            called['units'] = units
+
+            if location is None:
+                return "Weather for current location: 20°C, cloudy"
+            return f"Weather in {location}: 22°{units[0].upper()}, sunny"
+
+        response = session.generate("What's the weather in Paris?")
+
+        # Verify the tool was called with location set
+        assert 'location' in called
+        assert called['location'] == 'Paris'
+        assert "22°" in response or "sunny" in response.lower()
 
 
 class TestTranscript:

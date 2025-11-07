@@ -6,8 +6,95 @@ and managing tool registrations.
 """
 
 import inspect
-from typing import Callable, Dict, Any, Optional, get_type_hints, get_origin, get_args
+from typing import Callable, Dict, Any, Optional, get_type_hints, get_origin, get_args, Union
 from .exceptions import ToolCallError
+
+
+# Type mapping tables for efficient schema generation
+_BASIC_TYPE_MAP = {
+    str: "string",
+    int: "integer",
+    float: "number",
+    bool: "boolean",
+}
+
+_STRING_TYPE_MAP = {
+    "str": "string",
+    "int": "integer",
+    "float": "number",
+    "bool": "boolean",
+}
+
+
+def is_optional_type(python_type: Any) -> bool:
+    """
+    Check if a type is Optional (Union[X, None]).
+
+    Args:
+        python_type: Python type hint
+
+    Returns:
+        True if the type is Optional, False otherwise
+    """
+    origin = get_origin(python_type)
+    if origin is Union:
+        args = get_args(python_type)
+        return type(None) in args
+    return False
+
+
+def unwrap_optional(python_type: Any) -> Any:
+    """
+    Extract the non-None type from Optional[X] or Union[X, None].
+
+    Args:
+        python_type: Python type hint that may be Optional
+
+    Returns:
+        The unwrapped type (X from Optional[X])
+    """
+    origin = get_origin(python_type)
+    if origin is Union:
+        args = get_args(python_type)
+        # Filter out None and return the first non-None type
+        non_none_types = [arg for arg in args if arg is not type(None)]
+        if non_none_types:
+            return non_none_types[0]
+    return python_type
+
+
+def _handle_list_type(python_type: Any) -> Dict[str, Any]:
+    """
+    Extract list/array type with optional item schema.
+
+    Args:
+        python_type: List or generic list type hint
+
+    Returns:
+        JSON Schema for array type
+    """
+    args = get_args(python_type)
+    if args:
+        items_schema = python_type_to_json_schema(args[0])
+        return {"type": "array", "items": items_schema}
+    return {"type": "array"}
+
+
+def _handle_dict_type(python_type: Any) -> Dict[str, Any]:
+    """
+    Extract dict/object type with optional value schema.
+
+    Args:
+        python_type: Dict or generic dict type hint
+
+    Returns:
+        JSON Schema for object type
+    """
+    args = get_args(python_type)
+    if len(args) == 2 and args[0] is str:
+        value_schema = python_type_to_json_schema(args[1])
+        return {"type": "object", "additionalProperties": value_schema}
+    return {"type": "object"}
 
 
 def python_type_to_json_schema(python_type: Any) -> Dict[str, Any]:
@@ -27,48 +114,30 @@ def python_type_to_json_schema(python_type: Any) -> Dict[str, Any]:
     if python_type is type(None):
         return {"type": "null"}
 
-    # Get the origin type for generic types (e.g., List, Dict, Optional)
+    # Handle Optional[X] / Union[X, None] - unwrap and process the inner type
+    if is_optional_type(python_type):
+        inner_type = unwrap_optional(python_type)
+        return python_type_to_json_schema(inner_type)
+
+    # Check basic types via lookup table
+    if python_type in _BASIC_TYPE_MAP:
+        return {"type": _BASIC_TYPE_MAP[python_type]}
+
+    # Check string type annotations
+    if isinstance(python_type, str) and python_type in _STRING_TYPE_MAP:
+        return {"type": _STRING_TYPE_MAP[python_type]}
+
+    # Get origin for generic types
     origin = get_origin(python_type)
 
-    # Handle Optional[X] as union of X and null
-    if origin is type(None) or (
-        hasattr(python_type, "__origin__") and python_type.__origin__ is type(None)
-    ):
-        return {"type": "null"}
+    # Handle container types
+    if python_type is list or origin is list:
+        return _handle_list_type(python_type)
 
-    # Handle basic types
-    if python_type is str or python_type == "str":
-        return {"type": "string"}
-    elif python_type is int or python_type == "int":
-        return {"type": "integer"}
-    elif python_type is float or python_type == "float":
-        return {"type": "number"}
-    elif python_type is bool or python_type == "bool":
-        return {"type": "boolean"}
-    elif python_type is list or origin is list:
-        # Get the item type if specified
-        args = get_args(python_type)
-        if args:
-            items_schema = python_type_to_json_schema(args[0])
-            return {"type": "array", "items": items_schema}
-        return {"type": "array"}
-    elif python_type is dict or origin is dict:
-        # Get key/value types if specified
-        args = get_args(python_type)
-        if len(args) == 2:
-            # For Dict[str, X], we can specify value type
-            if args[0] is str:
-                value_schema = python_type_to_json_schema(args[1])
-                return {"type": "object", "additionalProperties": value_schema}
-        return {"type": "object"}
-    elif origin is not None:
-        # Handle other generic types - try to extract the origin
-        if origin is list:
-            return {"type": "array"}
-        elif origin is dict:
-            return {"type": "object"}
+    if python_type is dict or origin is dict:
+        return _handle_dict_type(python_type)
 
-    # If we can't determine the type, default to string
+    # Default fallback for unknown types
     return {"type": "string"}
 
 
@@ -155,6 +224,41 @@ def extract_function_schema(func: Callable) -> Dict[str, Any]:
         )
 
 
+def attach_tool_metadata(
+    func: Callable,
+    schema: Dict[str, Any],
+    description: Optional[str] = None,
+    name: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Attach tool metadata to a function and return final schema.
+
+    This is a shared helper used by both the standalone @tool decorator
+    and the Session.tool() method to avoid code duplication.
+
+    Args:
+        func: Function to attach metadata to
+        schema: Base schema from extract_function_schema
+        description: Optional override for description
+        name: Optional override for name
+
+    Returns:
+        Final schema with overrides applied
+    """
+    # Override with provided values
+    if description is not None:
+        schema["description"] = description
+    if name is not None:
+        schema["name"] = name
+
+    # Attach metadata to function
+    func._tool_name = schema["name"]  # type: ignore[attr-defined]
+    func._tool_description = schema["description"]  # type: ignore[attr-defined]
+    func._tool_parameters = schema["parameters"]  # type: ignore[attr-defined]
+
+    return schema
+
+
 def tool(
     description: Optional[str] = None,
     name: Optional[str] = None,
@@ -176,20 +280,9 @@ def tool(
     """
 
     def decorator(func: Callable) -> Callable:
-        # Extract schema
+        # Extract schema and attach metadata
         schema = extract_function_schema(func)
-
-        # Override with provided values
-        if description is not None:
-            schema["description"] = description
-        if name is not None:
-            schema["name"] = name
-
-        # Attach metadata to function
-        func._tool_name = schema["name"]
-        func._tool_description = schema["description"]
-        func._tool_parameters = schema["parameters"]
-
+        attach_tool_metadata(func, schema, description, name)
         return func
 
     return decorator
