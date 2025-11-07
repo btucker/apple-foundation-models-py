@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "apple-foundation-models"
 version = "0.1.4"
-description = "Python bindings for Apple's FoundationModels framework - on-device AI"
+description = "Python bindings for Apple's FoundationModels framework - on-device AI (requires macOS 26.0+)"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Ben Tucker" }]
