@@ -159,9 +159,7 @@ with Client() as client:
 
 ### Tool Calling
 
-> **Note**: Tool calling is currently unavailable due to a missing Swift compiler plugin in macOS 26.1. All infrastructure is implemented and ready - waiting for Apple to ship the FoundationModelsMacros plugin. See [TOOL_CALLING.md](TOOL_CALLING.md) for details.
-
-Tool calling allows the model to call your Python functions to access real-time data, perform actions, or integrate with external systems. Once available, tools will work with a simple decorator-based API:
+Tool calling allows the model to call your Python functions to access real-time data, perform actions, or integrate with external systems. Tools work with a simple decorator-based API:
 
 ```python
 from applefoundationmodels import Client
@@ -247,15 +245,16 @@ for entry in session.transcript:
             print(f"Assistant: {entry['content']}")
 ```
 
-**Current Status:**
+**Supported Parameter Types:**
 
-The tool calling implementation is complete but cannot be used yet because:
-- Apple's `@Generable` macro requires the FoundationModelsMacros compiler plugin
-- This plugin is not included in macOS 26.1 (Build 25B78)
-- All Python/Cython/Swift infrastructure is implemented and ready
-- Will work immediately when Apple ships the plugin
+Tool calling works with various parameter signatures:
+- No parameters
+- Single parameters (string, int, float, bool)
+- Multiple parameters with mixed types
+- Optional parameters with default values
+- Lists and nested objects
 
-For implementation details and status updates, see [TOOL_CALLING.md](TOOL_CALLING.md).
+See `examples/tool_calling_comprehensive.py` for complete examples of all supported patterns.
 
 ### Generation Parameters
 
@@ -419,7 +418,7 @@ See the `examples/` directory for complete working examples:
 - `basic_chat.py` - Simple conversation
 - `streaming_chat.py` - Async streaming
 - `structured_output.py` - JSON schema validation
-- `tool_calling.py` - Tool registration (ready, waiting for Apple's macro plugin)
+- `tool_calling_comprehensive.py` - Complete tool calling demonstration with all parameter types
 
 ## Development
 
