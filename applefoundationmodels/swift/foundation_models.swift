@@ -55,32 +55,56 @@ public typealias ToolCallback = @convention(c) (
 /// Store tool callback globally
 private var toolCallback: ToolCallback?
 
-// NOTE: PythonToolWrapper is disabled because @Generable macro is not
-// available even on macOS 26.1. The FoundationModelsMacros plugin is required
-// but not shipped with the OS. Tool calling infrastructure is ready and waiting
-// for Apple to provide the macro plugin.
-//
-// Python tool wrapper that bridges Swift Tool protocol to Python callbacks
-// @available(macOS 26.0, *)
-// struct PythonToolWrapper: Tool, Sendable {
-//     let toolName: String
-//     let toolDescription: String
-//
-//     var name: String { toolName }
-//     var description: String { toolDescription }
-//
-//     @Generable
-//     struct Arguments: Decodable {
-//         let parameters: [String: String]
-//     }
-//
-//     typealias Output = String
-//
-//     nonisolated func call(arguments: Arguments) async throws -> Output {
-//         // Implementation would marshal to Python callback
-//         return ""
-//     }
-// }
+/// Python tool wrapper that bridges Swift Tool protocol to Python callbacks
+@available(macOS 26.0, *)
+struct PythonToolWrapper: Tool, Sendable {
+    let toolName: String
+    let toolDescription: String
+    let parametersSchema: [String: Any]
+
+    var name: String { toolName }
+    var description: String { toolDescription }
+
+    // Use empty struct with @Generable - the model will generate the actual parameters
+    // We'll extract them from GeneratedContent
+    @Generable
+    struct Arguments: Sendable {
+        // Empty struct - we'll get parameters from raw generated content
+    }
+
+    typealias Output = String
+
+    nonisolated func call(arguments: Arguments) async throws -> Output {
+        // The arguments struct is empty, but we need to get the actual parameters
+        // from the generated content. For now, pass empty JSON.
+        // TODO: Figure out how to access raw GeneratedContent
+        let argsJson = "{}"
+
+        // Allocate result buffer (16KB)
+        let bufferSize: Int32 = 16384
+        let resultBuffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(bufferSize))
+        resultBuffer.initialize(repeating: 0, count: Int(bufferSize))
+        defer { resultBuffer.deallocate() }
+
+        // Call Python callback
+        guard let callback = toolCallback else {
+            throw NSError(domain: "ToolError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool callback not set"])
+        }
+
+        let result = argsJson.withCString { argsPtr in
+            toolName.withCString { namePtr in
+                callback(namePtr, argsPtr, resultBuffer, bufferSize)
+            }
+        }
+
+        guard result == 0 else {
+            let errorMsg = String(cString: resultBuffer)
+            throw NSError(domain: "ToolError", code: Int(result), userInfo: [NSLocalizedDescriptionKey: errorMsg])
+        }
+
+        return String(cString: resultBuffer)
+    }
+}
 
 // MARK: - Helper Functions
 
@@ -236,9 +260,49 @@ public func appleAIRegisterTools(
     toolsJson: UnsafePointer<CChar>?,
     callback: ToolCallback?
 ) -> Int32 {
-    // NOTE: Tool calling disabled - @Generable macro plugin not available
-    // even on macOS 26.1. FoundationModelsMacros plugin is required but not
-    // shipped. All infrastructure is ready for when Apple provides it.
+    guard isInitialized else {
+        return AIResult.errorInitFailed.rawValue
+    }
+
+    #if canImport(FoundationModels)
+    if #available(macOS 26.0, *) {
+        guard let jsonPtr = toolsJson,
+              let callback = callback else {
+            return AIResult.errorInvalidParams.rawValue
+        }
+
+        let jsonString = String(cString: jsonPtr)
+        guard let jsonData = jsonString.data(using: .utf8),
+              let toolsArray = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [[String: Any]] else {
+            return AIResult.errorJSONParse.rawValue
+        }
+
+        // Store callback
+        toolCallback = callback
+
+        // Clear existing tools
+        registeredTools.removeAll()
+
+        // Create PythonToolWrapper for each tool
+        for toolDef in toolsArray {
+            guard let name = toolDef["name"] as? String,
+                  let description = toolDef["description"] as? String,
+                  let parameters = toolDef["parameters"] as? [String: Any] else {
+                continue
+            }
+
+            let tool = PythonToolWrapper(
+                toolName: name,
+                toolDescription: description,
+                parametersSchema: parameters
+            )
+            registeredTools.append(tool)
+        }
+
+        return AIResult.success.rawValue
+    }
+    #endif
+
     return AIResult.errorNotAvailable.rawValue
 }
 
@@ -264,17 +328,31 @@ public func appleAICreateSession(
             }
         }
 
-        // Create session with instructions if provided
-        // NOTE: Tool support disabled until @Generable macro is available
+        // Create session with instructions and tools if provided
         if let instructions = sessionInstructions {
-            currentSession = LanguageModelSession(
-                model: SystemLanguageModel.default,
-                instructions: { instructions }
-            )
+            if !registeredTools.isEmpty {
+                currentSession = LanguageModelSession(
+                    model: SystemLanguageModel.default,
+                    tools: registeredTools,
+                    instructions: { instructions }
+                )
+            } else {
+                currentSession = LanguageModelSession(
+                    model: SystemLanguageModel.default,
+                    instructions: { instructions }
+                )
+            }
         } else {
-            currentSession = LanguageModelSession(
-                model: SystemLanguageModel.default
-            )
+            if !registeredTools.isEmpty {
+                currentSession = LanguageModelSession(
+                    model: SystemLanguageModel.default,
+                    tools: registeredTools
+                )
+            } else {
+                currentSession = LanguageModelSession(
+                    model: SystemLanguageModel.default
+                )
+            }
         }
 
         return AIResult.success.rawValue
@@ -460,46 +538,46 @@ public func appleAIGetTranscript() -> UnsafeMutablePointer<CChar>? {
         Task {
             do {
                 let transcript = session.transcript
-                var entries: [[String: Any]] = []
+                var entries: [NSDictionary] = []
 
                 for entry in transcript {
                     var entryDict: [String: Any] = [:]
 
                     switch entry {
                     case .instructions(let text):
-                        entryDict["type"] = "instructions"
-                        entryDict["content"] = text
+                        entryDict["type"] = "instructions" as NSString
+                        entryDict["content"] = String(describing: text) as NSString
 
                     case .prompt(let text):
-                        entryDict["type"] = "prompt"
-                        entryDict["content"] = text
+                        entryDict["type"] = "prompt" as NSString
+                        entryDict["content"] = String(describing: text) as NSString
 
                     case .response(let text):
-                        entryDict["type"] = "response"
-                        entryDict["content"] = text
+                        entryDict["type"] = "response" as NSString
+                        entryDict["content"] = String(describing: text) as NSString
 
                     case .toolCalls(let toolCalls):
-                        entryDict["type"] = "tool_calls"
+                        entryDict["type"] = "tool_calls" as NSString
                         // Convert tool calls to JSON array
                         var callsArray: [[String: Any]] = []
                         for call in toolCalls {
                             callsArray.append([
-                                "id": call.id
+                                "id": String(describing: call.id) as NSString
                             ])
                         }
-                        entryDict["tool_calls"] = callsArray
+                        entryDict["tool_calls"] = callsArray as NSArray
 
                     case .toolOutput(let output):
-                        entryDict["type"] = "tool_output"
-                        entryDict["tool_id"] = output.id
+                        entryDict["type"] = "tool_output" as NSString
+                        entryDict["tool_id"] = String(describing: output.id) as NSString
                         // Note: Additional properties may be available in final API
-                        entryDict["content"] = ""
+                        entryDict["content"] = "" as NSString
 
                     @unknown default:
-                        entryDict["type"] = "unknown"
+                        entryDict["type"] = "unknown" as NSString
                     }
 
-                    entries.append(entryDict)
+                    entries.append(entryDict as NSDictionary)
                 }
 
                 // Convert to JSON

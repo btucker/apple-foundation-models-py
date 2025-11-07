@@ -159,7 +159,7 @@ class Client(ContextManagedResource):
         # Note: tools_json, enable_guardrails, prewarm not supported in simplified API
 
         session_id = _foundationmodels.create_session(config if config else None)
-        session = Session(session_id)
+        session = Session(session_id, config if config else None)
         self._sessions.append(session)
         return session
 

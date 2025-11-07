@@ -34,7 +34,7 @@ class Session(ContextManagedResource):
             print(response)
     """
 
-    def __init__(self, session_id: int):
+    def __init__(self, session_id: int, config: Optional[Dict[str, Any]] = None):
         """
         Create a Session instance.
 
@@ -43,11 +43,13 @@ class Session(ContextManagedResource):
 
         Args:
             session_id: The session ID (always 0 in simplified API)
+            config: Optional session configuration
         """
         self._session_id = session_id
         self._closed = False
         self._tools: Dict[str, Callable] = {}
         self._tools_registered = False
+        self._config = config
 
     def close(self) -> None:
         """
@@ -334,6 +336,7 @@ class Session(ContextManagedResource):
         Register all tools with the FFI layer.
 
         Called automatically when tools are added via decorator.
+        Recreates the session with tools enabled.
         """
         if not self._tools:
             return
@@ -341,6 +344,12 @@ class Session(ContextManagedResource):
         # Register tools with C FFI
         _foundationmodels.register_tools(self._tools)
         self._tools_registered = True
+
+        # Recreate session with tools enabled
+        # This is necessary because the session needs to be created with tools
+        # for FoundationModels to know about them
+        config = self._config or {}
+        _foundationmodels.create_session(config)
 
     @property
     def transcript(self) -> List[Dict[str, Any]]:
