@@ -1,0 +1,1 @@
+- In tests/test_tools.py around lines 373 to 401, the test builds a 20KB string
