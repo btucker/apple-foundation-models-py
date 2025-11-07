@@ -230,7 +230,7 @@ def extract_function_schema(func: Callable) -> Dict[str, Any]:
     except Exception as e:
         raise ToolCallError(
             f"Failed to extract schema from function '{func.__name__}': {e}"
-        )
+        ) from e
 
 
 def attach_tool_metadata(

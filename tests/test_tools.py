@@ -138,6 +138,7 @@ class TestToolRegistration:
         assert "category" in called
         assert called["query"] == "authentication"
         assert called["category"] == "API"
+        assert "5 documents" in response or "authentication" in response.lower()
 
     def test_tool_with_mixed_types(self, session):
         """Test tool with mixed parameter types (string and int)."""
