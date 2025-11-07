@@ -1,0 +1,85 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: 007c472b...
+**Time:** 2025-11-06 23:20:14
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Fixed the duplicate workflow runs.
+
+**Commit**: `2d9f6d0`
+
+## What changed:
+
+Removed `feature/*` from the push trigger. Now workflows only run:
+
+✅ **On PRs to main/develop** - During review
+✅ **On push to main/develop** - After merge
+✅ **On manual trigger** - When you want it
+
+This prevents the duplicate runs you were seeing when pushing to feature branches with open PRs. Much more efficient!
+
+### 👤 User
+we're not using a develop branch, so you can remove that
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+---
