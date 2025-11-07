@@ -172,3 +172,30 @@ class TestStructuredOutput:
         assert "age" in data, "Object should have 'age' field"
         assert isinstance(data["name"], str), "Name should be a string"
         assert isinstance(data["age"], int), "Age should be an integer"
+
+    def test_generate_structured_pydantic(self, session):
+        """Test structured output with Pydantic model."""
+        try:
+            from pydantic import BaseModel
+        except ImportError:
+            pytest.skip("Pydantic not installed")
+
+        class Person(BaseModel):
+            name: str
+            age: int
+
+        result = session.generate_structured(
+            "Extract information: John is 30 years old", schema=Person
+        )
+
+        # Verify response structure
+        assert isinstance(result, dict), "Result should be a dictionary"
+        assert "object" in result, "Result should have 'object' key"
+
+        # Verify the structured data
+        data = result["object"]
+        assert isinstance(data, dict), "Object should be a dictionary"
+        assert "name" in data, "Object should have 'name' field"
+        assert "age" in data, "Object should have 'age' field"
+        assert isinstance(data["name"], str), "Name should be a string"
+        assert isinstance(data["age"], int), "Age should be an integer"
