@@ -41,10 +41,24 @@ public enum AIAvailability: Int32 {
 
 // MARK: - Helper Functions
 
-/// Create an error response in JSON format
+/// Create an error response in JSON format using safe serialization
 private func createErrorResponse(_ message: String) -> UnsafeMutablePointer<CChar>? {
-    let errorJson = "{\"error\": \"\(message)\"}"
-    return strdup(errorJson)
+    let errorDict: [String: String] = ["error": message]
+
+    do {
+        let jsonData = try JSONSerialization.data(withJSONObject: errorDict, options: [])
+        if let jsonString = String(data: jsonData, encoding: .utf8) {
+            return strdup(jsonString)
+        }
+    } catch {
+        // Fallback to generic error message if serialization fails
+        let fallback = "{\"error\":\"An error occurred\"}"
+        return strdup(fallback)
+    }
+
+    // If UTF-8 encoding fails, return generic error
+    let fallback = "{\"error\":\"An error occurred\"}"
+    return strdup(fallback)
 }
 
 /// Get existing session or create a new one with stored instructions
