@@ -12,7 +12,9 @@ def check_availability():
     status = applefoundationmodels.Client.check_availability()
     if status != applefoundationmodels.Availability.AVAILABLE:
         reason = applefoundationmodels.Client.get_availability_reason()
-        pytest.skip(f"Apple Intelligence not available: {reason}", allow_module_level=True)
+        pytest.skip(
+            f"Apple Intelligence not available: {reason}", allow_module_level=True
+        )
     return True
 
 
