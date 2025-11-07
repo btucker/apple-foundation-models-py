@@ -31,6 +31,7 @@ class Result(IntEnum):
     GUARDRAIL_VIOLATION = -10
     TOOL_NOT_FOUND = -11
     TOOL_EXECUTION = -12
+    BUFFER_TOO_SMALL = -13
     UNKNOWN = -99
 
 

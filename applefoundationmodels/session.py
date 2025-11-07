@@ -306,6 +306,13 @@ class Session(ContextManagedResource):
         Returns:
             Decorator function
 
+        Note:
+            Tool output size limits:
+            - Initial buffer: 16KB
+            - Maximum size: 1MB (automatically retried with larger buffers)
+            - Tools returning outputs larger than 1MB will raise an error
+            - For large outputs, consider returning references or summaries
+
         Example:
             @session.tool(description="Get current weather")
             def get_weather(location: str, units: str = "celsius") -> str:

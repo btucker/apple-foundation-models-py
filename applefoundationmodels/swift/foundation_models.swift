@@ -31,6 +31,7 @@ public enum AIResult: Int32 {
     case errorTimeout = -7
     case errorToolNotFound = -11
     case errorToolExecution = -12
+    case errorBufferTooSmall = -13
     case errorUnknown = -99
 }
 
@@ -82,33 +83,57 @@ struct PythonToolWrapper: Tool, Sendable {
         // Extract JSON directly from GeneratedContent!
         let argsJson = arguments.jsonString
 
-        // Allocate result buffer (16KB)
-        let bufferSize: Int32 = 16384
-        let resultBuffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(bufferSize))
-        resultBuffer.initialize(repeating: 0, count: Int(bufferSize))
-        defer { resultBuffer.deallocate() }
-
         // Call Python callback
         guard let callback = toolCallback else {
             throw NSError(domain: "ToolError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool callback not set"])
         }
 
-        let result = argsJson.withCString { argsPtr in
-            toolName.withCString { namePtr in
-                callback(namePtr, argsPtr, resultBuffer, bufferSize)
-            }
-        }
+        // Buffer size configuration
+        let initialBufferSize: Int32 = 16384  // 16KB initial
+        let maxBufferSize: Int32 = 1048576    // 1MB max cap
+        var bufferSize: Int32 = initialBufferSize
 
-        guard result == 0 else {
-            // Extract error message from buffer
+        // Retry loop with progressively larger buffers
+        while bufferSize <= maxBufferSize {
+            let resultBuffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(bufferSize))
+            resultBuffer.initialize(repeating: 0, count: Int(bufferSize))
+            defer { resultBuffer.deallocate() }
+
+            let result = argsJson.withCString { argsPtr in
+                toolName.withCString { namePtr in
+                    callback(namePtr, argsPtr, resultBuffer, bufferSize)
+                }
+            }
+
+            // Success - return result
+            if result == 0 {
+                return String(cString: resultBuffer)
+            }
+
+            // Buffer too small - retry with larger buffer
+            if result == AIResult.errorBufferTooSmall.rawValue {
+                // Double the buffer size and retry
+                let newSize = bufferSize * 2
+                if newSize > maxBufferSize {
+                    throw NSError(domain: "ToolError", code: Int(result), userInfo: [
+                        NSLocalizedDescriptionKey: "Tool '\(toolName)' output exceeds maximum buffer size (\(maxBufferSize) bytes)"
+                    ])
+                }
+                bufferSize = newSize
+                continue
+            }
+
+            // Other error - extract message and throw
             let errorMsg = String(cString: resultBuffer)
-            // Throw simpler error to avoid buffer overflow in error messages
             throw NSError(domain: "ToolError", code: Int(result), userInfo: [
                 NSLocalizedDescriptionKey: "Tool '\(toolName)' failed: \(errorMsg)"
             ])
         }
 
-        return String(cString: resultBuffer)
+        // Should never reach here due to buffer size check above
+        throw NSError(domain: "ToolError", code: -4, userInfo: [
+            NSLocalizedDescriptionKey: "Tool '\(toolName)' output exceeds maximum buffer size"
+        ])
     }
 }
 

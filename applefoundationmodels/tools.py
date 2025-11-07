@@ -282,6 +282,13 @@ def tool(
     Returns:
         Decorated function with tool metadata attached
 
+    Note:
+        Tool output size limits:
+        - Initial buffer: 16KB
+        - Maximum size: 1MB (automatically retried with larger buffers)
+        - Tools returning outputs larger than 1MB will raise an error
+        - For large outputs, consider returning references or summaries
+
     Example:
         @tool(description="Get the current weather")
         def get_weather(location: str) -> str:

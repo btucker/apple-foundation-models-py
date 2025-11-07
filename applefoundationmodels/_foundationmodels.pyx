@@ -253,8 +253,14 @@ cdef int32_t _tool_callback_wrapper(
             # Write to buffer using memcpy
             result_bytes = result_str.encode('utf-8')
             if len(result_bytes) >= buffer_size:
-                # Truncate if too large
-                result_bytes = result_bytes[:buffer_size-1]
+                # Buffer too small - signal retry needed
+                error_msg = f"Result too large: {len(result_bytes)} bytes (buffer: {buffer_size} bytes)"
+                error_bytes = error_msg.encode('utf-8')
+                if len(error_bytes) >= buffer_size:
+                    error_bytes = error_bytes[:buffer_size-1]
+                memcpy(result_buffer, <char*>error_bytes, len(error_bytes))
+                result_buffer[len(error_bytes)] = 0
+                return -13  # AI_ERROR_BUFFER_TOO_SMALL
 
             memcpy(result_buffer, <char*>result_bytes, len(result_bytes))
             result_buffer[len(result_bytes)] = 0

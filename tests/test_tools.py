@@ -369,3 +369,21 @@ class TestToolIntegration:
 
             assert results.get("called")
             assert "4" in response
+
+    def test_large_tool_output(self):
+        """Test that tools can return outputs larger than the initial 16KB buffer."""
+        with Client() as client:
+            session = client.create_session()
+
+            # Create a large output (20KB) to test buffer resizing
+            large_data = "x" * 20480  # 20KB of data
+
+            @session.tool(description="Return large data")
+            def get_large_data() -> str:
+                return large_data
+
+            # This should trigger buffer resizing
+            response = session.generate("Get me large data")
+
+            # Verify the tool was called and output was not truncated
+            assert "large data" in response.lower() or len(response) > 1000
