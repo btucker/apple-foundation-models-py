@@ -6,7 +6,7 @@ with various parameter signatures and types.
 """
 
 import pytest
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, Optional
 from functools import wraps
 from applefoundationmodels import Client
 
@@ -18,7 +18,7 @@ class ToolTestHarness:
         self.session = session
         self.calls = []
 
-    def register_tool(self, description: str = None):
+    def register_tool(self, description: Optional[str] = None):
         """
         Decorator to register a tool and wrap it to capture calls.
 
@@ -362,5 +362,5 @@ class TestToolIntegration:
 
             response = session.generate("What is 2 + 2?")
 
-            assert results.get("called") == True
+            assert results.get("called")
             assert "4" in response

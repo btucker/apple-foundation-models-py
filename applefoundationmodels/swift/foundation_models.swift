@@ -592,12 +592,13 @@ public func appleAIGetTranscript() -> UnsafeMutablePointer<CChar>? {
 
                     case .toolCalls(let toolCalls):
                         // Create individual entries for each tool call
+                        // API: ToolCall exposes id, toolName, and arguments (GeneratedContent)
                         for call in toolCalls {
                             var callDict: [String: Any] = [:]
                             callDict["type"] = "tool_call" as NSString
                             callDict["tool_id"] = String(describing: call.id) as NSString
                             callDict["tool_name"] = call.toolName as NSString
-                            // Serialize arguments as JSON string
+                            // Serialize arguments to JSON string via GeneratedContent.jsonString
                             callDict["arguments"] = call.arguments.jsonString as NSString
                             entries.append(callDict as NSDictionary)
                         }
@@ -609,6 +610,8 @@ public func appleAIGetTranscript() -> UnsafeMutablePointer<CChar>? {
                         entryDict["tool_id"] = String(describing: output.id) as NSString
 
                         // Extract content from segments
+                        // API: ToolOutput exposes id, toolName, and segments (array of Segment)
+                        // Note: FoundationModels API uses segments rather than direct content property
                         var contentParts: [String] = []
                         for segment in output.segments {
                             switch segment {
