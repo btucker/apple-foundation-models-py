@@ -16,6 +16,7 @@ class Result(IntEnum):
 
     These codes indicate the success or failure state of library operations.
     """
+
     SUCCESS = 0
     INIT_FAILED = -1
     NOT_AVAILABLE = -2
@@ -39,6 +40,7 @@ class Availability(IntEnum):
     Indicates whether Apple Intelligence is available and ready for use
     on the current device and system configuration.
     """
+
     AVAILABLE = 1
     DEVICE_NOT_ELIGIBLE = -1
     NOT_ENABLED = -2
@@ -59,6 +61,7 @@ class SessionConfig(TypedDict, total=False):
         enable_guardrails: Whether to enable content safety filtering (default: True)
         prewarm: Whether to preload session resources for faster first response (default: False)
     """
+
     instructions: NotRequired[Optional[str]]
     tools_json: NotRequired[Optional[str]]
     enable_guardrails: NotRequired[bool]
@@ -78,6 +81,7 @@ class GenerationParams(TypedDict, total=False):
         include_reasoning: Include reasoning in response (reserved for future use)
         seed: Random seed for reproducibility (0 = use random seed)
     """
+
     temperature: NotRequired[float]
     max_tokens: NotRequired[int]
     include_reasoning: NotRequired[bool]
@@ -98,6 +102,7 @@ class Stats(TypedDict):
         average_response_time: Average response time in seconds
         total_processing_time: Total processing time in seconds
     """
+
     total_requests: int
     successful_requests: int
     failed_requests: int

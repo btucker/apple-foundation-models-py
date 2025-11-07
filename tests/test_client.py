@@ -143,4 +143,7 @@ class TestStats:
         reset_stats = client.get_stats()
         assert isinstance(reset_stats, dict)
         # All counters should be 0 or minimal after reset
-        assert reset_stats["total_requests"] == 0 or reset_stats["total_requests"] <= initial_stats["total_requests"]
+        assert (
+            reset_stats["total_requests"] == 0
+            or reset_stats["total_requests"] <= initial_stats["total_requests"]
+        )

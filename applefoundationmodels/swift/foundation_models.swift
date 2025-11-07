@@ -39,6 +39,68 @@ public enum AIAvailability: Int32 {
     case unknown = -99
 }
 
+// MARK: - Helper Functions
+
+/// Create an error response in JSON format using safe serialization
+private func createErrorResponse(_ message: String) -> UnsafeMutablePointer<CChar>? {
+    let errorDict: [String: String] = ["error": message]
+
+    do {
+        let jsonData = try JSONSerialization.data(withJSONObject: errorDict, options: [])
+        if let jsonString = String(data: jsonData, encoding: .utf8) {
+            return strdup(jsonString)
+        }
+    } catch {
+        // Fallback to generic error message if serialization fails
+        let fallback = "{\"error\":\"An error occurred\"}"
+        return strdup(fallback)
+    }
+
+    // If UTF-8 encoding fails, return generic error
+    let fallback = "{\"error\":\"An error occurred\"}"
+    return strdup(fallback)
+}
+
+/// Get existing session or create a new one with stored instructions
+@available(macOS 26.0, *)
+private func getOrCreateSession() -> LanguageModelSession {
+    if let session = currentSession {
+        return session
+    }
+
+    let session: LanguageModelSession
+    if let instructions = sessionInstructions {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default,
+            instructions: { instructions }
+        )
+    } else {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default
+        )
+    }
+    currentSession = session
+    return session
+}
+
+/// Create a new session, replacing any existing one
+@available(macOS 26.0, *)
+private func createNewSession() -> LanguageModelSession {
+    let session: LanguageModelSession
+    if let instructions = sessionInstructions {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default,
+            instructions: { instructions }
+        )
+    } else {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default
+        )
+    }
+    currentSession = session
+    return session
+}
+
 // MARK: - Initialization
 
 @_cdecl("apple_ai_init")
@@ -169,6 +231,12 @@ public func appleAICreateSession(
 
 // MARK: - Generation
 
+/// Generate text response
+/// - Parameters:
+///   - prompt: User prompt as C string
+///   - temperature: Sampling temperature (0.0 to 2.0)
+///   - maxTokens: Maximum tokens to generate
+/// - Returns: JSON response or error message
 @_cdecl("apple_ai_generate")
 public func appleAIGenerate(
     prompt: UnsafePointer<CChar>,
@@ -176,7 +244,7 @@ public func appleAIGenerate(
     maxTokens: Int32
 ) -> UnsafeMutablePointer<CChar>? {
     guard isInitialized else {
-        return strdup("{\"error\": \"Not initialized\"}")
+        return createErrorResponse("Not initialized")
     }
 
     #if canImport(FoundationModels)
@@ -190,16 +258,13 @@ public func appleAIGenerate(
         Task {
             do {
                 // Get or create session
-                let session = currentSession ?? LanguageModelSession(
-                    model: SystemLanguageModel.default
-                )
-                currentSession = session
+                let session = getOrCreateSession()
 
                 // Configure generation options
                 let options = GenerationOptions(
-                    temperature: temperature
+                    temperature: temperature,
+                    maximumResponseTokens: Int(maxTokens)
                 )
-                // Note: maxTokens not supported in GenerationOptions
 
                 // Generate response
                 let response = try await session.respond(
@@ -209,7 +274,13 @@ public func appleAIGenerate(
 
                 result = response.content
             } catch {
-                result = "{\"error\": \"\(error.localizedDescription)\"}"
+                // Use safe JSON serialization for error messages
+                if let errorJson = createErrorResponse(error.localizedDescription) {
+                    result = String(cString: errorJson)
+                    free(errorJson)
+                } else {
+                    result = "{\"error\":\"An error occurred\"}"
+                }
             }
             semaphore.signal()
         }
@@ -219,12 +290,19 @@ public func appleAIGenerate(
     }
     #endif
 
-    return strdup("{\"error\": \"FoundationModels not available\"}")
+    return createErrorResponse("FoundationModels not available")
 }
 
 // Streaming callback type
 public typealias StreamCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
 
+/// Generate streaming text response
+/// - Parameters:
+///   - prompt: User prompt as C string
+///   - temperature: Sampling temperature (0.0 to 2.0)
+///   - maxTokens: Maximum tokens to generate
+///   - callback: Callback function to receive text chunks (receives nil to signal end)
+/// - Returns: Result code (0 = success, negative = error)
 @_cdecl("apple_ai_generate_stream")
 public func appleAIGenerateStream(
     prompt: UnsafePointer<CChar>,
@@ -246,16 +324,13 @@ public func appleAIGenerateStream(
         Task {
             do {
                 // Get or create session
-                let session = currentSession ?? LanguageModelSession(
-                    model: SystemLanguageModel.default
-                )
-                currentSession = session
+                let session = getOrCreateSession()
 
                 // Configure generation options
                 let options = GenerationOptions(
-                    temperature: temperature
+                    temperature: temperature,
+                    maximumResponseTokens: Int(maxTokens)
                 )
-                // Note: maxTokens not supported in GenerationOptions
 
                 // Stream response
                 let stream = try await session.streamResponse(
@@ -283,7 +358,14 @@ public func appleAIGenerateStream(
                 cb(nil)
 
             } catch {
-                cb(strdup("Error: \(error.localizedDescription)"))
+                // Use safe JSON serialization for error messages
+                let errorMessage = "Error: \(error.localizedDescription)"
+                if let errorJson = createErrorResponse(errorMessage) {
+                    cb(errorJson)
+                    // Note: callback takes ownership, will be freed by caller
+                } else {
+                    cb(strdup("{\"error\":\"An error occurred\"}"))
+                }
                 cb(nil)
                 resultCode = .errorGeneration
             }
@@ -298,6 +380,206 @@ public func appleAIGenerateStream(
     cb(strdup("FoundationModels not available"))
     cb(nil)
     return AIResult.errorNotAvailable.rawValue
+}
+
+// MARK: - Structured Generation
+
+// Helper to convert JSON Schema dictionary to DynamicGenerationSchema
+@available(macOS 26.0, *)
+private func convertJSONSchemaToDynamic(_ schema: [String: Any], name: String = "root") -> DynamicGenerationSchema? {
+    guard let type = schema["type"] as? String else {
+        return nil
+    }
+
+    switch type {
+    case "object":
+        guard let properties = schema["properties"] as? [String: [String: Any]] else {
+            return nil
+        }
+
+        var dynamicProperties: [DynamicGenerationSchema.Property] = []
+
+        for (propName, propSchema) in properties {
+            guard let propDynamicSchema = convertJSONSchemaToDynamic(propSchema, name: propName) else {
+                // Fail fast if property conversion fails - don't produce incomplete schemas
+                print("ERROR: Failed to convert property '\(propName)' in schema '\(name)'")
+                return nil
+            }
+
+            let description = propSchema["description"] as? String
+            dynamicProperties.append(
+                DynamicGenerationSchema.Property(
+                    name: propName,
+                    description: description,
+                    schema: propDynamicSchema
+                )
+            )
+        }
+
+        return DynamicGenerationSchema(
+            name: name,
+            description: schema["description"] as? String,
+            properties: dynamicProperties
+        )
+
+    case "array":
+        guard let items = schema["items"] as? [String: Any],
+              let itemSchema = convertJSONSchemaToDynamic(items, name: "\(name)Item") else {
+            // Fail fast - don't silently fall back to String type for malformed arrays
+            print("ERROR: Array schema missing or invalid 'items' specification for '\(name)'")
+            return nil
+        }
+
+        // Extract min/max items if specified
+        let minItems = schema["minItems"] as? Int
+        let maxItems = schema["maxItems"] as? Int
+
+        return DynamicGenerationSchema(
+            arrayOf: itemSchema,
+            minimumElements: minItems,
+            maximumElements: maxItems
+        )
+
+    case "string":
+        if let enumValues = schema["enum"] as? [String] {
+            return DynamicGenerationSchema(name: name, anyOf: enumValues)
+        }
+        return DynamicGenerationSchema(type: String.self)
+
+    case "integer", "number":
+        return DynamicGenerationSchema(type: Double.self)
+
+    case "boolean":
+        return DynamicGenerationSchema(type: Bool.self)
+
+    default:
+        return nil
+    }
+}
+
+// Helper to extract JSON from GeneratedContent
+@available(macOS 26.0, *)
+private func extractJSON(from content: GeneratedContent) throws -> [String: Any] {
+    guard case let .structure(properties, _) = content.kind else {
+        throw NSError(domain: "FoundationModels", code: -1, userInfo: [NSLocalizedDescriptionKey: "Expected structure content"])
+    }
+
+    var result: [String: Any] = [:]
+
+    for (key, value) in properties {
+        result[key] = try extractValue(from: value)
+    }
+
+    return result
+}
+
+@available(macOS 26.0, *)
+private func extractValue(from content: GeneratedContent) throws -> Any {
+    switch content.kind {
+    case .string(let str):
+        return str
+    case .number(let num):
+        return num
+    case .bool(let bool):
+        return bool
+    case .null:
+        return NSNull()
+    case .structure(let properties, _):
+        var result: [String: Any] = [:]
+        for (key, value) in properties {
+            result[key] = try extractValue(from: value)
+        }
+        return result
+    case .array(let items):
+        var result: [Any] = []
+        for item in items {
+            result.append(try extractValue(from: item))
+        }
+        return result
+    @unknown default:
+        throw NSError(domain: "FoundationModels", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unsupported GeneratedContent kind"])
+    }
+}
+
+/// Generate structured output conforming to JSON Schema
+/// - Parameters:
+///   - prompt: User prompt as C string
+///   - schemaJson: JSON Schema as C string
+///   - temperature: Sampling temperature (0.0 to 2.0)
+///   - maxTokens: Maximum tokens to generate
+/// - Returns: JSON object conforming to schema, or error message
+@_cdecl("apple_ai_generate_structured")
+public func appleAIGenerateStructured(
+    prompt: UnsafePointer<CChar>,
+    schemaJson: UnsafePointer<CChar>,
+    temperature: Double,
+    maxTokens: Int32
+) -> UnsafeMutablePointer<CChar>? {
+    guard isInitialized else {
+        return createErrorResponse("Not initialized")
+    }
+
+    #if canImport(FoundationModels)
+    if #available(macOS 26.0, *) {
+        let promptString = String(cString: prompt)
+        let schemaString = String(cString: schemaJson)
+
+        // Parse schema JSON to dictionary
+        guard let schemaData = schemaString.data(using: .utf8),
+              let schemaDict = try? JSONSerialization.jsonObject(with: schemaData) as? [String: Any] else {
+            return createErrorResponse("Invalid schema JSON")
+        }
+
+        // Convert JSON Schema to DynamicGenerationSchema
+        guard let dynamicSchema = convertJSONSchemaToDynamic(schemaDict) else {
+            return createErrorResponse("Failed to convert schema")
+        }
+
+        // Use semaphore for async coordination
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: String = ""
+
+        Task {
+            do {
+                // Get or create session
+                let session = getOrCreateSession()
+
+                // Configure generation options
+                let options = GenerationOptions(
+                    temperature: temperature,
+                    maximumResponseTokens: Int(maxTokens)
+                )
+
+                // Create GenerationSchema from DynamicGenerationSchema
+                let generationSchema = try GenerationSchema(root: dynamicSchema, dependencies: [])
+
+                // Generate response with proper schema
+                let response = try await session.respond(
+                    to: promptString,
+                    schema: generationSchema,
+                    options: options
+                )
+
+                // Extract JSON from GeneratedContent
+                let jsonObject = try extractJSON(from: response.content)
+                let jsonData = try JSONSerialization.data(withJSONObject: jsonObject)
+                if let jsonString = String(data: jsonData, encoding: .utf8) {
+                    result = jsonString
+                } else {
+                    result = "{\"error\": \"Failed to encode JSON as string\"}"
+                }
+            } catch {
+                result = "{\"error\": \"\(error.localizedDescription)\"}"
+            }
+            semaphore.signal()
+        }
+
+        semaphore.wait()
+        return strdup(result)
+    }
+    #endif
+
+    return createErrorResponse("FoundationModels not available")
 }
 
 // MARK: - Memory Management
@@ -332,18 +614,7 @@ public func appleAIClearHistory() {
     // Clear by creating a new session
     #if canImport(FoundationModels)
     if #available(macOS 26.0, *) {
-        if let instructions = sessionInstructions {
-            currentSession = LanguageModelSession(
-                model: SystemLanguageModel.default,
-                instructions: {
-                    instructions
-                }
-            )
-        } else {
-            currentSession = LanguageModelSession(
-                model: SystemLanguageModel.default
-            )
-        }
+        currentSession = createNewSession()
     }
     #endif
 }

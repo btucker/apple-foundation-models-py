@@ -19,66 +19,79 @@ class FoundationModelsError(Exception):
 
 class InitializationError(FoundationModelsError):
     """Library initialization failed."""
+
     pass
 
 
 class NotAvailableError(FoundationModelsError):
     """Apple Intelligence not available on this device."""
+
     pass
 
 
 class InvalidParametersError(FoundationModelsError):
     """Invalid parameters provided to function."""
+
     pass
 
 
 class MemoryError(FoundationModelsError):
     """Memory allocation error."""
+
     pass
 
 
 class JSONParseError(FoundationModelsError):
     """JSON parsing or validation error."""
+
     pass
 
 
 class GenerationError(FoundationModelsError):
     """Text generation error."""
+
     pass
 
 
 class TimeoutError(FoundationModelsError):
     """Operation timeout."""
+
     pass
 
 
 class SessionNotFoundError(FoundationModelsError):
     """Session ID not found."""
+
     pass
 
 
 class StreamNotFoundError(FoundationModelsError):
     """Stream ID not found or already completed."""
+
     pass
 
 
 class GuardrailViolationError(FoundationModelsError):
     """Content blocked by safety filters."""
+
     pass
 
 
 class ToolNotFoundError(FoundationModelsError):
     """Tool callback not registered for session."""
+
     pass
 
 
 class ToolExecutionError(FoundationModelsError):
     """Tool execution failed or returned invalid result."""
+
     pass
 
 
 class UnknownError(FoundationModelsError):
     """Unknown error occurred."""
+
     pass
 
 

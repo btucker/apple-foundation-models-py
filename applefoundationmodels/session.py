@@ -6,7 +6,7 @@ Provides session management, text generation, and async streaming support.
 
 import asyncio
 import json
-from typing import Optional, Dict, Any, AsyncIterator, Callable
+from typing import Optional, Dict, Any, AsyncIterator, Callable, Union, TYPE_CHECKING
 from queue import Queue, Empty
 import threading
 
@@ -14,6 +14,10 @@ from . import _foundationmodels
 from .base import ContextManagedResource
 from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
 from .types import GenerationParams
+from .pydantic_compat import normalize_schema
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 
 class Session(ContextManagedResource):
@@ -56,9 +60,7 @@ class Session(ContextManagedResource):
             raise RuntimeError("Session is closed")
 
     def _normalize_generation_params(
-        self,
-        temperature: Optional[float],
-        max_tokens: Optional[int]
+        self, temperature: Optional[float], max_tokens: Optional[int]
     ) -> tuple[float, int]:
         """
         Normalize generation parameters with defaults.
@@ -80,7 +82,7 @@ class Session(ContextManagedResource):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         include_reasoning: Optional[bool] = None,
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
     ) -> str:
         """
         Generate text response for a prompt.
@@ -110,28 +112,65 @@ class Session(ContextManagedResource):
     def generate_structured(
         self,
         prompt: str,
-        schema: Dict[str, Any],
+        schema: Union[Dict[str, Any], "BaseModel"],
         temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None
+        max_tokens: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Generate structured JSON output matching a schema.
 
-        Note: Not yet implemented in simplified API.
-
         Args:
             prompt: Input text prompt
-            schema: JSON schema the output must conform to
-            temperature: Sampling temperature (0.0-2.0)
-            max_tokens: Maximum tokens to generate
+            schema: JSON schema dict or Pydantic BaseModel class
+            temperature: Sampling temperature (0.0-2.0, default: DEFAULT_TEMPERATURE)
+            max_tokens: Maximum tokens to generate (default: DEFAULT_MAX_TOKENS)
 
         Returns:
-            Dictionary with 'object' key containing parsed JSON
+            Dictionary containing the parsed JSON matching the schema
 
         Raises:
-            NotImplementedError: Feature not yet implemented
+            RuntimeError: If session is closed
+            GenerationError: If generation fails
+            JSONParseError: If schema or response is invalid JSON
+            TypeError: If schema is neither dict nor Pydantic model
+            ImportError: If Pydantic model provided but Pydantic not installed
+
+        Example (JSON Schema):
+            >>> schema = {
+            ...     "type": "object",
+            ...     "properties": {
+            ...         "name": {"type": "string"},
+            ...         "age": {"type": "integer"}
+            ...     },
+            ...     "required": ["name", "age"]
+            ... }
+            >>> result = session.generate_structured(
+            ...     "Extract: Alice is 28",
+            ...     schema=schema
+            ... )
+            >>> print(result)
+            {'name': 'Alice', 'age': 28}
+
+        Example (Pydantic):
+            >>> from pydantic import BaseModel
+            >>> class Person(BaseModel):
+            ...     name: str
+            ...     age: int
+            >>> result = session.generate_structured(
+            ...     "Extract: Alice is 28",
+            ...     schema=Person
+            ... )
+            >>> person = Person(**result)  # Parse directly into Pydantic model
+            >>> print(person.name, person.age)
+            Alice 28
         """
-        raise NotImplementedError("Structured generation not yet implemented in Swift API")
+        self._check_closed()
+        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+
+        # Normalize schema to JSON Schema dict (handles Pydantic models)
+        json_schema = normalize_schema(schema)
+
+        return _foundationmodels.generate_structured(prompt, json_schema, temp, tokens)
 
     async def generate_stream(
         self,
@@ -139,7 +178,7 @@ class Session(ContextManagedResource):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         include_reasoning: Optional[bool] = None,
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
     ) -> AsyncIterator[str]:
         """
         Generate text response with async streaming.
