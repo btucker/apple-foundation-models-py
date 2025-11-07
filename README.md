@@ -14,7 +14,7 @@ Python bindings for Apple's FoundationModels framework - Direct access to on-dev
 ## Requirements
 
 - macOS 26.0+ (macOS Sequoia or later)
-- Python 3.8 or higher
+- Python 3.9 or higher
 - Apple Intelligence enabled on your device
 
 ## Installation
@@ -47,7 +47,7 @@ pip install -e .
 
 - macOS 26.0+ (Sequoia) with Apple Intelligence enabled
 - Xcode command line tools (`xcode-select --install`)
-- Python 3.8 or higher
+- Python 3.9 or higher
 
 **Note:** The Swift dylib is built automatically during installation.
 
