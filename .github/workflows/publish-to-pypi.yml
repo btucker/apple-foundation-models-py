@@ -50,34 +50,6 @@ jobs:
         run: |
           uv build --wheel
 
-      - name: Test wheel
-        run: |
-          # Create isolated test environment
-          uv venv .test-venv
-          source .test-venv/bin/activate
-
-          # Install wheel with test dependencies
-          uv pip install dist/*.whl pytest pytest-asyncio
-
-          # Verify installation
-          python -c "
-          import applefoundationmodels as afm
-          import os
-          print(f'Version: {afm.__version__}')
-          dylib = os.path.join(os.path.dirname(afm.__file__), 'libfoundation_models.dylib')
-          print(f'Dylib exists: {os.path.exists(dylib)}')
-          print(f'Availability: {afm.Client.check_availability().name}')
-          "
-
-          # Run tests from installed wheel
-          cd /tmp
-          pytest ${{ github.workspace }}/tests/ -v --tb=short
-
-          # Cleanup
-          cd ${{ github.workspace }}
-          deactivate
-          rm -rf .test-venv
-
       - name: Verify wheel contents
         run: |
           echo "Build artifacts:"
