@@ -5,6 +5,7 @@ This module provides TypedDicts, enums, and type aliases for type-safe
 interaction with the library.
 """
 
+from dataclasses import dataclass
 from enum import IntEnum
 from typing import TypedDict, Optional, Callable, Any
 from typing_extensions import NotRequired
@@ -30,6 +31,7 @@ class Result(IntEnum):
     GUARDRAIL_VIOLATION = -10
     TOOL_NOT_FOUND = -11
     TOOL_EXECUTION = -12
+    BUFFER_TOO_SMALL = -13
     UNKNOWN = -99
 
 
@@ -86,6 +88,46 @@ class GenerationParams(TypedDict, total=False):
     max_tokens: NotRequired[int]
     include_reasoning: NotRequired[bool]
     seed: NotRequired[int]
+
+
+@dataclass
+class NormalizedGenerationParams:
+    """
+    Normalized generation parameters with defaults applied.
+
+    This dataclass ensures all generation parameters have concrete values,
+    making it easier to pass to FFI functions without None checks.
+
+    Attributes:
+        temperature: Generation randomness (0.0-2.0)
+        max_tokens: Maximum response tokens
+    """
+
+    temperature: float
+    max_tokens: int
+
+    @classmethod
+    def from_optional(
+        cls,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> "NormalizedGenerationParams":
+        """
+        Create normalized params from optional values.
+
+        Args:
+            temperature: Optional temperature override
+            max_tokens: Optional max_tokens override
+
+        Returns:
+            NormalizedGenerationParams with defaults applied
+        """
+        from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
+
+        return cls(
+            temperature=temperature if temperature is not None else DEFAULT_TEMPERATURE,
+            max_tokens=max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS,
+        )
 
 
 class Stats(TypedDict):

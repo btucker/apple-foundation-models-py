@@ -22,6 +22,8 @@ cdef extern from "../applefoundationmodels/swift/foundation_models.h":
         AI_ERROR_JSON_PARSE = -5
         AI_ERROR_GENERATION = -6
         AI_ERROR_TIMEOUT = -7
+        AI_ERROR_TOOL_NOT_FOUND = -11
+        AI_ERROR_TOOL_EXECUTION = -12
         AI_ERROR_UNKNOWN = -99
 
     # Availability status
@@ -35,6 +37,12 @@ cdef extern from "../applefoundationmodels/swift/foundation_models.h":
     # Callback type for streaming
     ctypedef void (*ai_stream_callback_t)(const char *chunk)
 
+    # Callback type for tool execution
+    ctypedef int32_t (*ai_tool_callback_t)(const char *tool_name,
+                                           const char *arguments_json,
+                                           char *result_buffer,
+                                           int32_t buffer_size)
+
     # Core library functions
     int32_t apple_ai_init() nogil
     void apple_ai_cleanup() nogil
@@ -46,6 +54,11 @@ cdef extern from "../applefoundationmodels/swift/foundation_models.h":
 
     # Session management
     int32_t apple_ai_create_session(const char *instructions_json) nogil
+
+    # Tool calling
+    int32_t apple_ai_register_tools(const char *tools_json,
+                                    ai_tool_callback_t callback) nogil
+    char *apple_ai_get_transcript() nogil
 
     # Text generation
     char *apple_ai_generate(const char *prompt,

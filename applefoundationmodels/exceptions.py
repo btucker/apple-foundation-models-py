@@ -89,6 +89,12 @@ class ToolExecutionError(FoundationModelsError):
     pass
 
 
+class ToolCallError(FoundationModelsError):
+    """Tool call error (validation, schema, etc.)."""
+
+    pass
+
+
 class UnknownError(FoundationModelsError):
     """Unknown error occurred."""
 

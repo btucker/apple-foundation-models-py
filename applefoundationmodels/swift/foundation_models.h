@@ -17,6 +17,12 @@ extern "C" {
 // Callback type for streaming
 typedef void (*ai_stream_callback_t)(const char *chunk);
 
+// Callback type for tool execution
+typedef int32_t (*ai_tool_callback_t)(const char *tool_name,
+                                       const char *arguments_json,
+                                       char *result_buffer,
+                                       int32_t buffer_size);
+
 // Core library functions
 int32_t apple_ai_init(void);
 void apple_ai_cleanup(void);
@@ -28,6 +34,11 @@ char *apple_ai_get_availability_reason(void);
 
 // Session management
 int32_t apple_ai_create_session(const char *instructions_json);
+
+// Tool calling
+int32_t apple_ai_register_tools(const char *tools_json,
+                                ai_tool_callback_t callback);
+char *apple_ai_get_transcript(void);
 
 // Text generation
 char *apple_ai_generate(const char *prompt,

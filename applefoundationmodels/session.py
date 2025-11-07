@@ -6,15 +6,25 @@ Provides session management, text generation, and async streaming support.
 
 import asyncio
 import json
-from typing import Optional, Dict, Any, AsyncIterator, Callable, Union, TYPE_CHECKING
+from typing import (
+    Optional,
+    Dict,
+    Any,
+    AsyncIterator,
+    Callable,
+    Union,
+    TYPE_CHECKING,
+    List,
+    cast,
+)
 from queue import Queue, Empty
 import threading
 
 from . import _foundationmodels
 from .base import ContextManagedResource
-from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
-from .types import GenerationParams
+from .types import GenerationParams, NormalizedGenerationParams
 from .pydantic_compat import normalize_schema
+from .tools import extract_function_schema, attach_tool_metadata
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -33,7 +43,7 @@ class Session(ContextManagedResource):
             print(response)
     """
 
-    def __init__(self, session_id: int):
+    def __init__(self, session_id: int, config: Optional[Dict[str, Any]] = None):
         """
         Create a Session instance.
 
@@ -42,9 +52,13 @@ class Session(ContextManagedResource):
 
         Args:
             session_id: The session ID (always 0 in simplified API)
+            config: Optional session configuration
         """
         self._session_id = session_id
         self._closed = False
+        self._tools: Dict[str, Callable] = {}
+        self._tools_registered = False
+        self._config = config
 
     def close(self) -> None:
         """
@@ -61,7 +75,7 @@ class Session(ContextManagedResource):
 
     def _normalize_generation_params(
         self, temperature: Optional[float], max_tokens: Optional[int]
-    ) -> tuple[float, int]:
+    ) -> NormalizedGenerationParams:
         """
         Normalize generation parameters with defaults.
 
@@ -70,11 +84,9 @@ class Session(ContextManagedResource):
             max_tokens: Optional max tokens value
 
         Returns:
-            Tuple of (temperature, max_tokens) with defaults applied
+            NormalizedGenerationParams with defaults applied
         """
-        temp = temperature if temperature is not None else DEFAULT_TEMPERATURE
-        tokens = max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS
-        return temp, tokens
+        return NormalizedGenerationParams.from_optional(temperature, max_tokens)
 
     def generate(
         self,
@@ -106,8 +118,8 @@ class Session(ContextManagedResource):
             >>> print(response)
         """
         self._check_closed()
-        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
-        return _foundationmodels.generate(prompt, temp, tokens)
+        params = self._normalize_generation_params(temperature, max_tokens)
+        return _foundationmodels.generate(prompt, params.temperature, params.max_tokens)
 
     def generate_structured(
         self,
@@ -165,12 +177,14 @@ class Session(ContextManagedResource):
             Alice 28
         """
         self._check_closed()
-        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+        params = self._normalize_generation_params(temperature, max_tokens)
 
         # Normalize schema to JSON Schema dict (handles Pydantic models)
         json_schema = normalize_schema(schema)
 
-        return _foundationmodels.generate_structured(prompt, json_schema, temp, tokens)
+        return _foundationmodels.generate_structured(
+            prompt, json_schema, params.temperature, params.max_tokens
+        )
 
     async def generate_stream(
         self,
@@ -198,7 +212,7 @@ class Session(ContextManagedResource):
             ...     print(chunk, end='', flush=True)
         """
         self._check_closed()
-        temp, tokens = self._normalize_generation_params(temperature, max_tokens)
+        params = self._normalize_generation_params(temperature, max_tokens)
 
         # Use a queue to bridge the sync callback and async iterator
         queue: Queue = Queue()
@@ -209,7 +223,9 @@ class Session(ContextManagedResource):
         # Run streaming in a background thread
         def run_stream():
             try:
-                _foundationmodels.generate_stream(prompt, callback, temp, tokens)
+                _foundationmodels.generate_stream(
+                    prompt, callback, params.temperature, params.max_tokens
+                )
             except Exception as e:
                 queue.put(e)
 
@@ -272,3 +288,97 @@ class Session(ContextManagedResource):
         """
         self._check_closed()
         _foundationmodels.add_message(role, content)
+
+    def tool(
+        self,
+        description: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> Callable[[Callable], Callable]:
+        """
+        Decorator to register a function as a tool for this session.
+
+        The function's signature and docstring are used to automatically
+        generate a JSON schema for the tool's parameters.
+
+        Args:
+            description: Optional tool description (uses docstring if not provided)
+            name: Optional tool name (uses function name if not provided)
+
+        Returns:
+            Decorator function
+
+        Note:
+            Tool output size limits:
+            - Initial buffer: 16KB
+            - Maximum size: 1MB (automatically retried with larger buffers)
+            - Tools returning outputs larger than 1MB will raise an error
+            - For large outputs, consider returning references or summaries
+
+        Example:
+            @session.tool(description="Get current weather")
+            def get_weather(location: str, units: str = "celsius") -> str:
+                '''Get weather for a location.'''
+                return f"Weather in {location}: 20°{units[0].upper()}"
+
+            response = session.generate("What's the weather in Paris?")
+        """
+
+        def decorator(func: Callable) -> Callable:
+            # Extract schema and attach metadata using shared helper
+            schema = extract_function_schema(func)
+            final_schema = attach_tool_metadata(func, schema, description, name)
+
+            # Session-specific logic: store and register tool
+            tool_name = final_schema["name"]
+            self._tools[tool_name] = func
+            self._register_tools()
+
+            return func
+
+        return decorator
+
+    def _register_tools(self) -> None:
+        """
+        Register all tools with the FFI layer.
+
+        Called automatically when tools are added via decorator.
+        Recreates the session with tools enabled.
+        """
+        if not self._tools:
+            return
+
+        # Register tools with C FFI
+        _foundationmodels.register_tools(self._tools)
+        self._tools_registered = True
+
+        # Recreate session with tools enabled
+        # This is necessary because the session needs to be created with tools
+        # for FoundationModels to know about them
+        config = self._config or {}
+        _foundationmodels.create_session(config)
+
+    @property
+    def transcript(self) -> List[Dict[str, Any]]:
+        """
+        Get the session transcript including tool calls.
+
+        Returns a list of transcript entries showing the full conversation
+        history including instructions, prompts, tool calls, tool outputs,
+        and responses.
+
+        Returns:
+            List of transcript entry dictionaries with keys:
+            - type: Entry type ('instructions', 'prompt', 'response', 'tool_call', 'tool_output')
+            - content: Entry content (for text entries)
+            - tool_name: Tool name (for tool_call entries)
+            - tool_id: Tool call ID (for tool_call and tool_output entries)
+            - arguments: Tool arguments as JSON string (for tool_call entries)
+
+        Example:
+            >>> transcript = session.transcript
+            >>> for entry in transcript:
+            ...     print(f"{entry['type']}: {entry.get('content', '')}")
+        """
+        self._check_closed()
+        # Explicit cast to ensure type checkers see the correct return type
+        return cast(List[Dict[str, Any]], _foundationmodels.get_transcript())

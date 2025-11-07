@@ -1,6 +1,7 @@
 """Setup script for apple-foundation-models-py Python bindings."""
 
 import sys
+import os
 import platform
 import subprocess
 import shutil
@@ -40,9 +41,29 @@ def build_swift_dylib():
     print("Building Swift FoundationModels dylib...")
     LIB_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Check for Xcode (required for @Generable macro support)
+    xcode_path = Path("/Applications/Xcode.app")
+    if xcode_path.exists():
+        # Use Xcode's toolchain which includes the FoundationModelsMacros plugin
+        swift_compiler = "xcrun"
+        sdk_args = [
+            "-sdk", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+        ]
+        env = {**os.environ, "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer"}
+        print("✓ Using Xcode toolchain (@Generable macro support enabled)")
+    else:
+        # Fall back to command line tools (no @Generable support)
+        swift_compiler = "swiftc"
+        sdk_args = []
+        env = None
+        print("⚠ Using command line tools (@Generable macro not available)")
+
     # Build dylib
     cmd = [
-        "swiftc", str(SWIFT_SRC),
+        swift_compiler,
+        "swiftc" if swift_compiler == "xcrun" else None,
+        *sdk_args,
+        str(SWIFT_SRC),
         "-O", "-whole-module-optimization",
         "-target", f"{ARCH}-apple-macos26.0",
         "-framework", "Foundation", "-framework", "FoundationModels",
@@ -50,14 +71,15 @@ def build_swift_dylib():
         "-emit-module", "-emit-module-path", str(LIB_DIR / "foundation_models.swiftmodule"),
         "-Xlinker", "-install_name", "-Xlinker", "@rpath/libfoundation_models.dylib",
     ]
+    cmd = [arg for arg in cmd if arg is not None]  # Remove None entries
 
     try:
-        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        subprocess.run(cmd, check=True, capture_output=True, text=True, env=env)
         print(f"✓ Built: {dylib_path} ({dylib_path.stat().st_size / 1024:.1f} KB)")
         shutil.copy2(dylib_path, PKG_DYLIB)
         print(f"✓ Copied to: {PKG_DYLIB}")
     except FileNotFoundError:
-        sys.exit("Error: swiftc not found. Install Xcode Command Line Tools: xcode-select --install")
+        sys.exit("Error: swiftc not found. Install Xcode: https://developer.apple.com/xcode/")
     except subprocess.CalledProcessError as e:
         sys.exit(f"Error: Swift compilation failed\n{e.stderr}")
 
