@@ -1,0 +1,153 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: 007c472b...
+**Time:** 2025-11-06 23:20:14
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! I've successfully added Pydantic support for structured outputs. Here's a summary:
+
+## Summary of All Changes
+
+### 1. **Fixed Swift extractValue optionals** (`581ec1d`)
+   - Made `extractValue` return non-optional `Any` and throw on errors
+   - Prevents JSONSerialization failures
+
+### 2. **Added GitHub Actions test workflow** (`1da3e9f`, `0636a75`, `a5fd546`)
+   - Uses `uv sync` for fast, lockfile-based installs
+   - Tests across Python 3.10, 3.11, 3.12
+   - Includes lint job with black and mypy
+
+### 3. **Fixed formatting and type issues** (`1ef93c2`, `c4d0995`)
+   - Formatted all Python files with black
+   - Added type stub for `_foundationmodels` Cython extension
+   - Fixed mypy errors
+
+### 4. **Fixed test availability** (`4188ade`, `30c9872`)
+   - Made availability check autouse fixture
+   - Tests auto-skip when Apple Intelligence unavailable
+   - Added debug step to check availability in CI
+
+### 5. **Updated structured output test** (`d72b0b1`)
+   - Replaced outdated NotImplementedError test
+   - Added actual test verifying structured output works
+
+### 6. **Added Pydantic support** (`e19001a`, `6264791`)
+   - Created `pydantic_compat.py` with model-to-schema conversion
+   - Updated `generate_structured()` to accept `Union[Dict, BaseModel]`
+   - Added optional `pydantic` dependency
+   - Added tests and README examples
+
+## Key Features Added:
+
+**Pydantic Integration:**
+```python
+from pydantic import BaseModel
+
+class Person(BaseModel):
+    name: str
+    age: int
+    city: str
+
+# Pass Pydantic model directly!
+result = session.generate_structured(
+    "Extract person info: Alice is 28 and lives in Paris",
+    schema=Person  # No JSON schema needed
+)
+
+# Parse back into Pydantic model
+person = Person(**result['object'])
+```
+
+**Installation:**
+```bash
+pip install apple-foundation-models[pydantic]
+```
+
+All tests pass locally! The CI will show what happens on GitHub runners.
+
+### 👤 User
+the github actions are both running on the PR and also on the push, I think we only need the PR
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Good catch! Let me update the workflow to only run on PRs and pushes to main/develop:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+---
