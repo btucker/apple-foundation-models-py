@@ -381,13 +381,17 @@ class TestToolIntegration:
             # Use a pattern that we can verify wasn't truncated
             large_data = "START-" + ("x" * 20470) + "-END"  # 20KB total
 
-            @session.tool(description="Get system diagnostic data that includes large logs")
+            @session.tool(
+                description="Get system diagnostic data that includes large logs"
+            )
             def get_system_logs() -> str:
                 called["invoked"] = True
                 return large_data
 
             # More explicit prompt to trigger tool call
-            response = session.generate("Use the get_system_logs tool to retrieve the system diagnostic data")
+            response = session.generate(
+                "Use the get_system_logs tool to retrieve the system diagnostic data"
+            )
 
             # Verify the tool was called
             assert called.get("invoked"), "Tool should have been called"
