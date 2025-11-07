@@ -1,10 +1,5 @@
-"""
-Setup script for apple-foundation-models-py Python bindings.
+"""Setup script for apple-foundation-models-py Python bindings."""
 
-Builds the Swift FoundationModels dylib and Cython extension automatically.
-"""
-
-import os
 import sys
 import platform
 import subprocess
@@ -15,170 +10,101 @@ from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_py import build_py as _build_py
 from Cython.Build import cythonize
 
-
-# Determine paths
+# Paths
 REPO_ROOT = Path(__file__).parent.resolve()
-LIB_DIR = REPO_ROOT / "lib"
 PKG_DIR = REPO_ROOT / "applefoundationmodels"
-SWIFT_DIR = PKG_DIR / "swift"
-SWIFT_SRC = SWIFT_DIR / "foundation_models.swift"
-DYLIB_PATH = LIB_DIR / "libfoundation_models.dylib"
-SWIFTMODULE_PATH = LIB_DIR / "foundation_models.swiftmodule"
-PKG_DYLIB_PATH = PKG_DIR / "libfoundation_models.dylib"
+SWIFT_SRC = PKG_DIR / "swift" / "foundation_models.swift"
+LIB_DIR = REPO_ROOT / "lib"
+PKG_DYLIB = PKG_DIR / "libfoundation_models.dylib"
 
-# Detect architecture
-ARCH = platform.machine()
-if ARCH not in ["arm64", "x86_64"]:
-    print(f"Warning: Unsupported architecture {ARCH}, attempting to use x86_64")
-    ARCH = "x86_64"
+# Only support Apple Silicon (arm64)
+ARCH = "arm64"
 
 
 def build_swift_dylib():
-    """Build the Swift FoundationModels dylib (shared function)."""
-    # Check if we need to rebuild
-    needs_rebuild = (
-        not DYLIB_PATH.exists() or
-        not SWIFT_SRC.exists() or
-        SWIFT_SRC.stat().st_mtime > DYLIB_PATH.stat().st_mtime
-    )
+    """Build the Swift FoundationModels dylib."""
+    dylib_path = LIB_DIR / "libfoundation_models.dylib"
 
-    if not needs_rebuild:
-        print(f"Swift dylib is up to date: {DYLIB_PATH}")
-        return
+    # Skip if up to date
+    if dylib_path.exists() and SWIFT_SRC.exists():
+        if SWIFT_SRC.stat().st_mtime <= dylib_path.stat().st_mtime:
+            print(f"Swift dylib is up to date: {dylib_path}")
+            return
 
-    print("=" * 70)
-    print("Building Swift FoundationModels dylib...")
-    print("=" * 70)
-
-    # Check if running on macOS
+    # Validate environment
     if platform.system() != "Darwin":
-        print("Error: Swift dylib can only be built on macOS")
-        sys.exit(1)
-
-    # Check Swift source exists
+        sys.exit("Error: Swift dylib can only be built on macOS")
     if not SWIFT_SRC.exists():
-        print(f"Error: Swift source not found at {SWIFT_SRC}")
-        sys.exit(1)
+        sys.exit(f"Error: Swift source not found at {SWIFT_SRC}")
 
-    # Check macOS version
-    os_version = int(platform.mac_ver()[0].split('.')[0])
-    if os_version < 26:
-        print(f"Warning: macOS 26.0+ required for Apple Intelligence")
-        print(f"Current version: {platform.mac_ver()[0]}")
-        print("Continuing anyway (library will be built but may not function)")
-
-    # Create lib directory
+    print("Building Swift FoundationModels dylib...")
     LIB_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Compile Swift to dylib
+    # Build dylib
     cmd = [
         "swiftc", str(SWIFT_SRC),
-        "-O",
-        "-whole-module-optimization",
-        f"-target", f"{ARCH}-apple-macos26.0",
-        "-framework", "Foundation",
-        "-framework", "FoundationModels",
-        "-emit-library",
-        "-o", str(DYLIB_PATH),
-        "-emit-module",
-        "-emit-module-path", str(SWIFTMODULE_PATH),
-        "-Xlinker", "-install_name",
-        "-Xlinker", f"@rpath/libfoundation_models.dylib",
+        "-O", "-whole-module-optimization",
+        "-target", f"{ARCH}-apple-macos26.0",
+        "-framework", "Foundation", "-framework", "FoundationModels",
+        "-emit-library", "-o", str(dylib_path),
+        "-emit-module", "-emit-module-path", str(LIB_DIR / "foundation_models.swiftmodule"),
+        "-Xlinker", "-install_name", "-Xlinker", "@rpath/libfoundation_models.dylib",
     ]
 
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        if result.stdout:
-            print(result.stdout)
-        if result.stderr:
-            print(result.stderr, file=sys.stderr)
-
-        print(f"✓ Successfully built: {DYLIB_PATH}")
-        print(f"  Size: {DYLIB_PATH.stat().st_size / 1024:.1f} KB")
-
-        # Copy dylib to package directory so it's included in wheels
-        print(f"Copying dylib to package directory: {PKG_DYLIB_PATH}")
-        shutil.copy2(DYLIB_PATH, PKG_DYLIB_PATH)
-        print(f"✓ Dylib copied to package directory")
-
-    except subprocess.CalledProcessError as e:
-        print(f"✗ Swift compilation failed")
-        print(e.stderr)
-        sys.exit(1)
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print(f"✓ Built: {dylib_path} ({dylib_path.stat().st_size / 1024:.1f} KB)")
+        shutil.copy2(dylib_path, PKG_DYLIB)
+        print(f"✓ Copied to: {PKG_DYLIB}")
     except FileNotFoundError:
-        print("✗ Swift compiler (swiftc) not found")
-        print("Please install Xcode Command Line Tools:")
-        print("  xcode-select --install")
-        sys.exit(1)
+        sys.exit("Error: swiftc not found. Install Xcode Command Line Tools: xcode-select --install")
+    except subprocess.CalledProcessError as e:
+        sys.exit(f"Error: Swift compilation failed\n{e.stderr}")
 
 
 class BuildPyWithDylib(_build_py):
-    """Custom build_py that ensures dylib is built and copied."""
-
+    """Build Swift dylib before copying package files."""
     def run(self):
-        """Build Swift dylib before copying package files."""
-        # Build the Swift dylib first
         build_swift_dylib()
-        # Run the standard build_py
         super().run()
-        # Ensure dylib is copied to build directory
-        if PKG_DYLIB_PATH.exists():
-            build_lib = Path(self.build_lib)
-            target_dir = build_lib / "applefoundationmodels"
-            target_dir.mkdir(parents=True, exist_ok=True)
-            target_dylib = target_dir / "libfoundation_models.dylib"
-            print(f"Copying {PKG_DYLIB_PATH} to {target_dylib}")
-            shutil.copy2(PKG_DYLIB_PATH, target_dylib)
+        if PKG_DYLIB.exists():
+            target = Path(self.build_lib) / "applefoundationmodels" / "libfoundation_models.dylib"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(PKG_DYLIB, target)
 
 
 class BuildSwiftThenExt(_build_ext):
-    """Custom build_ext that builds Swift dylib before building Cython extension."""
-
+    """Build Swift dylib before building Cython extension."""
     def run(self):
-        """Build Swift dylib, then build Cython extension."""
         build_swift_dylib()
         super().run()
 
-# Define the Cython extension
-extensions = [
-    Extension(
-        name="applefoundationmodels._foundationmodels",
+# Cython extension
+ext_modules = cythonize(
+    [Extension(
+        "applefoundationmodels._foundationmodels",
         sources=["applefoundationmodels/_foundationmodels.pyx"],
-        include_dirs=[str(SWIFT_DIR)],  # Include Swift header directory
+        include_dirs=[str(PKG_DIR / "swift")],
         library_dirs=[str(LIB_DIR)],
-        libraries=["foundation_models"],  # Link against libfoundation_models.dylib
-        extra_compile_args=[
-            "-O3",  # Optimization
-            "-Wall",  # Warnings
-        ],
+        libraries=["foundation_models"],
+        extra_compile_args=["-O3", "-Wall"],
         extra_link_args=[
-            # Set RPATH to find dylib at runtime
-            f"-Wl,-rpath,{LIB_DIR}",  # Absolute path for development
-            "-Wl,-rpath,@loader_path/../lib",  # Relative path for installed package
-            "-Wl,-rpath,@loader_path",  # Also check same directory
+            f"-Wl,-rpath,{LIB_DIR}",
+            "-Wl,-rpath,@loader_path/../lib",
+            "-Wl,-rpath,@loader_path",
         ],
         language="c",
-    )
-]
-
-# Cythonize extensions
-ext_modules = cythonize(
-    extensions,
+    )],
     compiler_directives={
         "language_level": "3",
         "embedsignature": True,
         "boundscheck": False,
         "wraparound": False,
     },
-    annotate=False,  # Set to True to generate HTML annotation files
 )
 
-# Run setup
 if __name__ == "__main__":
     setup(
         ext_modules=ext_modules,
-        cmdclass={
-            'build_py': BuildPyWithDylib,
-            'build_ext': BuildSwiftThenExt,
-        },
+        cmdclass={"build_py": BuildPyWithDylib, "build_ext": BuildSwiftThenExt},
     )
