@@ -60,25 +60,27 @@ private var toolCallback: ToolCallback?
 struct PythonToolWrapper: Tool, Sendable {
     let toolName: String
     let toolDescription: String
-    let parametersSchema: [String: Any]
+    let dynamicSchema: DynamicGenerationSchema
 
     var name: String { toolName }
     var description: String { toolDescription }
 
-    // Use empty struct with @Generable - the model will generate the actual parameters
-    // We'll extract them from GeneratedContent
-    @Generable
-    struct Arguments: Sendable {
-        // Empty struct - we'll get parameters from raw generated content
-    }
-
+    // Use GeneratedContent as Arguments - it's already Generable and supports dynamic schemas!
+    typealias Arguments = GeneratedContent
     typealias Output = String
 
+    // Override parameters with our dynamic schema
+    var parameters: GenerationSchema {
+        // Must not throw - create schema or use empty one on error
+        (try? GenerationSchema(root: dynamicSchema, dependencies: [])) ?? GenerationSchema(
+            type: GeneratedContent.self,
+            properties: []
+        )
+    }
+
     nonisolated func call(arguments: Arguments) async throws -> Output {
-        // The arguments struct is empty, but we need to get the actual parameters
-        // from the generated content. For now, pass empty JSON.
-        // TODO: Figure out how to access raw GeneratedContent
-        let argsJson = "{}"
+        // Extract JSON directly from GeneratedContent!
+        let argsJson = arguments.jsonString
 
         // Allocate result buffer (16KB)
         let bufferSize: Int32 = 16384
@@ -98,8 +100,12 @@ struct PythonToolWrapper: Tool, Sendable {
         }
 
         guard result == 0 else {
+            // Extract error message from buffer
             let errorMsg = String(cString: resultBuffer)
-            throw NSError(domain: "ToolError", code: Int(result), userInfo: [NSLocalizedDescriptionKey: errorMsg])
+            // Throw simpler error to avoid buffer overflow in error messages
+            throw NSError(domain: "ToolError", code: Int(result), userInfo: [
+                NSLocalizedDescriptionKey: "Tool '\(toolName)' failed: \(errorMsg)"
+            ])
         }
 
         return String(cString: resultBuffer)
@@ -291,10 +297,16 @@ public func appleAIRegisterTools(
                 continue
             }
 
+            // Convert JSON Schema to DynamicGenerationSchema
+            guard let dynamicSchema = convertJSONSchemaToDynamic(parameters, name: "\(name)_params") else {
+                print("ERROR: Failed to convert schema for tool '\(name)'")
+                continue
+            }
+
             let tool = PythonToolWrapper(
                 toolName: name,
                 toolDescription: description,
-                parametersSchema: parameters
+                dynamicSchema: dynamicSchema
             )
             registeredTools.append(tool)
         }

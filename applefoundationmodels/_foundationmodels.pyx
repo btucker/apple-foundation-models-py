@@ -12,6 +12,7 @@ import json
 from typing import Optional, Callable, Any, Dict
 from .exceptions import raise_for_error_code
 from .types import Result, Availability
+from libc.string cimport memcpy
 
 
 # ============================================================================
@@ -249,14 +250,13 @@ cdef int32_t _tool_callback_wrapper(
             else:
                 result_str = json.dumps(result)
 
-            # Write to buffer
+            # Write to buffer using memcpy
             result_bytes = result_str.encode('utf-8')
             if len(result_bytes) >= buffer_size:
                 # Truncate if too large
                 result_bytes = result_bytes[:buffer_size-1]
 
-            for i, b in enumerate(result_bytes):
-                result_buffer[i] = b
+            memcpy(result_buffer, <char*>result_bytes, len(result_bytes))
             result_buffer[len(result_bytes)] = 0
 
             return 0  # AI_SUCCESS
@@ -266,8 +266,7 @@ cdef int32_t _tool_callback_wrapper(
             error_bytes = error_msg.encode('utf-8')
             if len(error_bytes) >= buffer_size:
                 error_bytes = error_bytes[:buffer_size-1]
-            for i, b in enumerate(error_bytes):
-                result_buffer[i] = b
+            memcpy(result_buffer, <char*>error_bytes, len(error_bytes))
             result_buffer[len(error_bytes)] = 0
             return -12  # AI_ERROR_TOOL_EXECUTION
 
@@ -276,8 +275,7 @@ cdef int32_t _tool_callback_wrapper(
         error_bytes = error_msg.encode('utf-8')
         if len(error_bytes) >= buffer_size:
             error_bytes = error_bytes[:buffer_size-1]
-        for i, b in enumerate(error_bytes):
-            result_buffer[i] = b
+        memcpy(result_buffer, <char*>error_bytes, len(error_bytes))
         result_buffer[len(error_bytes)] = 0
         return -99  # AI_ERROR_UNKNOWN
 
