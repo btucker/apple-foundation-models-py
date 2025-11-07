@@ -19,6 +19,19 @@ except ImportError:
     BaseModel = None  # type: ignore
 
 
+def require_pydantic() -> None:
+    """
+    Raise ImportError if Pydantic is not available.
+
+    Raises:
+        ImportError: If Pydantic is not installed
+    """
+    if not PYDANTIC_AVAILABLE:
+        raise ImportError(
+            "Pydantic is not installed. Install it with: pip install pydantic>=2.0"
+        )
+
+
 def model_to_schema(model: "BaseModel") -> Dict[str, Any]:
     """
     Convert a Pydantic model to JSON Schema.
@@ -42,10 +55,7 @@ def model_to_schema(model: "BaseModel") -> Dict[str, Any]:
         >>> print(schema)
         {'type': 'object', 'properties': {...}, 'required': [...]}
     """
-    if not PYDANTIC_AVAILABLE:
-        raise ImportError(
-            "Pydantic is not installed. Install it with: pip install pydantic>=2.0"
-        )
+    require_pydantic()
 
     if not hasattr(model, "model_json_schema"):
         raise ValueError(

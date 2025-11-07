@@ -39,6 +39,54 @@ public enum AIAvailability: Int32 {
     case unknown = -99
 }
 
+// MARK: - Helper Functions
+
+/// Create an error response in JSON format
+private func createErrorResponse(_ message: String) -> UnsafeMutablePointer<CChar>? {
+    let errorJson = "{\"error\": \"\(message)\"}"
+    return strdup(errorJson)
+}
+
+/// Get existing session or create a new one with stored instructions
+@available(macOS 26.0, *)
+private func getOrCreateSession() -> LanguageModelSession {
+    if let session = currentSession {
+        return session
+    }
+
+    let session: LanguageModelSession
+    if let instructions = sessionInstructions {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default,
+            instructions: { instructions }
+        )
+    } else {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default
+        )
+    }
+    currentSession = session
+    return session
+}
+
+/// Create a new session, replacing any existing one
+@available(macOS 26.0, *)
+private func createNewSession() -> LanguageModelSession {
+    let session: LanguageModelSession
+    if let instructions = sessionInstructions {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default,
+            instructions: { instructions }
+        )
+    } else {
+        session = LanguageModelSession(
+            model: SystemLanguageModel.default
+        )
+    }
+    currentSession = session
+    return session
+}
+
 // MARK: - Initialization
 
 @_cdecl("apple_ai_init")
@@ -176,7 +224,7 @@ public func appleAIGenerate(
     maxTokens: Int32
 ) -> UnsafeMutablePointer<CChar>? {
     guard isInitialized else {
-        return strdup("{\"error\": \"Not initialized\"}")
+        return createErrorResponse("Not initialized")
     }
 
     #if canImport(FoundationModels)
@@ -190,10 +238,7 @@ public func appleAIGenerate(
         Task {
             do {
                 // Get or create session
-                let session = currentSession ?? LanguageModelSession(
-                    model: SystemLanguageModel.default
-                )
-                currentSession = session
+                let session = getOrCreateSession()
 
                 // Configure generation options
                 let options = GenerationOptions(
@@ -219,7 +264,7 @@ public func appleAIGenerate(
     }
     #endif
 
-    return strdup("{\"error\": \"FoundationModels not available\"}")
+    return createErrorResponse("FoundationModels not available")
 }
 
 // Streaming callback type
@@ -246,10 +291,7 @@ public func appleAIGenerateStream(
         Task {
             do {
                 // Get or create session
-                let session = currentSession ?? LanguageModelSession(
-                    model: SystemLanguageModel.default
-                )
-                currentSession = session
+                let session = getOrCreateSession()
 
                 // Configure generation options
                 let options = GenerationOptions(
@@ -427,7 +469,7 @@ public func appleAIGenerateStructured(
     maxTokens: Int32
 ) -> UnsafeMutablePointer<CChar>? {
     guard isInitialized else {
-        return strdup("{\"error\": \"Not initialized\"}")
+        return createErrorResponse("Not initialized")
     }
 
     #if canImport(FoundationModels)
@@ -438,12 +480,12 @@ public func appleAIGenerateStructured(
         // Parse schema JSON to dictionary
         guard let schemaData = schemaString.data(using: .utf8),
               let schemaDict = try? JSONSerialization.jsonObject(with: schemaData) as? [String: Any] else {
-            return strdup("{\"error\": \"Invalid schema JSON\"}")
+            return createErrorResponse("Invalid schema JSON")
         }
 
         // Convert JSON Schema to DynamicGenerationSchema
         guard let dynamicSchema = convertJSONSchemaToDynamic(schemaDict) else {
-            return strdup("{\"error\": \"Failed to convert schema\"}")
+            return createErrorResponse("Failed to convert schema")
         }
 
         // Use semaphore for async coordination
@@ -453,10 +495,7 @@ public func appleAIGenerateStructured(
         Task {
             do {
                 // Get or create session
-                let session = currentSession ?? LanguageModelSession(
-                    model: SystemLanguageModel.default
-                )
-                currentSession = session
+                let session = getOrCreateSession()
 
                 // Configure generation options
                 let options = GenerationOptions(
@@ -492,7 +531,7 @@ public func appleAIGenerateStructured(
     }
     #endif
 
-    return strdup("{\"error\": \"FoundationModels not available\"}")
+    return createErrorResponse("FoundationModels not available")
 }
 
 // MARK: - Memory Management
@@ -527,18 +566,7 @@ public func appleAIClearHistory() {
     // Clear by creating a new session
     #if canImport(FoundationModels)
     if #available(macOS 26.0, *) {
-        if let instructions = sessionInstructions {
-            currentSession = LanguageModelSession(
-                model: SystemLanguageModel.default,
-                instructions: {
-                    instructions
-                }
-            )
-        } else {
-            currentSession = LanguageModelSession(
-                model: SystemLanguageModel.default
-            )
-        }
+        currentSession = createNewSession()
     }
     #endif
 }
