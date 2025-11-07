@@ -6,7 +6,7 @@ Provides session management, text generation, and async streaming support.
 
 import asyncio
 import json
-from typing import Optional, Dict, Any, AsyncIterator, Callable, Union, TYPE_CHECKING
+from typing import Optional, Dict, Any, AsyncIterator, Callable, Union, TYPE_CHECKING, List
 from queue import Queue, Empty
 import threading
 
@@ -15,6 +15,7 @@ from .base import ContextManagedResource
 from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
 from .types import GenerationParams
 from .pydantic_compat import normalize_schema
+from .tools import extract_function_schema
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -45,6 +46,8 @@ class Session(ContextManagedResource):
         """
         self._session_id = session_id
         self._closed = False
+        self._tools: Dict[str, Callable] = {}
+        self._tools_registered = False
 
     def close(self) -> None:
         """
@@ -272,3 +275,94 @@ class Session(ContextManagedResource):
         """
         self._check_closed()
         _foundationmodels.add_message(role, content)
+
+    def tool(
+        self,
+        description: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> Callable[[Callable], Callable]:
+        """
+        Decorator to register a function as a tool for this session.
+
+        The function's signature and docstring are used to automatically
+        generate a JSON schema for the tool's parameters.
+
+        Args:
+            description: Optional tool description (uses docstring if not provided)
+            name: Optional tool name (uses function name if not provided)
+
+        Returns:
+            Decorator function
+
+        Example:
+            @session.tool(description="Get current weather")
+            def get_weather(location: str, units: str = "celsius") -> str:
+                '''Get weather for a location.'''
+                return f"Weather in {location}: 20°{units[0].upper()}"
+
+            response = session.generate("What's the weather in Paris?")
+        """
+
+        def decorator(func: Callable) -> Callable:
+            # Extract schema from function
+            schema = extract_function_schema(func)
+
+            # Override with provided values
+            if description is not None:
+                schema["description"] = description
+            if name is not None:
+                schema["name"] = name
+
+            # Store tool function
+            tool_name = schema["name"]
+            self._tools[tool_name] = func
+
+            # Attach metadata to function
+            func._tool_name = schema["name"]
+            func._tool_description = schema["description"]
+            func._tool_parameters = schema["parameters"]
+
+            # Register tools if not already done
+            self._register_tools()
+
+            return func
+
+        return decorator
+
+    def _register_tools(self) -> None:
+        """
+        Register all tools with the FFI layer.
+
+        Called automatically when tools are added via decorator.
+        """
+        if not self._tools:
+            return
+
+        # Register tools with C FFI
+        _foundationmodels.register_tools(self._tools)
+        self._tools_registered = True
+
+    @property
+    def transcript(self) -> List[Dict[str, Any]]:
+        """
+        Get the session transcript including tool calls.
+
+        Returns a list of transcript entries showing the full conversation
+        history including instructions, prompts, tool calls, tool outputs,
+        and responses.
+
+        Returns:
+            List of transcript entry dictionaries with keys:
+            - type: Entry type ('instructions', 'prompt', 'response', 'tool_call', 'tool_output')
+            - content: Entry content (for text entries)
+            - tool_name: Tool name (for tool_call entries)
+            - tool_id: Tool call ID (for tool_call and tool_output entries)
+            - arguments: Tool arguments as JSON string (for tool_call entries)
+
+        Example:
+            >>> transcript = session.transcript
+            >>> for entry in transcript:
+            ...     print(f"{entry['type']}: {entry.get('content', '')}")
+        """
+        self._check_closed()
+        return _foundationmodels.get_transcript()

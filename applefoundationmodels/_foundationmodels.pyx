@@ -194,6 +194,157 @@ def create_session(config: Optional[Dict[str, Any]] = None) -> int:
 
 
 # ============================================================================
+# Tool calling
+# ============================================================================
+
+# Global storage for tool functions
+cdef object _registered_tools = {}
+
+
+cdef int32_t _tool_callback_wrapper(
+    const char *tool_name,
+    const char *arguments_json,
+    char *result_buffer,
+    int32_t buffer_size
+) noexcept with gil:
+    """
+    C callback wrapper for tool execution.
+
+    Called from Swift when the model wants to execute a tool.
+    """
+    global _registered_tools
+
+    if tool_name == NULL or arguments_json == NULL or result_buffer == NULL:
+        return -3  # AI_ERROR_INVALID_PARAMS
+
+    try:
+        # Decode inputs
+        name_str = tool_name.decode('utf-8')
+        args_str = arguments_json.decode('utf-8')
+
+        # Look up tool function
+        if name_str not in _registered_tools:
+            error_msg = f"Tool '{name_str}' not found"
+            error_bytes = error_msg.encode('utf-8')
+            if len(error_bytes) < buffer_size:
+                for i, b in enumerate(error_bytes):
+                    result_buffer[i] = b
+                result_buffer[len(error_bytes)] = 0
+            return -11  # AI_ERROR_TOOL_NOT_FOUND
+
+        tool_func = _registered_tools[name_str]
+
+        # Parse arguments
+        args_dict = json.loads(args_str)
+
+        # Execute tool
+        try:
+            result = tool_func(**args_dict)
+
+            # Convert result to string
+            if result is None:
+                result_str = ""
+            elif isinstance(result, str):
+                result_str = result
+            else:
+                result_str = json.dumps(result)
+
+            # Write to buffer
+            result_bytes = result_str.encode('utf-8')
+            if len(result_bytes) >= buffer_size:
+                # Truncate if too large
+                result_bytes = result_bytes[:buffer_size-1]
+
+            for i, b in enumerate(result_bytes):
+                result_buffer[i] = b
+            result_buffer[len(result_bytes)] = 0
+
+            return 0  # AI_SUCCESS
+
+        except Exception as e:
+            error_msg = f"Tool execution failed: {str(e)}"
+            error_bytes = error_msg.encode('utf-8')
+            if len(error_bytes) >= buffer_size:
+                error_bytes = error_bytes[:buffer_size-1]
+            for i, b in enumerate(error_bytes):
+                result_buffer[i] = b
+            result_buffer[len(error_bytes)] = 0
+            return -12  # AI_ERROR_TOOL_EXECUTION
+
+    except Exception as e:
+        error_msg = f"Callback error: {str(e)}"
+        error_bytes = error_msg.encode('utf-8')
+        if len(error_bytes) >= buffer_size:
+            error_bytes = error_bytes[:buffer_size-1]
+        for i, b in enumerate(error_bytes):
+            result_buffer[i] = b
+        result_buffer[len(error_bytes)] = 0
+        return -99  # AI_ERROR_UNKNOWN
+
+
+def register_tools(tools: Dict[str, Callable]) -> None:
+    """
+    Register tool functions for model to call.
+
+    Args:
+        tools: Dictionary mapping tool names to callable functions
+
+    Raises:
+        InvalidParametersError: If registration fails
+    """
+    global _registered_tools
+
+    # Store tools globally
+    _registered_tools = tools.copy()
+
+    # Build tools JSON for Swift layer
+    tools_list = []
+    for name, func in tools.items():
+        # Tool metadata will be added by Python layer
+        # For now, just pass the names
+        tools_list.append({
+            "name": name,
+            "description": getattr(func, "_tool_description", ""),
+            "parameters": getattr(func, "_tool_parameters", {})
+        })
+
+    tools_json_str = json.dumps(tools_list)
+    cdef bytes tools_json_bytes = _encode_string(tools_json_str)
+    cdef const char *tools_json = tools_json_bytes
+    cdef int32_t result
+
+    with nogil:
+        result = apple_ai_register_tools(tools_json, _tool_callback_wrapper)
+
+    _check_result(result)
+
+
+def get_transcript() -> list:
+    """
+    Get the session transcript including tool calls.
+
+    Returns:
+        List of transcript entries
+
+    Raises:
+        GenerationError: If transcript retrieval fails
+    """
+    cdef char *transcript_json
+
+    with nogil:
+        transcript_json = apple_ai_get_transcript()
+
+    if transcript_json == NULL:
+        raise_for_error_code(-6, "Failed to get transcript")
+
+    try:
+        transcript_str = _decode_string(transcript_json)
+        return json.loads(transcript_str)
+    finally:
+        apple_ai_free_string(transcript_json)
+
+
+# ============================================================================
 # Text generation
 # ============================================================================
 

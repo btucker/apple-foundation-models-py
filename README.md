@@ -157,6 +157,106 @@ with Client() as client:
     print(person.name, person.age, person.city)  # Alice 28 Paris
 ```
 
+### Tool Calling
+
+> **Note**: Tool calling is currently unavailable due to a missing Swift compiler plugin in macOS 26.1. All infrastructure is implemented and ready - waiting for Apple to ship the FoundationModelsMacros plugin. See [TOOL_CALLING.md](TOOL_CALLING.md) for details.
+
+Tool calling allows the model to call your Python functions to access real-time data, perform actions, or integrate with external systems. Once available, tools will work with a simple decorator-based API:
+
+```python
+from applefoundationmodels import Client
+
+with Client() as client:
+    session = client.create_session()
+
+    # Register a tool with the @session.tool decorator
+    @session.tool(description="Get current weather for a location")
+    def get_weather(location: str, units: str = "celsius") -> str:
+        """Fetch weather information from your weather API."""
+        # Your implementation here
+        return f"Weather in {location}: 22°{units[0].upper()}, sunny"
+
+    @session.tool()
+    def calculate(expression: str) -> float:
+        """Evaluate a mathematical expression safely."""
+        # Your implementation here
+        return eval(expression)  # Use safe_eval in production!
+
+    # The model will automatically call tools when needed
+    response = session.generate(
+        "What's the weather in Paris and what's 15 times 23?"
+    )
+    print(response)
+    # "The weather in Paris is 22°C and sunny. 15 times 23 equals 345."
+
+    # View the full conversation including tool calls
+    for entry in session.transcript:
+        print(f"{entry['type']}: {entry.get('content', '')}")
+```
+
+**Features:**
+- **Automatic schema generation** from Python type hints
+- **Parallel tool execution** when the model calls multiple tools
+- **Full transcript access** showing all tool calls and outputs
+- **Error handling** with detailed error information
+- **Type-safe** with complete type annotations
+
+**Schema Extraction:**
+
+The library automatically extracts JSON schemas from your Python functions:
+
+```python
+@session.tool(description="Search documentation")
+def search_docs(query: str, limit: int = 10, category: str = "all") -> list:
+    """Search the documentation database."""
+    # Implementation...
+    return results
+
+# Automatically generates:
+# {
+#   "name": "search_docs",
+#   "description": "Search documentation",
+#   "parameters": {
+#     "type": "object",
+#     "properties": {
+#       "query": {"type": "string"},
+#       "limit": {"type": "integer"},
+#       "category": {"type": "string"}
+#     },
+#     "required": ["query"]
+#   }
+# }
+```
+
+**Transcript Access:**
+
+View the complete conversation history including tool interactions:
+
+```python
+# After generating with tools
+for entry in session.transcript:
+    match entry['type']:
+        case 'prompt':
+            print(f"User: {entry['content']}")
+        case 'tool_calls':
+            for call in entry['tool_calls']:
+                print(f"Calling tool: {call['id']}")
+        case 'tool_output':
+            print(f"Tool result: {entry['content']}")
+        case 'response':
+            print(f"Assistant: {entry['content']}")
+```
+
+**Current Status:**
+
+The tool calling implementation is complete but cannot be used yet because:
+- Apple's `@Generable` macro requires the FoundationModelsMacros compiler plugin
+- This plugin is not included in macOS 26.1 (Build 25B78)
+- All Python/Cython/Swift infrastructure is implemented and ready
+- Will work immediately when Apple ships the plugin
+
+For implementation details and status updates, see [TOOL_CALLING.md](TOOL_CALLING.md).
+
 ### Generation Parameters
 
 ```python
@@ -254,6 +354,10 @@ class Session:
     def generate_structured(prompt: str, schema: dict, **params) -> dict: ...
     async def generate_stream(prompt: str, **params) -> AsyncIterator[str]: ...
 
+    def tool(description: str = None, name: str = None) -> Callable: ...
+    @property
+    def transcript() -> List[dict]: ...
+
     def get_history() -> List[dict]: ...
     def clear_history() -> None: ...
     def add_message(role: str, content: str) -> None: ...
@@ -305,6 +409,7 @@ All exceptions inherit from `FoundationModelsError`:
 - `GuardrailViolationError` - Content blocked by safety filters
 - `ToolNotFoundError` - Tool not registered
 - `ToolExecutionError` - Tool execution failed
+- `ToolCallError` - Tool call error (validation, schema, etc.)
 - `UnknownError` - Unknown error
 
 ## Examples
@@ -313,8 +418,8 @@ See the `examples/` directory for complete working examples:
 
 - `basic_chat.py` - Simple conversation
 - `streaming_chat.py` - Async streaming
-- `tool_calling.py` - Tool registration (coming soon)
 - `structured_output.py` - JSON schema validation
+- `tool_calling.py` - Tool registration (ready, waiting for Apple's macro plugin)
 
 ## Development
 

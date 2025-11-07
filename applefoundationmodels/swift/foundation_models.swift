@@ -16,6 +16,7 @@ import FoundationModels
 private var isInitialized = false
 private var currentSession: LanguageModelSession?
 private var sessionInstructions: String?
+private var registeredTools: [any Tool] = []
 
 // MARK: - Error Codes
 
@@ -28,6 +29,8 @@ public enum AIResult: Int32 {
     case errorJSONParse = -5
     case errorGeneration = -6
     case errorTimeout = -7
+    case errorToolNotFound = -11
+    case errorToolExecution = -12
     case errorUnknown = -99
 }
 
@@ -38,6 +41,46 @@ public enum AIAvailability: Int32 {
     case modelNotReady = -3
     case unknown = -99
 }
+
+// MARK: - Tool Calling Infrastructure
+
+/// C-compatible callback for Python tool execution
+public typealias ToolCallback = @convention(c) (
+    UnsafePointer<CChar>?,  // tool_name
+    UnsafePointer<CChar>?,  // arguments_json
+    UnsafeMutablePointer<CChar>?,  // result_buffer
+    Int32  // buffer_size
+) -> Int32
+
+/// Store tool callback globally
+private var toolCallback: ToolCallback?
+
+// NOTE: PythonToolWrapper is disabled because @Generable macro is not
+// available even on macOS 26.1. The FoundationModelsMacros plugin is required
+// but not shipped with the OS. Tool calling infrastructure is ready and waiting
+// for Apple to provide the macro plugin.
+//
+// Python tool wrapper that bridges Swift Tool protocol to Python callbacks
+// @available(macOS 26.0, *)
+// struct PythonToolWrapper: Tool, Sendable {
+//     let toolName: String
+//     let toolDescription: String
+//
+//     var name: String { toolName }
+//     var description: String { toolDescription }
+//
+//     @Generable
+//     struct Arguments: Decodable {
+//         let parameters: [String: String]
+//     }
+//
+//     typealias Output = String
+//
+//     nonisolated func call(arguments: Arguments) async throws -> Output {
+//         // Implementation would marshal to Python callback
+//         return ""
+//     }
+// }
 
 // MARK: - Helper Functions
 
@@ -186,6 +229,19 @@ public func appleAIGetVersion() -> UnsafeMutablePointer<CChar>? {
     return strdup("1.0.0-foundationmodels")
 }
 
+// MARK: - Tool Management
+
+@_cdecl("apple_ai_register_tools")
+public func appleAIRegisterTools(
+    toolsJson: UnsafePointer<CChar>?,
+    callback: ToolCallback?
+) -> Int32 {
+    // NOTE: Tool calling disabled - @Generable macro plugin not available
+    // even on macOS 26.1. FoundationModelsMacros plugin is required but not
+    // shipped. All infrastructure is ready for when Apple provides it.
+    return AIResult.errorNotAvailable.rawValue
+}
+
 // MARK: - Session Management
 
 @_cdecl("apple_ai_create_session")
@@ -209,12 +265,11 @@ public func appleAICreateSession(
         }
 
         // Create session with instructions if provided
+        // NOTE: Tool support disabled until @Generable macro is available
         if let instructions = sessionInstructions {
             currentSession = LanguageModelSession(
                 model: SystemLanguageModel.default,
-                instructions: {
-                    instructions
-                }
+                instructions: { instructions }
             )
         } else {
             currentSession = LanguageModelSession(
@@ -380,6 +435,93 @@ public func appleAIGenerateStream(
     cb(strdup("FoundationModels not available"))
     cb(nil)
     return AIResult.errorNotAvailable.rawValue
+}
+
+// MARK: - Transcript Access
+
+/// Get the session transcript
+/// - Returns: JSON array of transcript entries or error message
+@_cdecl("apple_ai_get_transcript")
+public func appleAIGetTranscript() -> UnsafeMutablePointer<CChar>? {
+    guard isInitialized else {
+        return createErrorResponse("Not initialized")
+    }
+
+    #if canImport(FoundationModels)
+    if #available(macOS 26.0, *) {
+        guard let session = currentSession else {
+            return createErrorResponse("No active session")
+        }
+
+        // Use semaphore for async coordination
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: String = ""
+
+        Task {
+            do {
+                let transcript = session.transcript
+                var entries: [[String: Any]] = []
+
+                for entry in transcript {
+                    var entryDict: [String: Any] = [:]
+
+                    switch entry {
+                    case .instructions(let text):
+                        entryDict["type"] = "instructions"
+                        entryDict["content"] = text
+
+                    case .prompt(let text):
+                        entryDict["type"] = "prompt"
+                        entryDict["content"] = text
+
+                    case .response(let text):
+                        entryDict["type"] = "response"
+                        entryDict["content"] = text
+
+                    case .toolCalls(let toolCalls):
+                        entryDict["type"] = "tool_calls"
+                        // Convert tool calls to JSON array
+                        var callsArray: [[String: Any]] = []
+                        for call in toolCalls {
+                            callsArray.append([
+                                "id": call.id
+                            ])
+                        }
+                        entryDict["tool_calls"] = callsArray
+
+                    case .toolOutput(let output):
+                        entryDict["type"] = "tool_output"
+                        entryDict["tool_id"] = output.id
+                        // Note: Additional properties may be available in final API
+                        entryDict["content"] = ""
+
+                    @unknown default:
+                        entryDict["type"] = "unknown"
+                    }
+
+                    entries.append(entryDict)
+                }
+
+                // Convert to JSON
+                let jsonData = try JSONSerialization.data(withJSONObject: entries, options: .prettyPrinted)
+                result = String(data: jsonData, encoding: .utf8) ?? "{\"error\":\"Failed to encode transcript\"}"
+            } catch {
+                if let errorJson = createErrorResponse(error.localizedDescription) {
+                    result = String(cString: errorJson)
+                    free(errorJson)
+                } else {
+                    result = "{\"error\":\"An error occurred\"}"
+                }
+            }
+            semaphore.signal()
+        }
+
+        semaphore.wait()
+        return strdup(result)
+    }
+    #endif
+
+    return createErrorResponse("FoundationModels not available")
 }
 
 // MARK: - Structured Generation
