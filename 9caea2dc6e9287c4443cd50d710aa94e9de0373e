@@ -1,0 +1,3 @@
+- can we build a "generic" wheel that would work on any platform, even though in
+  reality it will only work on macosx_26?
+- yes, let's do that
