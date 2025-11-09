@@ -44,7 +44,7 @@ class Client(ContextManagedResource):
             RuntimeError: If platform is not supported
         """
         # Check platform requirements
-        if platform.system() != 'Darwin':
+        if platform.system() != "Darwin":
             raise NotAvailableError(
                 "Apple Intelligence is only available on macOS. "
                 f"Current platform: {platform.system()}"
@@ -54,7 +54,7 @@ class Client(ContextManagedResource):
         mac_ver = platform.mac_ver()[0]
         if mac_ver:
             try:
-                major_version = int(mac_ver.split('.')[0])
+                major_version = int(mac_ver.split(".")[0])
                 if major_version < 26:
                     raise NotAvailableError(
                         f"Apple Intelligence requires macOS 26.0 or later. "
