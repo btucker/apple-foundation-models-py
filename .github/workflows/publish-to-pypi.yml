@@ -51,65 +51,66 @@ jobs:
           name: sdist
           path: dist/*.tar.gz
 
-  # TODO: Re-enable wheel building once PyPI supports macOS 26.0 wheels
-  # Currently PyPI rejects macosx_26_0 platform tags
-  # See: https://github.com/pypi/warehouse/issues/...
-  #
-  # build-wheels:
-  #   name: Build wheels on macOS for Python ${{ matrix.python-version }}
-  #   runs-on: macos-26
-  #   strategy:
-  #     matrix:
-  #       python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
-  #     fail-fast: false
-  #
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #
-  #     - name: Install uv
-  #       uses: astral-sh/setup-uv@v4
-  #       with:
-  #         enable-cache: true
-  #
-  #     - name: Build wheel
-  #       env:
-  #         MACOSX_DEPLOYMENT_TARGET: "26.0"
-  #         ARCHFLAGS: "-arch arm64"
-  #         _PYTHON_HOST_PLATFORM: "macosx-26.0-arm64"
-  #       run: |
-  #         uv build --wheel
-  #
-  #     - name: Verify wheel contents
-  #       run: |
-  #         echo "Build artifacts:"
-  #         ls -lh dist/
-  #         echo ""
-  #         echo "Checking for dylib in wheel:"
-  #         if unzip -l dist/*.whl | grep -q "libfoundation_models.dylib"; then
-  #           echo "✓ libfoundation_models.dylib found in wheel"
-  #           unzip -l dist/*.whl | grep -E "(dylib|\.so)"
-  #         else
-  #           echo "✗ ERROR: libfoundation_models.dylib NOT found in wheel!"
-  #           echo "Full wheel contents:"
-  #           unzip -l dist/*.whl
-  #           exit 1
-  #         fi
-  #
-  #     - name: Upload wheel
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: wheel-${{ matrix.python-version }}
-  #         path: dist/*.whl
+  build-wheel:
+    name: Build universal wheel (py3-none-any)
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Build wheel
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "26.0"
+          ARCHFLAGS: "-arch arm64"
+        run: |
+          uv build --wheel
+
+      - name: Verify wheel is universal
+        run: |
+          echo "Build artifacts:"
+          ls -lh dist/
+          echo ""
+          echo "Checking wheel filename (should be py3-none-any):"
+          if ls dist/*-py3-none-any.whl 1> /dev/null 2>&1; then
+            echo "✓ Universal wheel found: $(ls dist/*-py3-none-any.whl)"
+          else
+            echo "✗ ERROR: Universal wheel NOT found!"
+            echo "Found wheels:"
+            ls dist/*.whl
+            exit 1
+          fi
+          echo ""
+          echo "Checking for dylib in wheel:"
+          if unzip -l dist/*.whl | grep -q "libfoundation_models.dylib"; then
+            echo "✓ libfoundation_models.dylib found in wheel"
+            unzip -l dist/*.whl | grep -E "(dylib|\.so)"
+          else
+            echo "✗ ERROR: libfoundation_models.dylib NOT found in wheel!"
+            echo "Full wheel contents:"
+            unzip -l dist/*.whl
+            exit 1
+          fi
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: dist/*.whl
 
   publish:
     name: Publish to PyPI
-    needs: [build-sdist]  # Only wait for sdist now
+    needs: [build-sdist, build-wheel]
     runs-on: ubuntu-latest
 
     steps:
