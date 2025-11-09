@@ -5,6 +5,7 @@ Provides a Pythonic interface to Apple's FoundationModels framework with
 context managers, automatic resource cleanup, and integration with the Session class.
 """
 
+import platform
 from typing import Optional, List, cast
 from contextlib import contextmanager
 
@@ -12,6 +13,7 @@ from . import _foundationmodels
 from .base import ContextManagedResource
 from .types import Availability, Stats
 from .session import Session
+from .exceptions import NotAvailableError
 
 
 class Client(ContextManagedResource):
@@ -39,7 +41,29 @@ class Client(ContextManagedResource):
         Raises:
             InitializationError: If library initialization fails
             NotAvailableError: If Apple Intelligence is not available
+            RuntimeError: If platform is not supported
         """
+        # Check platform requirements
+        if platform.system() != 'Darwin':
+            raise NotAvailableError(
+                "Apple Intelligence is only available on macOS. "
+                f"Current platform: {platform.system()}"
+            )
+
+        # Check macOS version
+        mac_ver = platform.mac_ver()[0]
+        if mac_ver:
+            try:
+                major_version = int(mac_ver.split('.')[0])
+                if major_version < 26:
+                    raise NotAvailableError(
+                        f"Apple Intelligence requires macOS 26.0 or later. "
+                        f"Current version: {mac_ver}"
+                    )
+            except (ValueError, IndexError):
+                # If we can't parse the version, let it try anyway
+                pass
+
         # Initialize library on first client creation
         if not Client._initialized:
             _foundationmodels.init()
