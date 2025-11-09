@@ -1,0 +1,3 @@
+- how can I test this locally to be sure that it works
+- can you show me `llm -m apple "who is the mayor of chicago?"` works with this
+  wheel?
