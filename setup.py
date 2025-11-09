@@ -9,7 +9,19 @@ from pathlib import Path
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_py import build_py as _build_py
-from Cython.Build import cythonize
+try:
+    from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+    WHEEL_AVAILABLE = True
+except ImportError:
+    WHEEL_AVAILABLE = False
+    _bdist_wheel = None
+
+try:
+    from Cython.Build import cythonize
+    CYTHON_AVAILABLE = True
+except ImportError:
+    CYTHON_AVAILABLE = False
+    cythonize = None
 
 # Paths
 REPO_ROOT = Path(__file__).parent.resolve()
@@ -101,32 +113,58 @@ class BuildSwiftThenExt(_build_ext):
         build_swift_dylib()
         super().run()
 
-# Cython extension
-ext_modules = cythonize(
-    [Extension(
-        "applefoundationmodels._foundationmodels",
-        sources=["applefoundationmodels/_foundationmodels.pyx"],
-        include_dirs=[str(PKG_DIR / "swift")],
-        library_dirs=[str(LIB_DIR)],
-        libraries=["foundation_models"],
-        extra_compile_args=["-O3", "-Wall"],
-        extra_link_args=[
-            f"-Wl,-rpath,{LIB_DIR}",
-            "-Wl,-rpath,@loader_path/../lib",
-            "-Wl,-rpath,@loader_path",
-        ],
-        language="c",
-    )],
-    compiler_directives={
-        "language_level": "3",
-        "embedsignature": True,
-        "boundscheck": False,
-        "wraparound": False,
-    },
-)
+
+class UniversalWheel(_bdist_wheel if WHEEL_AVAILABLE else object):
+    """Create a universal wheel that can install on any platform.
+
+    Note: The wheel contains macOS-specific binaries, but can be installed
+    anywhere. Runtime checks in Client.__init__() will raise errors on
+    unsupported platforms.
+    """
+    def get_tag(self):
+        # Override to create py3-none-any tag instead of platform-specific
+        return 'py3', 'none', 'any'
+
+# Cython extension - only build on macOS with Cython available
+if platform.system() == "Darwin" and CYTHON_AVAILABLE:
+    ext_modules = cythonize(
+        [Extension(
+            "applefoundationmodels._foundationmodels",
+            sources=["applefoundationmodels/_foundationmodels.pyx"],
+            include_dirs=[str(PKG_DIR / "swift")],
+            library_dirs=[str(LIB_DIR)],
+            libraries=["foundation_models"],
+            extra_compile_args=["-O3", "-Wall"],
+            extra_link_args=[
+                f"-Wl,-rpath,{LIB_DIR}",
+                "-Wl,-rpath,@loader_path/../lib",
+                "-Wl,-rpath,@loader_path",
+            ],
+            language="c",
+        )],
+        compiler_directives={
+            "language_level": "3",
+            "embedsignature": True,
+            "boundscheck": False,
+            "wraparound": False,
+        },
+    )
+else:
+    ext_modules = []
+    print("Skipping Cython extension build (not on macOS or Cython not available)")
+
+# Custom command classes
+cmdclass = {
+    "build_py": BuildPyWithDylib,
+    "build_ext": BuildSwiftThenExt,
+}
+
+# Add bdist_wheel command if wheel is available
+if WHEEL_AVAILABLE:
+    cmdclass["bdist_wheel"] = UniversalWheel
 
 if __name__ == "__main__":
     setup(
         ext_modules=ext_modules,
-        cmdclass={"build_py": BuildPyWithDylib, "build_ext": BuildSwiftThenExt},
+        cmdclass=cmdclass,
     )

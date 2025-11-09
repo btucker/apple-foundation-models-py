@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel", "Cython>=3.0.0"]
+requires = ["setuptools>=61.0", "wheel", "Cython>=3.0.0", "packaging>=24.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -57,7 +57,13 @@ applefoundationmodels = [
     "py.typed",
     "*.pyi",
     "*.dylib",
+    "*.so",
 ]
+
+[bdist_wheel]
+universal = false
+# Note: This will be a py3-none-any wheel despite containing platform-specific binaries
+# The binaries will only work on macOS 26+, enforced by runtime checks
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
