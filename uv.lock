@@ -17,7 +17,7 @@ wheels = [
 
 [[package]]
 name = "apple-foundation-models"
-version = "0.1.7"
+version = "0.1.8"
 source = { editable = "." }
 dependencies = [
     { name = "typing-extensions" },

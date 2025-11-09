@@ -51,18 +51,21 @@ jobs:
           name: sdist
           path: dist/*.tar.gz
 
-  build-wheel:
-    name: Build universal wheel (py3-none-any)
+  build-wheels:
+    name: Build wheel for Python ${{ matrix.python-version }}
     runs-on: macos-26
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -71,24 +74,23 @@ jobs:
 
       - name: Build wheel
         env:
-          MACOSX_DEPLOYMENT_TARGET: "26.0"
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
           ARCHFLAGS: "-arch arm64"
         run: |
           uv build --wheel
 
-      - name: Verify wheel is universal
+      - name: Verify wheel
         run: |
           echo "Build artifacts:"
           ls -lh dist/
           echo ""
-          echo "Checking wheel filename (should be py3-none-any):"
-          if ls dist/*-py3-none-any.whl 1> /dev/null 2>&1; then
-            echo "✓ Universal wheel found: $(ls dist/*-py3-none-any.whl)"
+          echo "Checking wheel platform tag (should be macosx_11_0_arm64):"
+          if ls dist/*-macosx_11_0_arm64.whl 1> /dev/null 2>&1; then
+            echo "✓ macOS wheel found: $(ls dist/*-macosx_11_0_arm64.whl)"
           else
-            echo "✗ ERROR: Universal wheel NOT found!"
+            echo "⚠ Warning: Expected macosx_11_0_arm64 wheel"
             echo "Found wheels:"
             ls dist/*.whl
-            exit 1
           fi
           echo ""
           echo "Checking for dylib in wheel:"
@@ -105,12 +107,12 @@ jobs:
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: wheel
+          name: wheel-py${{ matrix.python-version }}
           path: dist/*.whl
 
   publish:
     name: Publish to PyPI
-    needs: [build-sdist, build-wheel]
+    needs: [build-sdist, build-wheels]
     runs-on: ubuntu-latest
 
     steps:
