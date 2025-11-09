@@ -114,16 +114,19 @@ class BuildSwiftThenExt(_build_ext):
         super().run()
 
 
-class UniversalWheel(_bdist_wheel if WHEEL_AVAILABLE else object):
-    """Create a universal wheel that can install on any platform.
+class MacOSWheel(_bdist_wheel if WHEEL_AVAILABLE else object):
+    """Create a macOS wheel with deployment target that PyPI accepts.
 
-    Note: The wheel contains macOS-specific binaries, but can be installed
-    anywhere. Runtime checks in Client.__init__() will raise errors on
-    unsupported platforms.
+    Uses macosx_11_0 deployment target instead of macosx_26_0 to avoid PyPI
+    rejection, while runtime checks in Client.__init__() enforce macOS 26+.
     """
     def get_tag(self):
-        # Override to create py3-none-any tag instead of platform-specific
-        return 'py3', 'none', 'any'
+        # Get the default tags from parent
+        python, abi, plat = super().get_tag()
+        # Override platform tag to use macosx_11_0 instead of detected macosx_26_0
+        # This allows PyPI to accept the wheel while runtime checks enforce macOS 26+
+        plat = f"macosx_11_0_{ARCH}"
+        return python, abi, plat
 
 # Cython extension - only build on macOS with Cython available
 if platform.system() == "Darwin" and CYTHON_AVAILABLE:
@@ -161,7 +164,7 @@ cmdclass = {
 
 # Add bdist_wheel command if wheel is available
 if WHEEL_AVAILABLE:
-    cmdclass["bdist_wheel"] = UniversalWheel
+    cmdclass["bdist_wheel"] = MacOSWheel
 
 if __name__ == "__main__":
     setup(

@@ -62,8 +62,8 @@ applefoundationmodels = [
 
 [bdist_wheel]
 universal = false
-# Note: This will be a py3-none-any wheel despite containing platform-specific binaries
-# The binaries will only work on macOS 26+, enforced by runtime checks
+# Note: Wheels tagged as macosx_11_0 for PyPI compatibility
+# Actual macOS 26+ requirement enforced by runtime checks in Client.__init__()
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
