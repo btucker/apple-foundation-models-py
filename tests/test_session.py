@@ -193,3 +193,283 @@ class TestStructuredOutput:
         person = Person(**result)
         assert person.name == result["name"]
         assert person.age == result["age"]
+
+
+class TestTranscriptTracking:
+    """Tests for transcript and last_generation_transcript properties."""
+
+    def test_last_generation_transcript_empty(self, session, check_availability):
+        """Test last_generation_transcript is empty before any generation."""
+        last_transcript = session.last_generation_transcript
+        assert isinstance(last_transcript, list), "Should return a list"
+        assert len(last_transcript) == 0, "Should be empty before any generation"
+
+    def test_last_generation_transcript_single_generation(
+        self, session, check_availability
+    ):
+        """Test last_generation_transcript after a single generation."""
+        # Perform one generation
+        response = session.generate("What is 2 + 2?", temperature=0.3)
+        assert_valid_response(response)
+
+        # Get last generation transcript
+        last_transcript = session.last_generation_transcript
+        assert isinstance(last_transcript, list), "Should return a list"
+        assert len(last_transcript) > 0, "Should have entries after generation"
+
+        # Verify transcript contains expected entry types
+        entry_types = {entry["type"] for entry in last_transcript}
+        assert "prompt" in entry_types, "Should contain prompt entry"
+        assert "response" in entry_types, "Should contain response entry"
+
+        # Full transcript should match last_generation_transcript after single call
+        full_transcript = session.transcript
+        assert len(last_transcript) == len(
+            full_transcript
+        ), "After single generation, last_generation_transcript should match full transcript"
+
+    def test_last_generation_transcript_multiple_generations(
+        self, session, check_availability
+    ):
+        """Test last_generation_transcript only returns entries from the last call."""
+        # First generation
+        response1 = session.generate("What is 2 + 2?", temperature=0.3)
+        assert_valid_response(response1)
+        last_transcript1 = session.last_generation_transcript
+        last_transcript1_len = len(last_transcript1)
+        assert last_transcript1_len > 0, "Should have entries after first generation"
+
+        # Second generation
+        response2 = session.generate("What is 5 + 7?", temperature=0.3)
+        assert_valid_response(response2)
+        last_transcript2 = session.last_generation_transcript
+        last_transcript2_len = len(last_transcript2)
+        assert last_transcript2_len > 0, "Should have entries after second generation"
+
+        # Get full transcript
+        full_transcript = session.transcript
+        full_transcript_len = len(full_transcript)
+
+        # Verify last_generation_transcript only contains entries from second call
+        assert (
+            last_transcript2_len < full_transcript_len
+        ), "last_generation_transcript should be shorter than full transcript"
+
+        # Verify full transcript contains both generations
+        assert full_transcript_len >= (
+            last_transcript1_len + last_transcript2_len
+        ), "Full transcript should contain entries from both generations"
+
+        # Verify last entries in full transcript match last_generation_transcript
+        assert (
+            full_transcript[-last_transcript2_len:] == last_transcript2
+        ), "Last entries of full transcript should match last_generation_transcript"
+
+    def test_last_generation_transcript_with_structured_output(self, session):
+        """Test last_generation_transcript with generate_structured()."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "answer": {"type": "integer"},
+            },
+            "required": ["answer"],
+        }
+
+        # First generate regular text
+        response = session.generate("Hello", temperature=0.3)
+        assert_valid_response(response)
+
+        # Then generate structured output
+        result = session.generate_structured(
+            "What is 2 + 2? Respond with just the number.", schema=schema
+        )
+        assert isinstance(result, dict), "Result should be a dictionary"
+
+        # Get last generation transcript
+        last_transcript = session.last_generation_transcript
+        assert (
+            len(last_transcript) > 0
+        ), "Should have entries after structured generation"
+
+        # Full transcript should have more entries than last_generation_transcript
+        full_transcript = session.transcript
+        assert len(full_transcript) > len(
+            last_transcript
+        ), "Full transcript should include previous generation"
+
+    @pytest.mark.asyncio
+    async def test_last_generation_transcript_with_streaming(
+        self, session, check_availability
+    ):
+        """Test last_generation_transcript with generate_stream()."""
+        # First generation (regular)
+        response1 = session.generate("Count to 3", temperature=0.3)
+        assert_valid_response(response1)
+
+        # Second generation (streaming)
+        chunks = []
+        async for chunk in session.generate_stream("Say hello", temperature=0.3):
+            chunks.append(chunk)
+        assert_valid_chunks(chunks)
+
+        # Get last generation transcript
+        last_transcript = session.last_generation_transcript
+        assert (
+            len(last_transcript) > 0
+        ), "Should have entries after streaming generation"
+
+        # Verify full transcript includes both generations
+        full_transcript = session.transcript
+        assert len(full_transcript) > len(
+            last_transcript
+        ), "Full transcript should include both regular and streaming generations"
+
+    def test_last_generation_transcript_after_clear_history(
+        self, session, check_availability
+    ):
+        """Test last_generation_transcript behavior after clearing history."""
+        # Generate something
+        response = session.generate("Hello", temperature=0.3)
+        assert_valid_response(response)
+
+        # Clear history
+        session.clear_history()
+
+        # last_generation_transcript should be empty after clear
+        last_transcript = session.last_generation_transcript
+        assert len(last_transcript) == 0, "Should be empty after clearing history"
+
+        # Generate again
+        response2 = session.generate("Goodbye", temperature=0.3)
+        assert_valid_response(response2)
+
+        # Now should have entries from the new generation
+        last_transcript2 = session.last_generation_transcript
+        assert len(last_transcript2) > 0, "Should have entries from new generation"
+
+        # Full transcript should only contain the second generation
+        full_transcript = session.transcript
+        assert len(full_transcript) == len(
+            last_transcript2
+        ), "After clear and new generation, full and last should match"
+
+    def test_last_generation_transcript_entry_format(self, session, check_availability):
+        """Test that last_generation_transcript entries have expected format."""
+        response = session.generate("What is the capital of France?", temperature=0.3)
+        assert_valid_response(response)
+
+        last_transcript = session.last_generation_transcript
+        assert len(last_transcript) > 0, "Should have entries"
+
+        # Verify each entry has required fields
+        for entry in last_transcript:
+            assert isinstance(entry, dict), "Each entry should be a dictionary"
+            assert "type" in entry, "Each entry should have a 'type' field"
+            assert entry["type"] in [
+                "instructions",
+                "prompt",
+                "response",
+                "tool_call",
+                "tool_output",
+            ], f"Entry type should be valid, got: {entry['type']}"
+
+            # Content field should exist for text entries
+            if entry["type"] in ["instructions", "prompt", "response"]:
+                assert "content" in entry, "Text entry should have 'content' field"
+                assert isinstance(entry["content"], str), "Content should be a string"
+
+    def test_last_generation_transcript_with_tool_calling(
+        self, client, check_availability
+    ):
+        """Test last_generation_transcript includes tool_call and tool_output entries."""
+        # Create session with tools
+        session = client.create_session(
+            instructions="You are a helpful assistant. Use tools when appropriate."
+        )
+
+        tool_call_count = {"first": 0, "second": 0}
+
+        @session.tool(description="Get the current temperature in a city")
+        def get_temperature(city: str) -> str:
+            """Get temperature for a city."""
+            # Track which generation called the tool
+            if tool_call_count["first"] == 0:
+                tool_call_count["first"] += 1
+            else:
+                tool_call_count["second"] += 1
+            return f"The temperature in {city} is 72°F"
+
+        # First generation - call tool
+        response1 = session.generate(
+            "What's the temperature in Boston?", temperature=0.3
+        )
+        assert_valid_response(response1)
+
+        # Get last_generation_transcript from first call
+        last_transcript1 = session.last_generation_transcript
+        assert len(last_transcript1) > 0, "Should have entries after first generation"
+
+        # Verify tool_call and tool_output are in last_generation_transcript
+        entry_types1 = {entry["type"] for entry in last_transcript1}
+        assert "prompt" in entry_types1, "Should contain prompt"
+        assert "tool_call" in entry_types1, "Should contain tool_call entry"
+        assert "tool_output" in entry_types1, "Should contain tool_output entry"
+        assert "response" in entry_types1, "Should contain response"
+
+        # Verify tool_call entry structure
+        tool_calls1 = [e for e in last_transcript1 if e["type"] == "tool_call"]
+        assert len(tool_calls1) > 0, "Should have tool_call entries"
+        tool_call = tool_calls1[0]
+        assert "tool_id" in tool_call, "tool_call should have tool_id"
+        assert "tool_name" in tool_call, "tool_call should have tool_name"
+        assert "arguments" in tool_call, "tool_call should have arguments"
+        assert tool_call["tool_name"] == "get_temperature"
+
+        # Verify tool_output entry structure
+        tool_outputs1 = [e for e in last_transcript1 if e["type"] == "tool_output"]
+        assert len(tool_outputs1) > 0, "Should have tool_output entries"
+        tool_output = tool_outputs1[0]
+        assert "tool_id" in tool_output, "tool_output should have tool_id"
+        assert "content" in tool_output, "tool_output should have content"
+        assert "72°F" in tool_output["content"], "tool_output should contain the result"
+
+        # Second generation - also call tool
+        response2 = session.generate("What about Seattle?", temperature=0.3)
+        assert_valid_response(response2)
+
+        # Get last_generation_transcript from second call
+        last_transcript2 = session.last_generation_transcript
+        assert len(last_transcript2) > 0, "Should have entries after second generation"
+
+        # Verify last_generation_transcript only contains second generation's tool calls
+        entry_types2 = {entry["type"] for entry in last_transcript2}
+        assert "prompt" in entry_types2, "Should contain prompt from second call"
+        assert "tool_call" in entry_types2, "Should contain tool_call from second call"
+        assert (
+            "tool_output" in entry_types2
+        ), "Should contain tool_output from second call"
+
+        # Verify full transcript contains both generations
+        full_transcript = session.transcript
+        full_tool_calls = [e for e in full_transcript if e["type"] == "tool_call"]
+        assert (
+            len(full_tool_calls) >= 2
+        ), "Full transcript should have tool calls from both generations"
+
+        last_tool_calls = [e for e in last_transcript2 if e["type"] == "tool_call"]
+        assert len(last_tool_calls) < len(
+            full_tool_calls
+        ), "last_generation_transcript should have fewer tool calls than full transcript"
+
+        # Verify last_generation_transcript doesn't include first generation's entries
+        # by checking that its length is less than full transcript
+        assert len(last_transcript2) < len(
+            full_transcript
+        ), "last_generation_transcript should be shorter than full transcript after multiple generations"
+
+        # Verify the last entries in full transcript match last_generation_transcript
+        assert (
+            full_transcript[-len(last_transcript2) :] == last_transcript2
+        ), "Last entries of full transcript should match last_generation_transcript"
+
+        session.close()
