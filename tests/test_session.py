@@ -305,7 +305,6 @@ class TestTranscriptTracking:
         # First generation (regular)
         response1 = session.generate("Count to 3", temperature=0.3)
         assert_valid_response(response1)
-        first_gen_entries = len(session.last_generation_transcript)
 
         # Second generation (streaming)
         chunks = []
@@ -376,7 +375,7 @@ class TestTranscriptTracking:
 
             # Content field should exist for text entries
             if entry["type"] in ["instructions", "prompt", "response"]:
-                assert "content" in entry, f"Text entry should have 'content' field"
+                assert "content" in entry, "Text entry should have 'content' field"
                 assert isinstance(entry["content"], str), "Content should be a string"
 
     def test_last_generation_transcript_with_tool_calling(

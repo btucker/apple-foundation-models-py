@@ -307,6 +307,7 @@ class Session(ContextManagedResource):
         """
         self._check_closed()
         _foundationmodels.clear_history()
+        self._last_transcript_length = 0
 
     def add_message(self, role: str, content: str) -> None:
         """
