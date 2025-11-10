@@ -89,6 +89,24 @@ class Session(ContextManagedResource):
         """
         return NormalizedGenerationParams.from_optional(temperature, max_tokens)
 
+    def _begin_generation(self) -> int:
+        """
+        Mark the beginning of a generation call.
+
+        Returns:
+            The current transcript length (boundary marker for this generation)
+        """
+        return len(self.transcript)
+
+    def _end_generation(self, start_length: int) -> None:
+        """
+        Mark the end of a generation call.
+
+        Args:
+            start_length: The transcript length captured at generation start
+        """
+        self._last_transcript_length = start_length
+
     def generate(
         self,
         prompt: str,
@@ -120,16 +138,14 @@ class Session(ContextManagedResource):
         """
         self._check_closed()
         params = self._normalize_generation_params(temperature, max_tokens)
+        start_length = self._begin_generation()
 
-        # Save transcript length before generation
-        start_length = len(self.transcript)
-
-        result = _foundationmodels.generate(prompt, params.temperature, params.max_tokens)
-
-        # Update transcript boundary marker to start of this generation
-        self._last_transcript_length = start_length
-
-        return result
+        try:
+            return _foundationmodels.generate(
+                prompt, params.temperature, params.max_tokens
+            )
+        finally:
+            self._end_generation(start_length)
 
     def generate_structured(
         self,
@@ -188,21 +204,15 @@ class Session(ContextManagedResource):
         """
         self._check_closed()
         params = self._normalize_generation_params(temperature, max_tokens)
-
-        # Normalize schema to JSON Schema dict (handles Pydantic models)
         json_schema = normalize_schema(schema)
+        start_length = self._begin_generation()
 
-        # Save transcript length before generation
-        start_length = len(self.transcript)
-
-        result = _foundationmodels.generate_structured(
-            prompt, json_schema, params.temperature, params.max_tokens
-        )
-
-        # Update transcript boundary marker to start of this generation
-        self._last_transcript_length = start_length
-
-        return result
+        try:
+            return _foundationmodels.generate_structured(
+                prompt, json_schema, params.temperature, params.max_tokens
+            )
+        finally:
+            self._end_generation(start_length)
 
     async def generate_stream(
         self,
@@ -231,50 +241,48 @@ class Session(ContextManagedResource):
         """
         self._check_closed()
         params = self._normalize_generation_params(temperature, max_tokens)
+        start_length = self._begin_generation()
 
-        # Save transcript length before generation
-        start_length = len(self.transcript)
+        try:
+            # Use a queue to bridge the sync callback and async iterator
+            queue: Queue = Queue()
 
-        # Use a queue to bridge the sync callback and async iterator
-        queue: Queue = Queue()
+            def callback(chunk: Optional[str]) -> None:
+                queue.put(chunk)
 
-        def callback(chunk: Optional[str]) -> None:
-            queue.put(chunk)
+            # Run streaming in a background thread
+            def run_stream():
+                try:
+                    _foundationmodels.generate_stream(
+                        prompt, callback, params.temperature, params.max_tokens
+                    )
+                except Exception as e:
+                    queue.put(e)
 
-        # Run streaming in a background thread
-        def run_stream():
-            try:
-                _foundationmodels.generate_stream(
-                    prompt, callback, params.temperature, params.max_tokens
-                )
-            except Exception as e:
-                queue.put(e)
+            thread = threading.Thread(target=run_stream, daemon=True)
+            thread.start()
 
-        thread = threading.Thread(target=run_stream, daemon=True)
-        thread.start()
+            # Yield chunks from queue
+            while True:
+                # Use asyncio.sleep to yield control
+                await asyncio.sleep(0)
 
-        # Yield chunks from queue
-        while True:
-            # Use asyncio.sleep to yield control
-            await asyncio.sleep(0)
+                try:
+                    chunk = queue.get(timeout=0.1)
+                except Empty:
+                    continue
 
-            try:
-                chunk = queue.get(timeout=0.1)
-            except Empty:
-                continue
+                if isinstance(chunk, Exception):
+                    raise chunk
 
-            if isinstance(chunk, Exception):
-                raise chunk
+                if chunk is None:  # End of stream
+                    break
 
-            if chunk is None:  # End of stream
-                break
+                yield chunk
 
-            yield chunk
-
-        thread.join(timeout=1.0)
-
-        # Update transcript boundary marker to start of this generation
-        self._last_transcript_length = start_length
+            thread.join(timeout=1.0)
+        finally:
+            self._end_generation(start_length)
 
     def get_history(self) -> list:
         """
@@ -436,4 +444,4 @@ class Session(ContextManagedResource):
         """
         self._check_closed()
         full_transcript = self.transcript
-        return full_transcript[self._last_transcript_length:]
+        return full_transcript[self._last_transcript_length :]
