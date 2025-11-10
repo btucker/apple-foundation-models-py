@@ -1,0 +1,3 @@
+- In tests/test_session.py around line 363, the assertion uses an unnecessary
+- In tests/test_session.py around line 300, the variable assignment
+- applefoundationmodels/session.py (1)
