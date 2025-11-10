@@ -1,0 +1,3 @@
+- we just added a new property to Session: last_generation_transcript. We need
+  to add some unit tests for this
+- add a test for last_generation_transcript specifically around tool calling
