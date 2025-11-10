@@ -59,6 +59,7 @@ class Session(ContextManagedResource):
         self._tools: Dict[str, Callable] = {}
         self._tools_registered = False
         self._config = config
+        self._last_transcript_length = 0
 
     def close(self) -> None:
         """
@@ -119,7 +120,16 @@ class Session(ContextManagedResource):
         """
         self._check_closed()
         params = self._normalize_generation_params(temperature, max_tokens)
-        return _foundationmodels.generate(prompt, params.temperature, params.max_tokens)
+
+        # Save transcript length before generation
+        start_length = len(self.transcript)
+
+        result = _foundationmodels.generate(prompt, params.temperature, params.max_tokens)
+
+        # Update transcript boundary marker to start of this generation
+        self._last_transcript_length = start_length
+
+        return result
 
     def generate_structured(
         self,
@@ -182,9 +192,17 @@ class Session(ContextManagedResource):
         # Normalize schema to JSON Schema dict (handles Pydantic models)
         json_schema = normalize_schema(schema)
 
-        return _foundationmodels.generate_structured(
+        # Save transcript length before generation
+        start_length = len(self.transcript)
+
+        result = _foundationmodels.generate_structured(
             prompt, json_schema, params.temperature, params.max_tokens
         )
+
+        # Update transcript boundary marker to start of this generation
+        self._last_transcript_length = start_length
+
+        return result
 
     async def generate_stream(
         self,
@@ -213,6 +231,9 @@ class Session(ContextManagedResource):
         """
         self._check_closed()
         params = self._normalize_generation_params(temperature, max_tokens)
+
+        # Save transcript length before generation
+        start_length = len(self.transcript)
 
         # Use a queue to bridge the sync callback and async iterator
         queue: Queue = Queue()
@@ -251,6 +272,9 @@ class Session(ContextManagedResource):
             yield chunk
 
         thread.join(timeout=1.0)
+
+        # Update transcript boundary marker to start of this generation
+        self._last_transcript_length = start_length
 
     def get_history(self) -> list:
         """
@@ -382,3 +406,34 @@ class Session(ContextManagedResource):
         self._check_closed()
         # Explicit cast to ensure type checkers see the correct return type
         return cast(List[Dict[str, Any]], _foundationmodels.get_transcript())
+
+    @property
+    def last_generation_transcript(self) -> List[Dict[str, Any]]:
+        """
+        Get transcript entries from the most recent generate() call only.
+
+        Unlike the `transcript` property which returns the full accumulated history,
+        this returns only the entries added during the last generation call
+        (generate(), generate_structured(), or generate_stream()).
+
+        This is useful when you need to inspect what happened during a specific
+        generation without worrying about accumulated history from previous calls.
+
+        Returns:
+            List of transcript entries from the last generate() call.
+            Returns empty list if no generation has been performed yet.
+
+        Example:
+            >>> # First generation
+            >>> response1 = session.generate("What is 2 + 2?")
+            >>> entries1 = session.last_generation_transcript
+            >>> print(f"First call: {len(entries1)} entries")
+
+            >>> # Second generation on same session
+            >>> response2 = session.generate("What is 5 + 7?")
+            >>> entries2 = session.last_generation_transcript
+            >>> print(f"Second call: {len(entries2)} entries (only from second call)")
+        """
+        self._check_closed()
+        full_transcript = self.transcript
+        return full_transcript[self._last_transcript_length:]
