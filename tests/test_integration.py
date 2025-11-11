@@ -48,17 +48,9 @@ def test_version():
         version = client.get_version()
         print(f"Version: {version}")
 
-        languages = client.get_supported_languages()
-        print(f"Supported languages: {', '.join(languages)}")
-
         # Assertions
         assert version, "Version should not be empty"
         assert isinstance(version, str), "Version should be a string"
-        assert isinstance(languages, list), "Languages should be a list"
-        assert len(languages) > 0, "Should support at least one language"
-        assert all(
-            isinstance(lang, str) for lang in languages
-        ), "All languages should be strings"
 
     print("\n✓ Version information retrieved")
     print()

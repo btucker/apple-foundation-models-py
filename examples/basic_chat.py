@@ -20,7 +20,6 @@ def main():
             return
 
         print(f"libai version: {Client.get_version()}")
-        print(f"Supported languages: {', '.join(Client.get_supported_languages()[:5])}")
         print()
 
         # Create client

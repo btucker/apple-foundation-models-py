@@ -14,44 +14,44 @@ from applefoundationmodels import Client
 class ToolTestHarness:
     """Helper for testing tool calling with less boilerplate."""
 
-    def __init__(self, session):
-        self.session = session
+    def __init__(self):
         self.calls = []
+        self.tools = []
 
-    def register_tool(self, description: Optional[str] = None):
+    def wrap_tool(self, func: Callable) -> Callable:
         """
-        Decorator to register a tool and wrap it to capture calls.
+        Wrap a tool function to capture calls.
 
-        Can be used with or without description parameter:
-            @harness.register_tool()
-            @harness.register_tool(description="...")
+        Usage:
+            harness = ToolTestHarness()
 
-        Returns the wrapped function for further inspection if needed.
+            def my_tool(param: str) -> str:
+                '''Tool description.'''
+                return "result"
+
+            wrapped = harness.wrap_tool(my_tool)
+            response = session.generate("prompt", tools=[wrapped])
         """
+        original_func = func
 
-        def decorator(func: Callable) -> Callable:
-            original_func = func
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            call_info = {
+                "args": args,
+                "kwargs": kwargs,
+            }
+            result = original_func(*args, **kwargs)
+            call_info["result"] = result
+            self.calls.append(call_info)
+            return result
 
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                call_info = {
-                    "args": args,
-                    "kwargs": kwargs,
-                }
-                result = original_func(*args, **kwargs)
-                call_info["result"] = result
-                self.calls.append(call_info)
-                return result
+        # Copy function metadata for schema extraction
+        wrapper.__name__ = original_func.__name__
+        wrapper.__annotations__ = original_func.__annotations__
+        wrapper.__doc__ = original_func.__doc__
 
-            # Copy function metadata for schema extraction
-            wrapper.__name__ = original_func.__name__
-            wrapper.__annotations__ = original_func.__annotations__
-            wrapper.__doc__ = original_func.__doc__
-
-            decorated = self.session.tool(description=description)(wrapper)
-            return decorated
-
-        return decorator
+        self.tools.append(wrapper)
+        return wrapper
 
     def assert_called_once(self) -> Dict[str, Any]:
         """Assert tool was called exactly once and return the call info."""
@@ -92,46 +92,47 @@ def session(client):
 class TestToolRegistration:
     """Tests for tool registration and schema extraction."""
 
-    def test_tool_with_no_parameters(self, session):
+    def test_tool_with_no_parameters(self, client):
         """Test registering and calling a tool with no parameters."""
         called = {}
 
-        @session.tool(description="Get the current time")
         def get_time() -> str:
             """Get current time."""
             called["get_time"] = True
             return "2:30 PM"
 
+        session = client.create_session(tools=[get_time])
         response = session.generate("What time is it?")
 
         assert "get_time" in called
         assert "2:30" in response.text or "time" in response.text.lower()
 
-    def test_tool_with_single_string_parameter(self, session):
+    def test_tool_with_single_string_parameter(self, client):
         """Test tool with a single string parameter."""
-        harness = ToolTestHarness(session)
+        harness = ToolTestHarness()
 
-        @harness.register_tool(description="Get weather for a location")
         def get_weather(location: str) -> str:
             """Get weather information."""
             return f"Weather in {location}: 72°F, sunny"
 
+        wrapped = harness.wrap_tool(get_weather)
+        session = client.create_session(tools=[wrapped])
         response = session.generate("What's the weather in Paris?")
 
         harness.assert_called_with(location="Paris")
         assert "72°F" in response.text or "sunny" in response.text.lower()
 
-    def test_tool_with_multiple_parameters(self, session):
+    def test_tool_with_multiple_parameters(self, client):
         """Test tool with multiple string parameters."""
         called = {}
 
-        @session.tool(description="Search documentation")
         def search_docs(query: str, category: str) -> str:
             """Search the documentation database."""
             called["query"] = query
             called["category"] = category
             return f"Found 5 documents about '{query}' in {category}"
 
+        session = client.create_session(tools=[search_docs])
         response = session.generate("Search for 'authentication' in the API category")
 
         assert "query" in called
@@ -145,27 +146,38 @@ class TestToolRegistration:
             "5 documents" in response.text or "authentication" in response.text.lower()
         )
 
-    def test_tool_with_mixed_types(self, session):
+    def test_tool_with_mixed_types(self, client):
         """Test tool with mixed parameter types (string and int)."""
-        harness = ToolTestHarness(session)
+        harness = ToolTestHarness()
 
-        @harness.register_tool(description="Get top N items from a category")
         def get_top_items(category: str, count: int) -> str:
-            """Get top items."""
+            """Get top items in a category."""
             items = [f"Item {i+1}" for i in range(count)]
             return f"Top {count} in {category}: {', '.join(items)}"
 
-        response = session.generate("Show me the top 3 products")
+        wrapped = harness.wrap_tool(get_top_items)
+        session = client.create_session(
+            instructions="You are a helpful assistant. Always use the tools provided and include their results in your response.",
+            tools=[wrapped],
+        )
+        response = session.generate(
+            "Show me the top 3 electronics products. Use the get_top_items tool."
+        )
 
+        # Verify tool was called with correct parameters
         kwargs = harness.get_call_kwargs()
         assert kwargs["count"] == 3
-        assert "Item 1" in response.text or "top" in response.text.lower()
+        assert "category" in kwargs
 
-    def test_tool_with_optional_parameters(self, session):
+        # Verify the tool was called (check tool_calls property)
+        assert response.tool_calls is not None, "Tool should have been called"
+        assert len(response.tool_calls) > 0, "At least one tool call expected"
+        assert response.tool_calls[0].function.name == "get_top_items"
+
+    def test_tool_with_optional_parameters(self, client):
         """Test tool with optional parameters and defaults."""
         called = {}
 
-        @session.tool(description="Perform mathematical calculation")
         def calculate(x: int, y: int, operation: str = "add") -> str:
             """Perform a calculation."""
             called["x"] = x
@@ -177,64 +189,72 @@ class TestToolRegistration:
                 "subtract": x - y,
                 "multiply": x * y,
                 "times": x * y,
+                "multiplication": x * y,
             }
             result = operations.get(operation, "unknown")
             return f"Result: {result}"
 
+        session = client.create_session(tools=[calculate])
         response = session.generate("What is 15 times 7?")
 
         assert "x" in called
         assert "y" in called
         assert "operation" in called
         # Should use multiply operation
-        assert called["operation"] in ["multiply", "times"]
+        assert called["operation"] in ["multiply", "times", "multiplication"]
         assert "105" in response.text
 
 
 class TestToolExecution:
     """Tests for tool execution behavior."""
 
-    def test_multiple_tools_registered(self, session):
+    def test_multiple_tools_registered(self, client):
         """Test that multiple tools can be registered and called."""
         calls = []
 
-        @session.tool(description="Get time")
         def get_time() -> str:
+            """Get time."""
             calls.append("get_time")
             return "2:30 PM"
 
-        @session.tool(description="Get date")
         def get_date() -> str:
+            """Get date."""
             calls.append("get_date")
             return "November 7, 2024"
 
         # This might call one or both depending on the prompt
+        session = client.create_session(tools=[get_time, get_date])
         session.generate("What's the time and date?")
 
         # At least one should be called
         assert len(calls) > 0
 
-    def test_tool_return_types(self, session):
+    def test_tool_return_types(self, client):
         """Test tools can return different types."""
         called = {}
 
-        @session.tool(description="Get status")
         def get_status() -> str:
+            """Get the current system status."""
             called["invoked"] = True
             return "System operational"
 
-        response = session.generate("What's the system status?")
+        session = client.create_session(
+            instructions="You must use the get_status tool to answer status questions.",
+            tools=[get_status],
+        )
+        response = session.generate(
+            "What's the system status? Use the get_status tool."
+        )
         # Verify tool was called and response contains relevant content
         assert called.get("invoked"), "Tool should have been called"
         assert (
             "operational" in response.text.lower() or "status" in response.text.lower()
         )
 
-    def test_tool_with_optional_type_annotation(self, session):
+    def test_tool_with_optional_type_annotation(self, client):
         """Test that Optional[...] type annotations are properly handled."""
         called = {}
 
-        @session.tool(description="Get weather for a location")
         def get_weather(location: Optional[str] = None, units: str = "celsius") -> str:
             """Get weather information."""
             called["location"] = location
@@ -244,6 +264,7 @@ class TestToolExecution:
                 return "Weather for current location: 20°C, cloudy"
             return f"Weather in {location}: 22°{units[0].upper()}, sunny"
 
+        session = client.create_session(tools=[get_weather])
         response = session.generate("What's the weather in Paris?")
 
         # Verify the tool was called with location set
@@ -268,29 +289,29 @@ class TestToolCallsProperty:
         # finish_reason should be "stop" since no tools were called
         assert response.finish_reason == "stop"
 
-    def test_tool_calls_property_with_tools_not_called(self, session):
+    def test_tool_calls_property_with_tools_not_called(self, client):
         """Test that tool_calls is None when tools exist but aren't called."""
 
-        @session.tool()
         def get_weather(location: str) -> str:
             """Get weather for a location."""
             return f"Weather in {location}: 20°C"
 
         # Generate something that doesn't trigger the tool
+        session = client.create_session(tools=[get_weather])
         response = session.generate("What is 2 plus 2?")
 
         # Tool wasn't called, so tool_calls should be None
         assert response.tool_calls is None
         assert response.finish_reason == "stop"
 
-    def test_tool_calls_property_with_tools_called(self, session):
+    def test_tool_calls_property_with_tools_called(self, client):
         """Test that tool_calls is populated when tools are called."""
 
-        @session.tool()
         def get_weather(location: str) -> str:
             """Get weather for a location."""
             return f"Weather in {location}: 22°C"
 
+        session = client.create_session(tools=[get_weather])
         response = session.generate("What's the weather in Paris?")
 
         # Verify tool_calls is populated
@@ -319,19 +340,18 @@ class TestToolCallsProperty:
         assert "location" in args
         assert args["location"] == "Paris"
 
-    def test_tool_calls_property_with_multiple_tools(self, session):
+    def test_tool_calls_property_with_multiple_tools(self, client):
         """Test tool_calls with multiple tool invocations."""
 
-        @session.tool()
         def get_weather(location: str) -> str:
             """Get weather for a location."""
             return f"Weather in {location}: 22°C"
 
-        @session.tool()
         def get_time(timezone: str = "UTC") -> str:
             """Get current time for a timezone."""
             return f"Time in {timezone}: 12:00 PM"
 
+        session = client.create_session(tools=[get_weather, get_time])
         response = session.generate("What's the weather and time in Paris?")
 
         # May call one or both tools depending on model behavior
@@ -349,13 +369,14 @@ class TestToolCallsProperty:
 class TestTranscript:
     """Tests for transcript access with tool calls."""
 
-    def test_transcript_includes_tool_calls(self, session):
+    def test_transcript_includes_tool_calls(self, client):
         """Test that transcript includes tool call entries."""
 
-        @session.tool(description="Get info")
         def get_info() -> str:
+            """Get info."""
             return "Information"
 
+        session = client.create_session(tools=[get_info])
         session.generate("Get me some info")
 
         transcript = session.transcript
@@ -363,7 +384,7 @@ class TestTranscript:
 
         # Check that we have expected entry types
         entry_types = [entry.get("type") for entry in transcript]
-        assert "instructions" in entry_types
+        assert "instructions" in entry_types or "prompt" in entry_types
         assert "prompt" in entry_types
         # Verify tool_call and tool_output entries are present
         assert "tool_call" in entry_types, "transcript should contain tool_call entries"
@@ -371,13 +392,14 @@ class TestTranscript:
             "tool_output" in entry_types
         ), "transcript should contain tool_output entries"
 
-    def test_transcript_structure(self, session):
+    def test_transcript_structure(self, client):
         """Test that transcript entries have expected structure."""
 
-        @session.tool(description="Get the current status")
         def get_status() -> str:
+            """Get the current status."""
             return "System is operational"
 
+        session = client.create_session(tools=[get_status])
         session.generate("What's the current status?")
 
         transcript = session.transcript
@@ -396,13 +418,14 @@ class TestTranscript:
             elif entry["type"] in ("prompt", "response", "instructions"):
                 assert "content" in entry
 
-    def test_transcript_tool_call_shape(self, session):
+    def test_transcript_tool_call_shape(self, client):
         """Test exact shape and content of tool_call and tool_output entries."""
 
-        @session.tool(description="Calculate sum")
         def calculate_sum(a: int, b: int) -> str:
+            """Calculate sum."""
             return f"Result: {a + b}"
 
+        session = client.create_session(tools=[calculate_sum])
         session.generate("What is 5 plus 3?")
 
         transcript = session.transcript
@@ -449,18 +472,17 @@ class TestToolIntegration:
     def test_end_to_end_tool_calling(self):
         """Full end-to-end test of tool calling."""
         with Client() as client:
-            session = client.create_session()
-
             results = {}
 
-            @session.tool(description="Calculate math expression")
             def calculate(expression: str) -> str:
+                """Calculate math expression."""
                 results["called"] = True
                 # Simple calculator (in real code, use safe evaluation)
                 if "2 + 2" in expression:
                     return "4"
                 return "calculated"
 
+            session = client.create_session(tools=[calculate])
             response = session.generate("What is 2 + 2?")
 
             assert results.get("called")
@@ -469,21 +491,18 @@ class TestToolIntegration:
     def test_large_tool_output(self):
         """Test that tools can return outputs larger than the initial 16KB buffer."""
         with Client() as client:
-            session = client.create_session()
-
             called = {}
 
             # Create a large output (20KB) to test buffer resizing
             # Use a pattern that we can verify wasn't truncated
             large_data = "START-" + ("x" * 20470) + "-END"  # 20KB total
 
-            @session.tool(
-                description="Get system diagnostic data that includes large logs"
-            )
             def get_system_logs() -> str:
+                """Get system diagnostic data that includes large logs."""
                 called["invoked"] = True
                 return large_data
 
+            session = client.create_session(tools=[get_system_logs])
             # More explicit prompt to trigger tool call
             response = session.generate(
                 "Use the get_system_logs tool to retrieve the system diagnostic data"

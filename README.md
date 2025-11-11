@@ -84,7 +84,7 @@ with Client() as client:
 
 ### Async Streaming
 
-Following OpenAI's pattern, use `AsyncClient` for async operations:
+Use `AsyncClient` for async operations:
 
 ```python
 import asyncio
@@ -104,6 +104,7 @@ asyncio.run(main())
 ```
 
 **Sync vs Async:**
+
 - **Sync**: `Client()` → `create_session()` → `session.generate()`
 - **Async**: `AsyncClient()` → `await create_session()` → `await session.generate()`
 
@@ -180,31 +181,28 @@ with Client() as client:
 
 ### Tool Calling
 
-Tool calling allows the model to call your Python functions to access real-time data, perform actions, or integrate with external systems. Tools work with a simple decorator-based API:
+Tool calling allows the model to call your Python functions to access real-time data, perform actions, or integrate with external systems. Tools are registered when you create a session and remain available for all generate() calls on that session:
 
 ```python
 from applefoundationmodels import Client
 
 with Client() as client:
-    session = client.create_session()
-
-    # Register a tool with the @session.tool decorator
-    @session.tool(description="Get current weather for a location")
+    # Define tools as regular Python functions with docstrings
     def get_weather(location: str, units: str = "celsius") -> str:
-        """Fetch weather information from your weather API."""
+        """Get current weather for a location."""
         # Your implementation here
         return f"Weather in {location}: 22°{units[0].upper()}, sunny"
 
-    @session.tool()
     def calculate(expression: str) -> float:
         """Evaluate a mathematical expression safely."""
         # Your implementation here
         return eval(expression)  # Use safe_eval in production!
 
+    # Register tools at session creation - they'll be available for all generate() calls
+    session = client.create_session(tools=[get_weather, calculate])
+
     # The model will automatically call tools when needed
-    response = session.generate(
-        "What's the weather in Paris and what's 15 times 23?"
-    )
+    response = session.generate("What's the weather in Paris and what's 15 times 23?")
     print(response.text)
     # "The weather in Paris is 22°C and sunny. 15 times 23 equals 345."
 
@@ -223,9 +221,15 @@ with Client() as client:
 
 **Accessing Tool Calls:**
 
-Tool calls are exposed directly on the response object following OpenAI's pattern:
+Tool calls are exposed directly on the response object:
 
 ```python
+def get_weather(location: str) -> str:
+    """Get current weather for a location."""
+    return f"Weather in {location}: 22°C, sunny"
+
+# Tools registered at session creation
+session = client.create_session(tools=[get_weather])
 response = session.generate("What's the weather in Paris?")
 
 # Access tool calls directly from the response
@@ -253,29 +257,20 @@ for entry in session.transcript:
     print(f"{entry['type']}: {entry.get('content', '')}")
 ```
 
-**Features:**
-- **OpenAI-style tool_calls** property on responses for easy access
-- **Automatic schema generation** from Python type hints
-- **Parallel tool execution** when the model calls multiple tools
-- **Full transcript access** showing all tool calls and outputs
-- **Error handling** with detailed error information
-- **Type-safe** with complete type annotations
-
 **Schema Extraction:**
 
-The library automatically extracts JSON schemas from your Python functions:
+The library automatically extracts JSON schemas from your Python functions using their docstrings and type hints:
 
 ```python
-@session.tool(description="Search documentation")
 def search_docs(query: str, limit: int = 10, category: str = "all") -> list:
     """Search the documentation database."""
     # Implementation...
     return results
 
-# Automatically generates:
+# Tools registered at session creation - automatically generates schema:
 # {
 #   "name": "search_docs",
-#   "description": "Search documentation",
+#   "description": "Search the documentation database.",
 #   "parameters": {
 #     "type": "object",
 #     "properties": {
@@ -286,6 +281,9 @@ def search_docs(query: str, limit: int = 10, category: str = "all") -> list:
 #     "required": ["query"]
 #   }
 # }
+
+session = client.create_session(tools=[search_docs])
+response = session.generate("Search for 'authentication' in the API docs")
 ```
 
 **Transcript Access:**
@@ -310,6 +308,7 @@ for entry in session.transcript:
 **Supported Parameter Types:**
 
 Tool calling works with various parameter signatures:
+
 - No parameters
 - Single parameters (string, int, float, bool)
 - Multiple parameters with mixed types
@@ -351,36 +350,14 @@ with Client() as client:
 
     # Clear history while keeping session
     chat_session.clear_history()
-
-    # Manually add messages
-    chat_session.add_message("system", "Be concise")
-```
-
-### Statistics
-
-```python
-with Client() as client:
-    session = client.create_session()
-
-    # Generate some responses
-    for i in range(5):
-        response = session.generate(f"Question {i}")
-
-    # Get statistics
-    stats = client.get_stats()
-    print(f"Total requests: {stats['total_requests']}")
-    print(f"Success rate: {stats['successful_requests'] / stats['total_requests'] * 100:.1f}%")
-    print(f"Avg response time: {stats['average_response_time']:.2f}s")
-
-    # Reset statistics
-    client.reset_stats()
 ```
 
 ## API Reference
 
 ### Sync vs Async Pattern
 
-Following OpenAI's approach, we provide separate client classes for sync and async:
+We provide separate client classes for sync and async:
+
 - **`Client`**: Synchronous operations (returns `Session`)
 - **`AsyncClient`**: Async operations (returns `AsyncSession`)
 
@@ -404,12 +381,8 @@ class Client:
     def is_ready() -> bool: ...
     @staticmethod
     def get_version() -> str: ...
-    @staticmethod
-    def get_supported_languages() -> List[str]: ...
 
     def create_session(...) -> Session: ...
-    def get_stats() -> Stats: ...
-    def reset_stats() -> None: ...
     def close() -> None: ...
 ```
 
@@ -431,12 +404,8 @@ class AsyncClient:
     def is_ready() -> bool: ...
     @staticmethod
     def get_version() -> str: ...
-    @staticmethod
-    def get_supported_languages() -> List[str]: ...
 
     async def create_session(...) -> AsyncSession: ...
-    async def get_stats() -> Stats: ...
-    async def reset_stats() -> None: ...
     async def close() -> None: ...
 ```
 
@@ -466,7 +435,6 @@ class Session:
 
     def get_history() -> List[dict]: ...
     def clear_history() -> None: ...
-    def add_message(role: str, content: str) -> None: ...
     def close() -> None: ...
 ```
 
@@ -496,7 +464,6 @@ class AsyncSession:
 
     async def get_history() -> List[dict]: ...
     async def clear_history() -> None: ...
-    async def add_message(role: str, content: str) -> None: ...
     async def close() -> None: ...
 ```
 

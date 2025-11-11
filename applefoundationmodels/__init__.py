@@ -76,7 +76,6 @@ from .types import (
     GenerationParams,
     GenerationResponse,
     StreamChunk,
-    Stats,
     StreamCallback,
     ToolCallback,
 )
@@ -119,7 +118,6 @@ __all__ = [
     "GenerationParams",
     "GenerationResponse",
     "StreamChunk",
-    "Stats",
     "StreamCallback",
     "ToolCallback",
     # Exceptions

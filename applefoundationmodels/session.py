@@ -52,11 +52,7 @@ class Session(BaseSession):
     """
 
     def close(self) -> None:
-        """
-        Close the session and cleanup resources.
-
-        This is a no-op in the simplified API.
-        """
+        """Close the session and cleanup resources."""
         self._closed = True
 
     # Type overloads for non-streaming text generation
@@ -265,17 +261,4 @@ class Session(BaseSession):
         # Reset to current transcript length (may include persistent instructions)
         self._last_transcript_length = len(self.transcript)
 
-    def add_message(self, role: str, content: str) -> None:
-        """
-        Add a message to conversation history.
-
-        Note: This is a stub in the simplified API.
-
-        Args:
-            role: Message role ('user', 'assistant', 'system')
-            content: Message content
-        """
-        self._check_closed()
-        _foundationmodels.add_message(role, content)
-
-    # Tool decorator, registration, and properties inherited from BaseSession
+    # Properties inherited from BaseSession (transcript, last_generation_transcript)

@@ -5,7 +5,7 @@ Provides shared logic for both sync and async clients.
 """
 
 import platform
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Callable
 from abc import ABC
 
 from . import _foundationmodels
@@ -114,41 +114,38 @@ class BaseClient(ContextManagedResource, ABC):
         return _foundationmodels.get_version()
 
     @staticmethod
-    def get_supported_languages() -> List[str]:
-        """
-        Get list of languages supported by Apple Intelligence.
-
-        Returns:
-            List of localized language display names
-        """
-        count = _foundationmodels.get_supported_languages_count()
-        return [
-            lang
-            for i in range(count)
-            if (lang := _foundationmodels.get_supported_language(i)) is not None
-        ]
-
-    @staticmethod
     def _build_session_config(
         instructions: Optional[str],
-        tools_json: Optional[str],
-        enable_guardrails: bool,
-        prewarm: bool,
+        tools: Optional[List[Callable]],
     ) -> Optional[Dict[str, Any]]:
         """
-        Build session configuration dictionary.
+        Build session configuration dictionary and register tools.
 
         Args:
             instructions: Optional system instructions
-            tools_json: Optional tool definitions (not used in simplified API)
-            enable_guardrails: Enable guardrails (not used in simplified API)
-            prewarm: Prewarm session (not used in simplified API)
+            tools: Optional list of tool functions to register
 
         Returns:
             Configuration dictionary or None if empty
         """
+        # Register tools if provided
+        if tools:
+            from .tools import extract_function_schema, attach_tool_metadata
+
+            # Build tool dictionary with function objects
+            tool_dict = {}
+            for func in tools:
+                schema = extract_function_schema(func)
+                final_schema = attach_tool_metadata(
+                    func, schema, description=None, name=None
+                )
+                tool_name = final_schema["name"]
+                tool_dict[tool_name] = func
+
+            # Register with FFI
+            _foundationmodels.register_tools(tool_dict)
+
         config = {}
         if instructions is not None:
             config["instructions"] = instructions
-        # Note: tools_json, enable_guardrails, prewarm not supported in simplified API
         return config if config else None

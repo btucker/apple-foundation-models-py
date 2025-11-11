@@ -5,12 +5,11 @@ Provides a Pythonic interface to Apple's FoundationModels framework with
 context managers, automatic resource cleanup, and integration with the Session class.
 """
 
-from typing import Optional, List, cast
+from typing import Optional, List, Callable
 from contextlib import contextmanager
 
 from . import _foundationmodels
 from .base_client import BaseClient
-from .types import Stats
 from .session import Session
 
 
@@ -56,9 +55,7 @@ class Client(BaseClient):
     def create_session(
         self,
         instructions: Optional[str] = None,
-        tools_json: Optional[str] = None,
-        enable_guardrails: bool = True,
-        prewarm: bool = False,
+        tools: Optional[List[Callable]] = None,
     ) -> Session:
         """
         Create a new AI session.
@@ -68,9 +65,7 @@ class Client(BaseClient):
 
         Args:
             instructions: Optional system instructions to guide AI behavior
-            tools_json: Optional JSON array of tool definitions in Claude format
-            enable_guardrails: Whether to enable content safety filtering
-            prewarm: Whether to preload session resources for faster first response
+            tools: Optional list of tool functions to make available to the model
 
         Returns:
             New Session instance
@@ -79,41 +74,19 @@ class Client(BaseClient):
             Various FoundationModelsError subclasses on failure
 
         Example:
+            >>> def get_weather(location: str) -> str:
+            ...     '''Get current weather for a location.'''
+            ...     return f"Weather in {location}: 22°C"
             >>> session = client.create_session(
             ...     instructions="You are a helpful assistant.",
-            ...     enable_guardrails=True
+            ...     tools=[get_weather]
             ... )
         """
-        config = self._build_session_config(
-            instructions, tools_json, enable_guardrails, prewarm
-        )
+        config = self._build_session_config(instructions, tools)
         session_id = _foundationmodels.create_session(config)
         session = Session(session_id, config)
         self._sessions.append(session)
         return session
-
-    def get_stats(self) -> Stats:
-        """
-        Get generation statistics for this client.
-
-        Returns:
-            Dictionary with statistics fields including request counts,
-            success rates, and performance metrics
-
-        Example:
-            >>> stats = client.get_stats()
-            >>> print(f"Total requests: {stats['total_requests']}")
-            >>> print(f"Average response time: {stats['average_response_time']:.2f}s")
-        """
-        return cast(Stats, _foundationmodels.get_stats())
-
-    def reset_stats(self) -> None:
-        """
-        Reset generation statistics for this client.
-
-        Clears all accumulated statistics, resetting counters to zero.
-        """
-        _foundationmodels.reset_stats()
 
 
 @contextmanager

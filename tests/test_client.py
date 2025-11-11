@@ -42,15 +42,6 @@ class TestClientInfo:
         assert isinstance(version, str)
         assert len(version) > 0
 
-    def test_get_supported_languages(self, client):
-        """Test supported languages returns a list."""
-        languages = client.get_supported_languages()
-        assert isinstance(languages, list)
-        assert len(languages) > 0, "Should support at least one language"
-        for lang in languages:
-            assert isinstance(lang, str)
-            assert len(lang) > 0, "Language code should not be empty"
-
 
 class TestClientLifecycle:
     """Tests for client lifecycle management."""
@@ -115,35 +106,3 @@ class TestSessionCreation:
 
         session1.close()
         session2.close()
-
-
-class TestStats:
-    """Tests for statistics tracking."""
-
-    def test_get_stats(self, client):
-        """Test getting statistics."""
-        stats = client.get_stats()
-        assert isinstance(stats, dict)
-        assert "total_requests" in stats
-        assert "successful_requests" in stats
-        assert "failed_requests" in stats
-        assert "total_tokens_generated" in stats
-        assert "average_response_time" in stats
-        assert "total_processing_time" in stats
-
-    def test_reset_stats(self, client):
-        """Test resetting statistics."""
-        # Get initial stats
-        initial_stats = client.get_stats()
-
-        # Reset stats
-        client.reset_stats()
-
-        # Get stats after reset
-        reset_stats = client.get_stats()
-        assert isinstance(reset_stats, dict)
-        # All counters should be 0 or minimal after reset
-        assert (
-            reset_stats["total_requests"] == 0
-            or reset_stats["total_requests"] <= initial_stats["total_requests"]
-        )

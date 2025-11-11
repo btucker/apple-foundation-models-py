@@ -112,21 +112,6 @@ class TestSessionHistory:
         assert isinstance(history_after, list)
         assert len(history_after) == 0, "History should be empty after clearing"
 
-    def test_add_message(self, session, check_availability):
-        """Test manually adding messages."""
-        # Get initial history
-        initial_history = session.get_history()
-        initial_count = len(initial_history)
-
-        # Add a message
-        session.add_message("user", "Test message")
-
-        # Verify message was added
-        updated_history = session.get_history()
-        assert (
-            len(updated_history) >= initial_count
-        ), "History should not shrink after adding message"
-
 
 class TestSessionLifecycle:
     """Tests for session lifecycle."""
@@ -399,22 +384,22 @@ class TestTranscriptTracking:
         self, client, check_availability
     ):
         """Test last_generation_transcript includes tool_call and tool_output entries."""
-        # Create session with tools
-        session = client.create_session(
-            instructions="You are a helpful assistant. Use tools when appropriate."
-        )
-
         tool_call_count = {"first": 0, "second": 0}
 
-        @session.tool(description="Get the current temperature in a city")
         def get_temperature(city: str) -> str:
-            """Get temperature for a city."""
+            """Get the current temperature in a city."""
             # Track which generation called the tool
             if tool_call_count["first"] == 0:
                 tool_call_count["first"] += 1
             else:
                 tool_call_count["second"] += 1
             return f"The temperature in {city} is 72°F"
+
+        # Create session with tools
+        session = client.create_session(
+            instructions="You are a helpful assistant. Use tools when appropriate.",
+            tools=[get_temperature],
+        )
 
         # First generation - call tool
         response1 = session.generate(

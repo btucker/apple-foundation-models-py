@@ -15,7 +15,6 @@ from .types import (
     ToolCall,
     Function,
 )
-from .tools import extract_function_schema, attach_tool_metadata
 
 
 class BaseSession(ContextManagedResource, ABC):
@@ -36,8 +35,6 @@ class BaseSession(ContextManagedResource, ABC):
         """
         self._session_id = session_id
         self._closed = False
-        self._tools: Dict[str, Callable] = {}
-        self._tools_registered = False
         self._config = config
         # Initialize to current transcript length to exclude any initial instructions
         self._last_transcript_length = len(self.transcript)
@@ -158,74 +155,6 @@ class BaseSession(ContextManagedResource, ABC):
             tool_calls=tool_calls,
             finish_reason=finish_reason,
         )
-
-    def tool(
-        self,
-        description: Optional[str] = None,
-        name: Optional[str] = None,
-    ) -> Callable[[Callable], Callable]:
-        """
-        Decorator to register a function as a tool for this session.
-
-        The function's signature and docstring are used to automatically
-        generate a JSON schema for the tool's parameters.
-
-        Args:
-            description: Optional tool description (uses docstring if not provided)
-            name: Optional tool name (uses function name if not provided)
-
-        Returns:
-            Decorator function
-
-        Note:
-            Tool output size limits:
-            - Initial buffer: 16KB
-            - Maximum size: 1MB (automatically retried with larger buffers)
-            - Tools returning outputs larger than 1MB will raise an error
-            - For large outputs, consider returning references or summaries
-
-        Example:
-            @session.tool(description="Get current weather")
-            def get_weather(location: str, units: str = "celsius") -> str:
-                '''Get weather for a location.'''
-                return f"Weather in {location}: 20°{units[0].upper()}"
-
-            response = session.generate("What's the weather in Paris?")
-        """
-
-        def decorator(func: Callable) -> Callable:
-            # Extract schema and attach metadata using shared helper
-            schema = extract_function_schema(func)
-            final_schema = attach_tool_metadata(func, schema, description, name)
-
-            # Session-specific logic: store and register tool
-            tool_name = final_schema["name"]
-            self._tools[tool_name] = func
-            self._register_tools()
-
-            return func
-
-        return decorator
-
-    def _register_tools(self) -> None:
-        """
-        Register all tools with the FFI layer.
-
-        Called automatically when tools are added via decorator.
-        Recreates the session with tools enabled.
-        """
-        if not self._tools:
-            return
-
-        # Register tools with C FFI
-        _foundationmodels.register_tools(self._tools)
-        self._tools_registered = True
-
-        # Recreate session with tools enabled
-        # This is necessary because the session needs to be created with tools
-        # for FoundationModels to know about them
-        config = self._config or {}
-        _foundationmodels.create_session(config)
 
     @property
     def transcript(self) -> List[Dict[str, Any]]:

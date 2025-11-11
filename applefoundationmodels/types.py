@@ -73,15 +73,9 @@ class SessionConfig(TypedDict, total=False):
 
     Attributes:
         instructions: Optional system instructions to guide AI behavior
-        tools_json: Optional JSON array of tool definitions in Claude format
-        enable_guardrails: Whether to enable content safety filtering (default: True)
-        prewarm: Whether to preload session resources for faster first response (default: False)
     """
 
     instructions: NotRequired[Optional[str]]
-    tools_json: NotRequired[Optional[str]]
-    enable_guardrails: NotRequired[bool]
-    prewarm: NotRequired[bool]
 
 
 class GenerationParams(TypedDict, total=False):
@@ -314,29 +308,6 @@ class StreamChunk:
     content: str
     finish_reason: Optional[str] = None
     index: int = 0
-
-
-class Stats(TypedDict):
-    """
-    Generation statistics and performance metrics.
-
-    Provides insights into the usage and performance of generation operations.
-
-    Attributes:
-        total_requests: Total number of generation requests initiated
-        successful_requests: Number of requests that completed successfully
-        failed_requests: Number of requests that failed or were cancelled
-        total_tokens_generated: Total tokens generated across all requests
-        average_response_time: Average response time in seconds
-        total_processing_time: Total processing time in seconds
-    """
-
-    total_requests: int
-    successful_requests: int
-    failed_requests: int
-    total_tokens_generated: int
-    average_response_time: float
-    total_processing_time: float
 
 
 # Callback type aliases
