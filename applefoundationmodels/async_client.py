@@ -5,11 +5,13 @@ Provides async/await interface following OpenAI's AsyncClient pattern.
 """
 
 import asyncio
-from typing import Optional, List, Callable, Type, cast
+from typing import Optional, List, Callable, Type, cast, TYPE_CHECKING
 
 from .base_client import BaseClient
 from .base import AsyncContextManagedResource
-from .async_session import AsyncSession
+
+if TYPE_CHECKING:
+    from .async_session import AsyncSession
 
 
 class AsyncClient(BaseClient, AsyncContextManagedResource):
@@ -47,8 +49,10 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
         super().__init__()
 
     @property
-    def _session_class(self) -> Type[AsyncSession]:
+    def _session_class(self) -> Type["AsyncSession"]:
         """Return AsyncSession class for async client."""
+        from .async_session import AsyncSession
+
         return AsyncSession
 
     def close(self) -> None:
@@ -94,7 +98,7 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
         self,
         instructions: Optional[str] = None,
         tools: Optional[List[Callable]] = None,
-    ) -> AsyncSession:
+    ) -> "AsyncSession":
         """
         Create a new async AI session.
 
@@ -123,4 +127,6 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
             >>> response = await session.generate("Hello!")
             >>> print(response.text)
         """
+        from .async_session import AsyncSession
+
         return cast(AsyncSession, self._create_session_impl(instructions, tools))

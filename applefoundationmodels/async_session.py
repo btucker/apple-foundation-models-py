@@ -22,7 +22,6 @@ from typing import (
 from typing_extensions import Literal
 import threading
 
-from . import _foundationmodels
 from .base_session import BaseSession
 from .base import AsyncContextManagedResource
 from .types import (
@@ -35,6 +34,13 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+
+def _get_foundationmodels():
+    """Lazy import helper to avoid circular imports."""
+    from . import _foundationmodels
+
+    return _foundationmodels
 
 
 class AsyncSession(BaseSession, AsyncContextManagedResource):
@@ -63,7 +69,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         while other functions are safely wrapped in asyncio.to_thread.
         """
         # Streaming must run in thread with callback - don't wrap
-        if func == _foundationmodels.generate_stream:
+        if func == _get_foundationmodels().generate_stream:
             return func(*args, **kwargs)
         # Other functions can be safely wrapped
         return await asyncio.to_thread(func, *args, **kwargs)
@@ -209,7 +215,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         try:
             # Run sync FFI call in thread pool
             text = await asyncio.to_thread(
-                _foundationmodels.generate,
+                _get_foundationmodels().generate,
                 prompt,
                 temperature,
                 max_tokens,
@@ -232,7 +238,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             json_schema = normalize_schema(schema)
             # Run sync FFI call in thread pool
             result = await asyncio.to_thread(
-                _foundationmodels.generate_structured,
+                _get_foundationmodels().generate_structured,
                 prompt,
                 json_schema,
                 temperature,
@@ -262,7 +268,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             # Run streaming in a background thread
             def run_stream():
                 try:
-                    _foundationmodels.generate_stream(
+                    _get_foundationmodels().generate_stream(
                         prompt, callback, temperature, max_tokens
                     )
                 except Exception as e:
@@ -321,7 +327,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             ...     print(f"{msg['role']}: {msg['content']}")
         """
         self._check_closed()
-        return await asyncio.to_thread(_foundationmodels.get_history)
+        return await asyncio.to_thread(_get_foundationmodels().get_history)
 
     async def clear_history(self) -> None:
         """
@@ -330,7 +336,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         Removes all messages from the session while keeping the session active.
         """
         self._check_closed()
-        await asyncio.to_thread(_foundationmodels.clear_history)
+        await asyncio.to_thread(_get_foundationmodels().clear_history)
         # Reset to current transcript length (may include persistent instructions)
         self._last_transcript_length = len(self.transcript)
 
