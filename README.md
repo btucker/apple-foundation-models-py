@@ -68,8 +68,7 @@ with Client() as client:
 
     # Create a session
     session = client.create_session(
-        instructions="You are a helpful assistant.",
-        enable_guardrails=True
+        instructions="You are a helpful assistant."
     )
 
     # Generate a response
@@ -501,22 +500,11 @@ class Availability(IntEnum):
 
 class SessionConfig(TypedDict):
     instructions: Optional[str]
-    tools_json: Optional[str]
-    enable_guardrails: bool
-    prewarm: bool
 
 class GenerationParams(TypedDict):
     temperature: float
     max_tokens: int
     seed: int
-
-class Stats(TypedDict):
-    total_requests: int
-    successful_requests: int
-    failed_requests: int
-    total_tokens_generated: int
-    average_response_time: float
-    total_processing_time: float
 ```
 
 ### Exceptions
