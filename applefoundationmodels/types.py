@@ -7,8 +7,21 @@ interaction with the library.
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TypedDict, Optional, Callable, Any
+from typing import (
+    TypedDict,
+    Optional,
+    Callable,
+    Any,
+    Union,
+    Dict,
+    Type,
+    TYPE_CHECKING,
+    cast,
+)
 from typing_extensions import NotRequired
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 
 class Result(IntEnum):
@@ -128,6 +141,118 @@ class NormalizedGenerationParams:
             temperature=temperature if temperature is not None else DEFAULT_TEMPERATURE,
             max_tokens=max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS,
         )
+
+
+@dataclass
+class GenerationResponse:
+    """
+    Response from non-streaming generation.
+
+    Provides a unified interface for both text and structured generation results.
+    Use the .text property for text responses and .parsed for structured outputs.
+
+    Attributes:
+        content: The generated content (str for text, dict for structured)
+        is_structured: True if response is structured JSON, False for text
+        metadata: Optional metadata about the generation
+
+    Example (text):
+        >>> response = session.generate("Hello")
+        >>> print(response.text)
+
+    Example (structured):
+        >>> response = session.generate("Extract name and age", schema={...})
+        >>> data = response.parsed
+        >>> person = Person(**data)  # Parse into Pydantic model
+    """
+
+    content: Union[str, Dict[str, Any]]
+    is_structured: bool
+    metadata: Optional[Dict[str, Any]] = None
+
+    @property
+    def text(self) -> str:
+        """
+        Get response as text.
+
+        Returns:
+            The generated text
+
+        Raises:
+            ValueError: If response is structured (use .parsed instead)
+        """
+        if self.is_structured:
+            raise ValueError(
+                "Response is structured output. Use .parsed property instead of .text"
+            )
+        return cast(str, self.content)
+
+    @property
+    def parsed(self) -> Dict[str, Any]:
+        """
+        Get response as structured data.
+
+        Returns:
+            The parsed JSON dictionary
+
+        Raises:
+            ValueError: If response is text (use .text instead)
+        """
+        if not self.is_structured:
+            raise ValueError(
+                "Response is text output. Use .text property instead of .parsed"
+            )
+        return cast(Dict[str, Any], self.content)
+
+    def parse_as(self, model: "Type[BaseModel]") -> "BaseModel":
+        """
+        Parse structured response into a Pydantic model.
+
+        Args:
+            model: Pydantic BaseModel class to parse into
+
+        Returns:
+            Instantiated Pydantic model
+
+        Raises:
+            ValueError: If response is not structured
+            ImportError: If pydantic is not installed
+
+        Example:
+            >>> from pydantic import BaseModel
+            >>> class Person(BaseModel):
+            ...     name: str
+            ...     age: int
+            >>> response = session.generate("Extract: Alice is 28", schema=Person)
+            >>> person = response.parse_as(Person)
+            >>> print(person.name, person.age)
+        """
+        return model(**self.parsed)
+
+
+@dataclass
+class StreamChunk:
+    """
+    A chunk from streaming generation.
+
+    Represents a single delta in the streaming response. Multiple chunks
+    combine to form the complete response.
+
+    Attributes:
+        content: The text content delta for this chunk
+        finish_reason: Reason streaming ended (None for intermediate chunks)
+        index: Chunk sequence index (usually 0 for single-stream responses)
+
+    Example:
+        >>> for chunk in session.generate("Tell a story", stream=True):
+        ...     print(chunk.content, end='', flush=True)
+        ...     if chunk.finish_reason:
+        ...         print(f"\\n[Finished: {chunk.finish_reason}]")
+    """
+
+    content: str
+    finish_reason: Optional[str] = None
+    index: int = 0
 
 
 class Stats(TypedDict):

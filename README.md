@@ -74,7 +74,7 @@ with Client() as client:
 
     # Generate a response
     response = session.generate("What is the capital of France?")
-    print(response)
+    print(response.text)  # Access text via .text property
 
     # Get conversation history
     history = session.get_history()
@@ -90,14 +90,24 @@ from applefoundationmodels import Client
 
 async def main():
     with Client() as client:
-        session = client.create_session()
+        # Create an async session for async streaming
+        session = client.create_async_session()
 
         # Stream response chunks as they arrive
-        async for chunk in session.generate_stream("Tell me a story about a robot"):
-            print(chunk, end='', flush=True)
+        async for chunk in session.generate("Tell me a story about a robot", stream=True):
+            print(chunk.content, end='', flush=True)
         print()  # Newline after stream
 
 asyncio.run(main())
+```
+
+**Note:** For synchronous streaming (without async/await), use a regular Session:
+
+```python
+with Client() as client:
+    session = client.create_session()
+    for chunk in session.generate("Tell me a story", stream=True):
+        print(chunk.content, end='', flush=True)
 ```
 
 ### Structured Output
@@ -120,12 +130,12 @@ with Client() as client:
     }
 
     # Generate structured response
-    result = session.generate_structured(
+    response = session.generate(
         "Extract person info: Alice is 28 and lives in Paris",
         schema=schema
     )
 
-    print(result)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
+    print(response.parsed)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
 ```
 
 #### Using Pydantic Models
@@ -145,15 +155,17 @@ with Client() as client:
     session = client.create_session()
 
     # Pass Pydantic model directly - no need for JSON schema!
-    result = session.generate_structured(
+    response = session.generate(
         "Extract person info: Alice is 28 and lives in Paris",
         schema=Person
     )
 
-    print(result)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
+    print(response.parsed)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
 
     # Parse directly into a Pydantic model for validation
-    person = Person(**result)
+    person = Person(**response.parsed)
+    # Or use the convenience method:
+    person = response.parse_as(Person)
     print(person.name, person.age, person.city)  # Alice 28 Paris
 ```
 
@@ -184,7 +196,7 @@ with Client() as client:
     response = session.generate(
         "What's the weather in Paris and what's 15 times 23?"
     )
-    print(response)
+    print(response.text)
     # "The weather in Paris is 22°C and sunny. 15 times 23 equals 345."
 
     # View the full conversation including tool calls
@@ -263,9 +275,9 @@ See `examples/tool_calling_comprehensive.py` for complete examples of all suppor
 response = session.generate(
     "Write a creative story",
     temperature=1.5,      # Higher = more creative (0.0-2.0)
-    max_tokens=500,       # Limit response length
-    seed=42               # Reproducible outputs
+    max_tokens=500        # Limit response length
 )
+print(response.text)
 ```
 
 ### Session Management
@@ -282,7 +294,10 @@ with Client() as client:
 
     # Each session maintains separate conversation history
     chat_response = chat_session.generate("Hello!")
+    print(chat_response.text)
+
     code_response = code_session.generate("Review this code: ...")
+    print(code_response.text)
 
     # Clear history while keeping session
     chat_session.clear_history()
@@ -299,7 +314,7 @@ with Client() as client:
 
     # Generate some responses
     for i in range(5):
-        session.generate(f"Question {i}")
+        response = session.generate(f"Question {i}")
 
     # Get statistics
     stats = client.get_stats()
@@ -335,6 +350,7 @@ class Client:
     def get_supported_languages() -> List[str]: ...
 
     def create_session(...) -> Session: ...
+    def create_async_session(...) -> AsyncSession: ...
     def get_stats() -> Stats: ...
     def reset_stats() -> None: ...
     def close() -> None: ...
@@ -342,25 +358,85 @@ class Client:
 
 ### Session
 
-Manages conversation state and text generation.
+Manages conversation state and text generation (synchronous).
 
 ```python
 class Session:
     def __enter__() -> Session: ...
     def __exit__(...) -> None: ...
 
-    def generate(prompt: str, **params) -> str: ...
-    def generate_structured(prompt: str, schema: dict, **params) -> dict: ...
-    async def generate_stream(prompt: str, **params) -> AsyncIterator[str]: ...
+    # Unified generation method
+    def generate(
+        prompt: str,
+        schema: Optional[Union[dict, Type[BaseModel]]] = None,
+        stream: bool = False,
+        **params
+    ) -> Union[GenerationResponse, Iterator[StreamChunk]]: ...
 
     def tool(description: str = None, name: str = None) -> Callable: ...
+
     @property
     def transcript() -> List[dict]: ...
+    @property
+    def last_generation_transcript() -> List[dict]: ...
 
     def get_history() -> List[dict]: ...
     def clear_history() -> None: ...
     def add_message(role: str, content: str) -> None: ...
     def close() -> None: ...
+```
+
+### AsyncSession
+
+Manages conversation state and text generation (asynchronous).
+
+```python
+class AsyncSession:
+    async def __aenter__() -> AsyncSession: ...
+    async def __aexit__(...) -> None: ...
+
+    # Unified async generation method
+    async def generate(
+        prompt: str,
+        schema: Optional[Union[dict, Type[BaseModel]]] = None,
+        stream: bool = False,
+        **params
+    ) -> Union[GenerationResponse, AsyncIterator[StreamChunk]]: ...
+
+    def tool(description: str = None, name: str = None) -> Callable: ...
+
+    @property
+    def transcript() -> List[dict]: ...
+    @property
+    def last_generation_transcript() -> List[dict]: ...
+
+    async def get_history() -> List[dict]: ...
+    async def clear_history() -> None: ...
+    async def add_message(role: str, content: str) -> None: ...
+    async def close() -> None: ...
+```
+
+### Response Types
+
+```python
+@dataclass
+class GenerationResponse:
+    """Response from non-streaming generation."""
+    content: Union[str, Dict[str, Any]]
+    is_structured: bool
+
+    @property
+    def text() -> str: ...  # For text responses
+    @property
+    def parsed() -> Dict[str, Any]: ...  # For structured responses
+    def parse_as(model: Type[BaseModel]) -> BaseModel: ...  # Parse into Pydantic
+
+@dataclass
+class StreamChunk:
+    """Chunk from streaming generation."""
+    content: str  # Text delta
+    finish_reason: Optional[str] = None
+    index: int = 0
 ```
 
 ### Types

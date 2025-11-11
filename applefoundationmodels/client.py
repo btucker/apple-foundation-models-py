@@ -13,6 +13,7 @@ from . import _foundationmodels
 from .base import ContextManagedResource
 from .types import Availability, Stats
 from .session import Session
+from .async_session import AsyncSession
 from .exceptions import NotAvailableError
 
 
@@ -70,17 +71,26 @@ class Client(ContextManagedResource):
             Client._initialized = True
 
         self._sessions: List[Session] = []
+        self._async_sessions: List[AsyncSession] = []
 
     def close(self) -> None:
         """
         Close the client and cleanup all resources.
 
-        Destroys all sessions.
+        Destroys all sessions (both sync and async).
         """
-        # Close all sessions
+        # Close all sync sessions
         for session in self._sessions:
             session.close()
         self._sessions.clear()
+
+        # Close all async sessions
+        # Note: AsyncSession.close() is async, but since it's currently a no-op,
+        # we can safely skip awaiting. If close() becomes meaningful in the future,
+        # this will need to use asyncio.run() or require Client.close() to be async.
+        for session in self._async_sessions:
+            session._closed = True  # Manually set closed flag
+        self._async_sessions.clear()
 
     @staticmethod
     def check_availability() -> Availability:
@@ -185,6 +195,50 @@ class Client(ContextManagedResource):
         session_id = _foundationmodels.create_session(config if config else None)
         session = Session(session_id, config if config else None)
         self._sessions.append(session)
+        return session
+
+    def create_async_session(
+        self,
+        instructions: Optional[str] = None,
+        tools_json: Optional[str] = None,
+        enable_guardrails: bool = True,
+        prewarm: bool = False,
+    ) -> AsyncSession:
+        """
+        Create a new async AI session.
+
+        AsyncSession provides async/await support for all operations including
+        streaming. Use this for async applications. Sessions maintain conversation
+        state and can be configured with tools and instructions.
+
+        Args:
+            instructions: Optional system instructions to guide AI behavior
+            tools_json: Optional JSON array of tool definitions in Claude format
+            enable_guardrails: Whether to enable content safety filtering
+            prewarm: Whether to preload session resources for faster first response
+
+        Returns:
+            New AsyncSession instance
+
+        Raises:
+            Various FoundationModelsError subclasses on failure
+
+        Example:
+            >>> async_session = client.create_async_session(
+            ...     instructions="You are a helpful assistant.",
+            ...     enable_guardrails=True
+            ... )
+            >>> response = await async_session.generate("Hello!")
+            >>> print(response.text)
+        """
+        config = {}
+        if instructions is not None:
+            config["instructions"] = instructions
+        # Note: tools_json, enable_guardrails, prewarm not supported in simplified API
+
+        session_id = _foundationmodels.create_session(config if config else None)
+        session = AsyncSession(session_id, config if config else None)
+        self._async_sessions.append(session)
         return session
 
     def get_stats(self) -> Stats:

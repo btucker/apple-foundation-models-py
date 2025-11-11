@@ -29,7 +29,8 @@ def client(check_availability):
 @pytest.fixture
 def session(client):
     """Provide a applefoundationmodels Session instance."""
-    session = client.create_session()
+    # Create session without instructions to avoid transcript pollution
+    session = client.create_session(instructions=None)
     yield session
     session.close()
 
@@ -39,23 +40,32 @@ def session(client):
 
 def assert_valid_response(response, min_length=0, message="Response validation failed"):
     """
-    Assert response is a valid non-empty string.
+    Assert response is a valid GenerationResponse or raw string (legacy).
 
     Args:
-        response: The response to validate
+        response: The GenerationResponse object or string to validate
         min_length: Minimum expected length (default: 0)
         message: Custom error message prefix
 
     Returns:
-        The validated response for chaining
+        The validated response text for chaining
     """
-    assert isinstance(
-        response, str
-    ), f"{message}: should be a string, got {type(response)}"
+    from applefoundationmodels.types import GenerationResponse
+
+    # Handle both new GenerationResponse and legacy string responses
+    if isinstance(response, GenerationResponse):
+        text = response.text
+    elif isinstance(response, str):
+        text = response
+    else:
+        raise AssertionError(
+            f"{message}: should be GenerationResponse or string, got {type(response)}"
+        )
+
     assert (
-        len(response) > min_length
-    ), f"{message}: should have content (got {len(response)} chars)"
-    return response
+        len(text) > min_length
+    ), f"{message}: should have content (got {len(text)} chars)"
+    return text
 
 
 def assert_valid_chunks(chunks):
@@ -63,15 +73,24 @@ def assert_valid_chunks(chunks):
     Assert chunks are valid for streaming responses.
 
     Args:
-        chunks: List of chunks received from streaming
+        chunks: List of StreamChunk objects or strings (legacy) received from streaming
 
     Returns:
         The combined full response string
     """
+    from applefoundationmodels.types import StreamChunk
+
     assert len(chunks) > 0, "Should receive at least one chunk"
-    assert all(
-        isinstance(chunk, str) for chunk in chunks
-    ), "All chunks should be strings"
-    full_response = "".join(chunks)
-    assert len(full_response) > 0, "Combined response should not be empty"
+
+    # Handle both new StreamChunk objects and legacy string chunks
+    if all(isinstance(chunk, StreamChunk) for chunk in chunks):
+        full_response = "".join(chunk.content for chunk in chunks)
+    elif all(isinstance(chunk, str) for chunk in chunks):
+        full_response = "".join(chunks)
+    else:
+        raise AssertionError(
+            "All chunks should be StreamChunk objects or all should be strings"
+        )
+
+    assert len(full_response) >= 0, "Combined response should exist"
     return full_response

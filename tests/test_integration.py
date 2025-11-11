@@ -76,7 +76,7 @@ def test_basic_generation():
         # Test simple math
         print("Q: What is 7 + 15?")
         response = session.generate("What is 7 + 15?", temperature=0.3)
-        print(f"A: {response}")
+        print(f"A: {response.text}")
         assert_valid_response(response)
         print()
 
@@ -85,17 +85,17 @@ def test_basic_generation():
         response = session.generate(
             "What is the largest planet in our solar system?", temperature=0.5
         )
-        print(f"A: {response}")
-        assert_valid_response(response)
-        assert "jupiter" in response.lower(), "Response should mention Jupiter"
+        print(f"A: {response.text}")
+        response_text = assert_valid_response(response)
+        assert "jupiter" in response_text.lower(), "Response should mention Jupiter"
         print()
 
         # Test creative generation
         print("Q: Write a haiku about coding")
         response = session.generate("Write a haiku about coding", temperature=1.0)
-        print(f"A: {response}")
-        assert_valid_response(response)
-        assert len(response) > 10, "Haiku should have substantial content"
+        print(f"A: {response.text}")
+        response_text = assert_valid_response(response)
+        assert len(response_text) > 10, "Haiku should have substantial content"
 
     print("\n✓ Basic generation tests passed")
     print()
@@ -115,26 +115,26 @@ def test_conversation_context():
         # First message - establish context
         print("User: Remember this: The code name is BLUE42")
         response1 = session.generate("Remember this: The code name is BLUE42")
-        print(f"Assistant: {response1}")
+        print(f"Assistant: {response1.text}")
         assert_valid_response(response1)
         print()
 
         # Follow-up that requires context
         print("User: What code name did I just tell you?")
         response2 = session.generate("What code name did I just tell you?")
-        print(f"Assistant: {response2}")
-        assert_valid_response(response2)
+        print(f"Assistant: {response2.text}")
+        response2_text = assert_valid_response(response2)
         print()
 
         # Check if context was maintained
         # More lenient check - if the model refuses or doesn't maintain context,
         # at least verify it responded with a valid message
-        if "blue42" in response2.lower() or "blue 42" in response2.lower():
+        if "blue42" in response2_text.lower() or "blue 42" in response2_text.lower():
             print("✓ Context maintained across turns")
         else:
-            print(f"⚠️  Context not fully maintained - got: {response2[:100]}")
+            print(f"⚠️  Context not fully maintained - got: {response2_text[:100]}")
             # Still pass if we got a coherent response (not a refusal)
-            assert len(response2) > 5, "Should still provide a meaningful response"
+            assert len(response2_text) > 5, "Should still provide a meaningful response"
 
     print()
 
@@ -146,24 +146,27 @@ async def test_streaming():
     print("=" * 60)
 
     client = applefoundationmodels.Client()
-    session = client.create_session()
+    session = client.create_async_session()
 
     print("Prompt: Tell me a short story about a robot learning to paint (2 sentences)")
     print("Response: ", end="", flush=True)
 
     chunks = []
-    async for chunk in session.generate_stream(
+    # Await to get the async iterator, then iterate over it
+    stream = await session.generate(
         "Tell me a short story about a robot learning to paint in exactly 2 sentences",
+        stream=True,
         temperature=0.8,
-    ):
-        print(chunk, end="", flush=True)
+    )
+    async for chunk in stream:
+        print(chunk.content, end="", flush=True)
         chunks.append(chunk)
 
     print("\n")
 
     # Assertions
-    assert_valid_chunks(chunks)
-    print(f"✓ Received {len(chunks)} chunks totaling {len(''.join(chunks))} characters")
+    full_response = assert_valid_chunks(chunks)
+    print(f"✓ Received {len(chunks)} chunks totaling {len(full_response)} characters")
 
     client.close()
     print()
@@ -217,23 +220,23 @@ def test_session_management():
     # Test each session maintains its own context
     print("Session 1 (Math): What is 12 * 8?")
     response1 = session1.generate("What is 12 * 8?")
-    print(f"Response: {response1}")
-    assert_valid_response(response1)
+    print(f"Response: {response1.text}")
+    response1_text = assert_valid_response(response1)
     assert (
-        "96" in response1 or "ninety" in response1.lower()
+        "96" in response1_text or "ninety" in response1_text.lower()
     ), "Math response should contain the answer"
     print()
 
     print("Session 2 (Poetry): Write one line of poetry about the moon")
     response2 = session2.generate("Write one line of poetry about the moon")
-    print(f"Response: {response2}")
-    assert_valid_response(response2)
-    assert len(response2) > 5, "Poetry response should have content"
+    print(f"Response: {response2.text}")
+    response2_text = assert_valid_response(response2)
+    assert len(response2_text) > 5, "Poetry response should have content"
     print()
 
     # Verify sessions are independent
     assert (
-        response1 != response2
+        response1_text != response2_text
     ), "Different sessions should produce different responses"
 
     # Close sessions

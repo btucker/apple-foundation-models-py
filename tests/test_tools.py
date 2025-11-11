@@ -105,7 +105,7 @@ class TestToolRegistration:
         response = session.generate("What time is it?")
 
         assert "get_time" in called
-        assert "2:30" in response or "time" in response.lower()
+        assert "2:30" in response.text or "time" in response.text.lower()
 
     def test_tool_with_single_string_parameter(self, session):
         """Test tool with a single string parameter."""
@@ -119,7 +119,7 @@ class TestToolRegistration:
         response = session.generate("What's the weather in Paris?")
 
         harness.assert_called_with(location="Paris")
-        assert "72°F" in response or "sunny" in response.lower()
+        assert "72°F" in response.text or "sunny" in response.text.lower()
 
     def test_tool_with_multiple_parameters(self, session):
         """Test tool with multiple string parameters."""
@@ -139,9 +139,11 @@ class TestToolRegistration:
         assert called["query"] == "authentication"
         assert called["category"] == "API"
         # Validate response is a non-empty string with expected content
-        assert isinstance(response, str), "Response should be a string"
+        assert isinstance(response.text, str), "Response should be a string"
         assert response, "Response should not be empty"
-        assert "5 documents" in response or "authentication" in response.lower()
+        assert (
+            "5 documents" in response.text or "authentication" in response.text.lower()
+        )
 
     def test_tool_with_mixed_types(self, session):
         """Test tool with mixed parameter types (string and int)."""
@@ -157,7 +159,7 @@ class TestToolRegistration:
 
         kwargs = harness.get_call_kwargs()
         assert kwargs["count"] == 3
-        assert "Item 1" in response or "top" in response.lower()
+        assert "Item 1" in response.text or "top" in response.text.lower()
 
     def test_tool_with_optional_parameters(self, session):
         """Test tool with optional parameters and defaults."""
@@ -186,7 +188,7 @@ class TestToolRegistration:
         assert "operation" in called
         # Should use multiply operation
         assert called["operation"] in ["multiply", "times"]
-        assert "105" in response
+        assert "105" in response.text
 
 
 class TestToolExecution:
@@ -224,7 +226,9 @@ class TestToolExecution:
         response = session.generate("What's the system status?")
         # Verify tool was called and response contains relevant content
         assert called.get("invoked"), "Tool should have been called"
-        assert "operational" in response.lower() or "status" in response.lower()
+        assert (
+            "operational" in response.text.lower() or "status" in response.text.lower()
+        )
 
     def test_tool_with_optional_type_annotation(self, session):
         """Test that Optional[...] type annotations are properly handled."""
@@ -245,7 +249,7 @@ class TestToolExecution:
         # Verify the tool was called with location set
         assert "location" in called
         assert called["location"] == "Paris"
-        assert "22°" in response or "sunny" in response.lower()
+        assert "22°" in response.text or "sunny" in response.text.lower()
 
 
 class TestTranscript:
@@ -366,7 +370,7 @@ class TestToolIntegration:
             response = session.generate("What is 2 + 2?")
 
             assert results.get("called")
-            assert "4" in response
+            assert "4" in response.text
 
     def test_large_tool_output(self):
         """Test that tools can return outputs larger than the initial 16KB buffer."""

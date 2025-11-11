@@ -1,11 +1,10 @@
 """
-Session API for applefoundationmodels Python bindings.
+AsyncSession API for applefoundationmodels Python bindings.
 
-Provides session management, text generation, and async streaming support.
+Provides async session management, text generation, and async streaming support.
 """
 
 import asyncio
-import json
 from typing import (
     Optional,
     Dict,
@@ -16,7 +15,6 @@ from typing import (
     TYPE_CHECKING,
     List,
     cast,
-    Iterator,
     overload,
     Type,
 )
@@ -27,7 +25,6 @@ import threading
 from . import _foundationmodels
 from .base import ContextManagedResource
 from .types import (
-    GenerationParams,
     NormalizedGenerationParams,
     GenerationResponse,
     StreamChunk,
@@ -39,24 +36,29 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
 
 
-class Session(ContextManagedResource):
+class AsyncSession(ContextManagedResource):
     """
-    AI session for maintaining conversation state.
+    Async AI session for maintaining conversation state.
 
-    Sessions maintain conversation history and can be configured with tools
-    and instructions. Use as a context manager for automatic cleanup.
+    AsyncSession provides async/await support for all operations including
+    streaming. Use this for async applications. Sessions maintain conversation
+    history and can be configured with tools and instructions.
 
     Usage:
-        with client.create_session() as session:
-            response = session.generate("Hello!")
-            print(response)
+        async with client.create_async_session() as session:
+            response = await session.generate("Hello!")
+            print(response.text)
+
+            # Async streaming
+            async for chunk in session.generate("Story", stream=True):
+                print(chunk.content, end='', flush=True)
     """
 
     def __init__(self, session_id: int, config: Optional[Dict[str, Any]] = None):
         """
-        Create a Session instance.
+        Create an AsyncSession instance.
 
-        Note: Users should create sessions via Client.create_session()
+        Note: Users should create sessions via Client.create_async_session()
         rather than calling this constructor directly.
 
         Args:
@@ -71,7 +73,7 @@ class Session(ContextManagedResource):
         # Initialize to current transcript length to exclude any initial instructions
         self._last_transcript_length = len(self.transcript)
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """
         Close the session and cleanup resources.
 
@@ -119,7 +121,7 @@ class Session(ContextManagedResource):
 
     # Type overloads for non-streaming text generation
     @overload
-    def generate(
+    async def generate(
         self,
         prompt: str,
         schema: None = None,
@@ -130,7 +132,7 @@ class Session(ContextManagedResource):
 
     # Type overload for non-streaming structured generation
     @overload
-    def generate(
+    async def generate(
         self,
         prompt: str,
         schema: Union[Dict[str, Any], Type["BaseModel"]],
@@ -139,43 +141,43 @@ class Session(ContextManagedResource):
         max_tokens: Optional[int] = None,
     ) -> GenerationResponse: ...
 
-    # Type overload for streaming generation (text only, no structured streaming)
+    # Type overload for async streaming generation (text only)
     @overload
-    def generate(
+    async def generate(
         self,
         prompt: str,
         schema: None = None,
         stream: Literal[True] = True,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-    ) -> Iterator[StreamChunk]: ...
+    ) -> AsyncIterator[StreamChunk]: ...
 
-    def generate(
+    async def generate(
         self,
         prompt: str,
         schema: Optional[Union[Dict[str, Any], Type["BaseModel"]]] = None,
         stream: bool = False,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-    ) -> Union[GenerationResponse, Iterator[StreamChunk]]:
+    ) -> Union[GenerationResponse, AsyncIterator[StreamChunk]]:
         """
-        Generate text or structured output, with optional streaming.
+        Generate text or structured output asynchronously, with optional streaming.
 
-        This unified method supports three generation modes:
+        This unified async method supports three generation modes:
         1. Text generation (schema=None, stream=False) -> GenerationResponse
         2. Structured generation (schema=dict/model, stream=False) -> GenerationResponse
-        3. Streaming generation (schema=None, stream=True) -> Iterator[StreamChunk]
+        3. Async streaming (schema=None, stream=True) -> AsyncIterator[StreamChunk]
 
         Args:
             prompt: Input text prompt
             schema: Optional JSON schema dict or Pydantic model for structured output
-            stream: If True, return an iterator of chunks instead of complete response
+            stream: If True, return an async iterator of chunks
             temperature: Sampling temperature (0.0-2.0, default: DEFAULT_TEMPERATURE)
             max_tokens: Maximum tokens to generate (default: DEFAULT_MAX_TOKENS)
 
         Returns:
             - GenerationResponse with .text or .parsed property (if stream=False)
-            - Iterator[StreamChunk] yielding content deltas (if stream=True)
+            - AsyncIterator[StreamChunk] yielding content deltas (if stream=True)
 
         Raises:
             RuntimeError: If session is closed
@@ -184,16 +186,16 @@ class Session(ContextManagedResource):
 
         Examples:
             Text generation:
-                >>> response = session.generate("What is Python?")
+                >>> response = await session.generate("What is Python?")
                 >>> print(response.text)
 
             Structured generation:
                 >>> schema = {"type": "object", "properties": {"name": {"type": "string"}}}
-                >>> response = session.generate("Extract name: John Doe", schema=schema)
+                >>> response = await session.generate("Extract name: John", schema=schema)
                 >>> print(response.parsed)
 
-            Streaming generation:
-                >>> for chunk in session.generate("Tell me a story", stream=True):
+            Async streaming:
+                >>> async for chunk in session.generate("Tell a story", stream=True):
                 ...     print(chunk.content, end='', flush=True)
         """
         self._check_closed()
@@ -206,49 +208,58 @@ class Session(ContextManagedResource):
             )
 
         if stream:
-            # Streaming mode: return Iterator[StreamChunk]
+            # Return async iterator directly
             return self._generate_stream_impl(prompt, params)
         elif schema is not None:
             # Structured generation mode
-            return self._generate_structured_impl(prompt, schema, params)
+            return await self._generate_structured_impl(prompt, schema, params)
         else:
             # Text generation mode
-            return self._generate_text_impl(prompt, params)
+            return await self._generate_text_impl(prompt, params)
 
-    def _generate_text_impl(
+    async def _generate_text_impl(
         self, prompt: str, params: NormalizedGenerationParams
     ) -> GenerationResponse:
-        """Internal implementation for text generation."""
+        """Internal implementation for async text generation."""
         start_length = self._begin_generation()
         try:
-            text = _foundationmodels.generate(
-                prompt, params.temperature, params.max_tokens
+            # Run sync FFI call in thread pool
+            text = await asyncio.to_thread(
+                _foundationmodels.generate,
+                prompt,
+                params.temperature,
+                params.max_tokens,
             )
             return GenerationResponse(content=text, is_structured=False)
         finally:
             self._end_generation(start_length)
 
-    def _generate_structured_impl(
+    async def _generate_structured_impl(
         self,
         prompt: str,
         schema: Union[Dict[str, Any], Type["BaseModel"]],
         params: NormalizedGenerationParams,
     ) -> GenerationResponse:
-        """Internal implementation for structured generation."""
+        """Internal implementation for async structured generation."""
         start_length = self._begin_generation()
         try:
             json_schema = normalize_schema(schema)
-            result = _foundationmodels.generate_structured(
-                prompt, json_schema, params.temperature, params.max_tokens
+            # Run sync FFI call in thread pool
+            result = await asyncio.to_thread(
+                _foundationmodels.generate_structured,
+                prompt,
+                json_schema,
+                params.temperature,
+                params.max_tokens,
             )
             return GenerationResponse(content=result, is_structured=True)
         finally:
             self._end_generation(start_length)
 
-    def _generate_stream_impl(
+    async def _generate_stream_impl(
         self, prompt: str, params: NormalizedGenerationParams
-    ) -> Iterator[StreamChunk]:
-        """Internal implementation for streaming generation."""
+    ) -> AsyncIterator[StreamChunk]:
+        """Internal implementation for async streaming generation."""
         start_length = self._begin_generation()
         try:
             # Use a queue to collect chunks from callback
@@ -269,9 +280,12 @@ class Session(ContextManagedResource):
             thread = threading.Thread(target=run_stream, daemon=True)
             thread.start()
 
-            # Yield StreamChunk objects
+            # Yield StreamChunk objects asynchronously
             chunk_index = 0
             while True:
+                # Use asyncio.sleep to yield control
+                await asyncio.sleep(0)
+
                 try:
                     item = queue.get(timeout=0.1)
                 except Empty:
@@ -295,35 +309,35 @@ class Session(ContextManagedResource):
         finally:
             self._end_generation(start_length)
 
-    def get_history(self) -> list:
+    async def get_history(self) -> list:
         """
-        Get conversation history.
+        Get conversation history asynchronously.
 
         Returns:
             List of message dictionaries with 'role' and 'content' keys
 
         Example:
-            >>> history = session.get_history()
+            >>> history = await session.get_history()
             >>> for msg in history:
             ...     print(f"{msg['role']}: {msg['content']}")
         """
         self._check_closed()
-        return _foundationmodels.get_history()
+        return await asyncio.to_thread(_foundationmodels.get_history)
 
-    def clear_history(self) -> None:
+    async def clear_history(self) -> None:
         """
-        Clear conversation history.
+        Clear conversation history asynchronously.
 
         Removes all messages from the session while keeping the session active.
         """
         self._check_closed()
-        _foundationmodels.clear_history()
+        await asyncio.to_thread(_foundationmodels.clear_history)
         # Reset to current transcript length (may include persistent instructions)
         self._last_transcript_length = len(self.transcript)
 
-    def add_message(self, role: str, content: str) -> None:
+    async def add_message(self, role: str, content: str) -> None:
         """
-        Add a message to conversation history.
+        Add a message to conversation history asynchronously.
 
         Note: This is a stub in the simplified API.
 
@@ -332,7 +346,7 @@ class Session(ContextManagedResource):
             content: Message content
         """
         self._check_closed()
-        _foundationmodels.add_message(role, content)
+        await asyncio.to_thread(_foundationmodels.add_message, role, content)
 
     def tool(
         self,
@@ -365,7 +379,7 @@ class Session(ContextManagedResource):
                 '''Get weather for a location.'''
                 return f"Weather in {location}: 20°{units[0].upper()}"
 
-            response = session.generate("What's the weather in Paris?")
+            response = await session.generate("What's the weather in Paris?")
         """
 
         def decorator(func: Callable) -> Callable:
@@ -434,8 +448,7 @@ class Session(ContextManagedResource):
         Get transcript entries from the most recent generate() call only.
 
         Unlike the `transcript` property which returns the full accumulated history,
-        this returns only the entries added during the last generation call
-        (generate(), generate_structured(), or generate_stream()).
+        this returns only the entries added during the last generation call.
 
         This is useful when you need to inspect what happened during a specific
         generation without worrying about accumulated history from previous calls.
@@ -446,12 +459,12 @@ class Session(ContextManagedResource):
 
         Example:
             >>> # First generation
-            >>> response1 = session.generate("What is 2 + 2?")
+            >>> response1 = await session.generate("What is 2 + 2?")
             >>> entries1 = session.last_generation_transcript
             >>> print(f"First call: {len(entries1)} entries")
 
             >>> # Second generation on same session
-            >>> response2 = session.generate("What is 5 + 7?")
+            >>> response2 = await session.generate("What is 5 + 7?")
             >>> entries2 = session.last_generation_transcript
             >>> print(f"Second call: {len(entries2)} entries (only from second call)")
         """

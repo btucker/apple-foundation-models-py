@@ -4,7 +4,7 @@ applefoundationmodels: Python bindings for Apple's FoundationModels framework
 High-level Pythonic interface for accessing Apple Intelligence on-device
 Foundation models.
 
-Basic usage:
+Basic text generation:
     from applefoundationmodels import Client
 
     with Client() as client:
@@ -16,7 +16,31 @@ Basic usage:
         # Create a session and generate response
         session = client.create_session()
         response = session.generate("Hello, how are you?")
-        print(response)
+        print(response.text)  # Access text via .text property
+
+Structured output:
+    from applefoundationmodels import Client
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "integer"}
+        }
+    }
+
+    with Client() as client:
+        session = client.create_session()
+        response = session.generate("Extract: Alice is 28", schema=schema)
+        print(response.parsed)  # {"name": "Alice", "age": 28}
+
+Sync streaming:
+    from applefoundationmodels import Client
+
+    with Client() as client:
+        session = client.create_session()
+        for chunk in session.generate("Tell me a story", stream=True):
+            print(chunk.content, end='', flush=True)
 
 Async streaming:
     import asyncio
@@ -24,9 +48,9 @@ Async streaming:
 
     async def main():
         with Client() as client:
-            session = client.create_session()
-            async for chunk in session.generate_stream("Tell me a story"):
-                print(chunk, end='', flush=True)
+            session = client.create_async_session()
+            async for chunk in session.generate("Tell me a story", stream=True):
+                print(chunk.content, end='', flush=True)
 
     asyncio.run(main())
 """
@@ -36,6 +60,7 @@ __version__ = "0.1.0"
 # Public API exports
 from .client import Client, client
 from .session import Session
+from .async_session import AsyncSession
 from .constants import (
     DEFAULT_TEMPERATURE,
     DEFAULT_MAX_TOKENS,
@@ -48,6 +73,8 @@ from .types import (
     Availability,
     SessionConfig,
     GenerationParams,
+    GenerationResponse,
+    StreamChunk,
     Stats,
     StreamCallback,
     ToolCallback,
@@ -75,6 +102,7 @@ __all__ = [
     # Main classes
     "Client",
     "Session",
+    "AsyncSession",
     "client",
     # Constants
     "DEFAULT_TEMPERATURE",
@@ -87,6 +115,8 @@ __all__ = [
     "Availability",
     "SessionConfig",
     "GenerationParams",
+    "GenerationResponse",
+    "StreamChunk",
     "Stats",
     "StreamCallback",
     "ToolCallback",
