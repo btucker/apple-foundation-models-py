@@ -95,7 +95,3 @@ class AsyncClient(BaseClient):
         session = AsyncSession(session_id, config)
         self._sessions.append(session)
         return session
-
-
-# Note: asynccontextmanager is available in Python 3.7+
-# Using typing_extensions for older Python versions if needed
