@@ -1,0 +1,6 @@
+- I'm mostly interested in how it handles sync vs. async & exposing the
+  transcript
+- let's do #1
+- Now use the code quality agent to look for opportunities to DRY up & simplify
+  the code
+- please proceed with that
