@@ -1,0 +1,4 @@
+- In applefoundationmodels/async_client.py around lines 64-74, the current
+- applefoundationmodels/async_client.py around lines 92 to 125, the async
+- In applefoundationmodels/async_session.py around lines 82 to 92, the current
+- In applefoundationmodels/client.py around lines 12 and 43-45, the top-level
