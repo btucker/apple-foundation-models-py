@@ -84,14 +84,16 @@ with Client() as client:
 
 ### Async Streaming
 
+Following OpenAI's pattern, use `AsyncClient` for async operations:
+
 ```python
 import asyncio
-from applefoundationmodels import Client
+from applefoundationmodels import AsyncClient
 
 async def main():
-    with Client() as client:
-        # Create an async session for async streaming
-        session = client.create_async_session()
+    async with AsyncClient() as client:
+        # Create a session from the async client
+        session = await client.create_session()
 
         # Stream response chunks as they arrive
         async for chunk in session.generate("Tell me a story about a robot", stream=True):
@@ -101,9 +103,16 @@ async def main():
 asyncio.run(main())
 ```
 
-**Note:** For synchronous streaming (without async/await), use a regular Session:
+**Sync vs Async:**
+- **Sync**: `Client()` → `create_session()` → `session.generate()`
+- **Async**: `AsyncClient()` → `await create_session()` → `await session.generate()`
+
+Same method signatures, just `await` for async:
 
 ```python
+# Synchronous
+from applefoundationmodels import Client
+
 with Client() as client:
     session = client.create_session()
     for chunk in session.generate("Tell me a story", stream=True):
@@ -199,12 +208,53 @@ with Client() as client:
     print(response.text)
     # "The weather in Paris is 22°C and sunny. 15 times 23 equals 345."
 
-    # View the full conversation including tool calls
-    for entry in session.transcript:
-        print(f"{entry['type']}: {entry.get('content', '')}")
+    # Check if tools were called using the tool_calls property
+    if response.tool_calls:
+        print(f"Tools called: {len(response.tool_calls)}")
+        for tool_call in response.tool_calls:
+            print(f"  - {tool_call.function.name}")
+            print(f"    ID: {tool_call.id}")
+            print(f"    Args: {tool_call.function.arguments}")
+
+    # Check why generation stopped
+    print(f"Finish reason: {response.finish_reason}")
+    # "tool_calls" if tools were called, "stop" otherwise
+```
+
+**Accessing Tool Calls:**
+
+Tool calls are exposed directly on the response object following OpenAI's pattern:
+
+```python
+response = session.generate("What's the weather in Paris?")
+
+# Access tool calls directly from the response
+if response.tool_calls:
+    for tool_call in response.tool_calls:
+        print(f"Called: {tool_call.function.name}")
+
+        # Parse arguments as JSON
+        import json
+        args = json.loads(tool_call.function.arguments)
+        print(f"Args: {args}")
+
+# Check finish reason
+if response.finish_reason == "tool_calls":
+    print("Generation stopped to call tools")
+elif response.finish_reason == "stop":
+    print("Generation completed normally")
+```
+
+You can also view the full conversation history including tool outputs:
+
+```python
+# View the full conversation including tool calls and outputs
+for entry in session.transcript:
+    print(f"{entry['type']}: {entry.get('content', '')}")
 ```
 
 **Features:**
+- **OpenAI-style tool_calls** property on responses for easy access
 - **Automatic schema generation** from Python type hints
 - **Parallel tool execution** when the model calls multiple tools
 - **Full transcript access** showing all tool calls and outputs
@@ -328,9 +378,17 @@ with Client() as client:
 
 ## API Reference
 
+### Sync vs Async Pattern
+
+Following OpenAI's approach, we provide separate client classes for sync and async:
+- **`Client`**: Synchronous operations (returns `Session`)
+- **`AsyncClient`**: Async operations (returns `AsyncSession`)
+
+Both have identical method signatures - just use `await` with `AsyncClient`.
+
 ### Client
 
-The main entry point for using libai.
+Synchronous client for Apple Intelligence operations.
 
 ```python
 class Client:
@@ -350,10 +408,36 @@ class Client:
     def get_supported_languages() -> List[str]: ...
 
     def create_session(...) -> Session: ...
-    def create_async_session(...) -> AsyncSession: ...
     def get_stats() -> Stats: ...
     def reset_stats() -> None: ...
     def close() -> None: ...
+```
+
+### AsyncClient
+
+Asynchronous client for Apple Intelligence operations (identical interface to Client).
+
+```python
+class AsyncClient:
+    def __init__() -> None: ...
+    async def __aenter__() -> AsyncClient: ...
+    async def __aexit__(...) -> None: ...
+
+    @staticmethod
+    def check_availability() -> Availability: ...
+    @staticmethod
+    def get_availability_reason() -> str: ...
+    @staticmethod
+    def is_ready() -> bool: ...
+    @staticmethod
+    def get_version() -> str: ...
+    @staticmethod
+    def get_supported_languages() -> List[str]: ...
+
+    async def create_session(...) -> AsyncSession: ...
+    async def get_stats() -> Stats: ...
+    async def reset_stats() -> None: ...
+    async def close() -> None: ...
 ```
 
 ### Session

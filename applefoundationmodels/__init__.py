@@ -44,11 +44,11 @@ Sync streaming:
 
 Async streaming:
     import asyncio
-    from applefoundationmodels import Client
+    from applefoundationmodels import AsyncClient
 
     async def main():
-        with Client() as client:
-            session = client.create_async_session()
+        async with AsyncClient() as client:
+            session = await client.create_session()
             async for chunk in session.generate("Tell me a story", stream=True):
                 print(chunk.content, end='', flush=True)
 
@@ -59,6 +59,7 @@ __version__ = "0.1.0"
 
 # Public API exports
 from .client import Client, client
+from .async_client import AsyncClient
 from .session import Session
 from .async_session import AsyncSession
 from .constants import (
@@ -101,6 +102,7 @@ __all__ = [
     "__version__",
     # Main classes
     "Client",
+    "AsyncClient",
     "Session",
     "AsyncSession",
     "client",

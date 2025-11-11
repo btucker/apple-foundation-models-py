@@ -145,8 +145,8 @@ async def test_streaming():
     print("TEST 5: Streaming Generation")
     print("=" * 60)
 
-    client = applefoundationmodels.Client()
-    session = client.create_async_session()
+    client = applefoundationmodels.AsyncClient()
+    session = await client.create_session()
 
     print("Prompt: Tell me a short story about a robot learning to paint (2 sentences)")
     print("Response: ", end="", flush=True)
@@ -168,7 +168,7 @@ async def test_streaming():
     full_response = assert_valid_chunks(chunks)
     print(f"✓ Received {len(chunks)} chunks totaling {len(full_response)} characters")
 
-    client.close()
+    await client.close()
     print()
 
 
