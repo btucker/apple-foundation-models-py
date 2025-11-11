@@ -5,13 +5,17 @@ Provides shared logic for both sync and async clients.
 """
 
 import platform
-from typing import Optional, List, Dict, Any, Callable
-from abc import ABC
+from typing import Optional, List, Dict, Any, Callable, TYPE_CHECKING, Type, Union
+from abc import ABC, abstractmethod
 
 from . import _foundationmodels
 from .base import ContextManagedResource
 from .types import Availability
 from .exceptions import NotAvailableError
+
+if TYPE_CHECKING:
+    from .session import Session
+    from .async_session import AsyncSession
 
 
 class BaseClient(ContextManagedResource, ABC):
@@ -23,6 +27,31 @@ class BaseClient(ContextManagedResource, ABC):
     """
 
     _initialized: bool = False
+
+    def __init__(self):
+        """
+        Initialize the client with platform validation and library initialization.
+
+        This is called by both Client and AsyncClient constructors.
+
+        Raises:
+            InitializationError: If library initialization fails
+            NotAvailableError: If Apple Intelligence is not available
+            RuntimeError: If platform is not supported
+        """
+        self._validate_platform()
+        self._initialize_library()
+        self._sessions: List[Any] = []
+
+    @property
+    @abstractmethod
+    def _session_class(self) -> Type[Union["Session", "AsyncSession"]]:
+        """
+        Return the session class to use for this client.
+
+        This is implemented by subclasses to return either Session or AsyncSession.
+        """
+        pass
 
     @staticmethod
     def _validate_platform() -> None:
@@ -113,6 +142,30 @@ class BaseClient(ContextManagedResource, ABC):
         """
         return _foundationmodels.get_version()
 
+    def _create_session_impl(
+        self,
+        instructions: Optional[str],
+        tools: Optional[List[Callable]],
+    ) -> Union["Session", "AsyncSession"]:
+        """
+        Shared implementation for creating sessions.
+
+        This method contains the common logic for both sync and async session creation.
+        Subclasses don't need to override this.
+
+        Args:
+            instructions: Optional system instructions
+            tools: Optional list of tool functions to register
+
+        Returns:
+            New session instance (Session or AsyncSession based on _session_class)
+        """
+        config = self._build_session_config(instructions, tools)
+        session_id = _foundationmodels.create_session(config)
+        session = self._session_class(session_id, config)
+        self._sessions.append(session)
+        return session
+
     @staticmethod
     def _build_session_config(
         instructions: Optional[str],
@@ -130,16 +183,13 @@ class BaseClient(ContextManagedResource, ABC):
         """
         # Register tools if provided
         if tools:
-            from .tools import extract_function_schema, attach_tool_metadata
+            from .tools import register_tool_for_function
 
             # Build tool dictionary with function objects
             tool_dict = {}
             for func in tools:
-                schema = extract_function_schema(func)
-                final_schema = attach_tool_metadata(
-                    func, schema, description=None, name=None
-                )
-                tool_name = final_schema["name"]
+                schema = register_tool_for_function(func)
+                tool_name = schema["name"]
                 tool_dict[tool_name] = func
 
             # Register with FFI

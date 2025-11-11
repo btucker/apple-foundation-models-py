@@ -24,8 +24,8 @@ import threading
 
 from . import _foundationmodels
 from .base_session import BaseSession
+from .base import AsyncContextManagedResource
 from .types import (
-    NormalizedGenerationParams,
     GenerationResponse,
     StreamChunk,
 )
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
 
 
-class AsyncSession(BaseSession):
+class AsyncSession(BaseSession, AsyncContextManagedResource):
     """
     Async AI session for maintaining conversation state.
 
@@ -52,6 +52,19 @@ class AsyncSession(BaseSession):
             async for chunk in session.generate("Story", stream=True):
                 print(chunk.content, end='', flush=True)
     """
+
+    async def _call_ffi(self, func, *args, **kwargs):
+        """
+        Execute FFI call asynchronously.
+
+        Streaming functions use callbacks and must run directly in threads,
+        while other functions are safely wrapped in asyncio.to_thread.
+        """
+        # Streaming must run in thread with callback - don't wrap
+        if func == _foundationmodels.generate_stream:
+            return func(*args, **kwargs)
+        # Other functions can be safely wrapped
+        return await asyncio.to_thread(func, *args, **kwargs)
 
     async def close(self) -> None:
         """Close the session and cleanup resources."""
@@ -137,26 +150,24 @@ class AsyncSession(BaseSession):
                 ...     print(chunk.content, end='', flush=True)
         """
         self._check_closed()
-        params = self._normalize_generation_params(temperature, max_tokens)
+        self._validate_generate_params(stream, schema)
 
-        # Validate: streaming only supports text generation
-        if stream and schema is not None:
-            raise ValueError(
-                "Streaming is not supported with structured output (schema parameter)"
-            )
+        # Apply defaults to parameters
+        temp = self._get_temperature(temperature)
+        max_tok = self._get_max_tokens(max_tokens)
 
         if stream:
             # Return async iterator directly
-            return self._generate_stream_impl(prompt, params)
+            return self._generate_stream_impl(prompt, temp, max_tok)
         elif schema is not None:
             # Structured generation mode
-            return await self._generate_structured_impl(prompt, schema, params)
+            return await self._generate_structured_impl(prompt, schema, temp, max_tok)
         else:
             # Text generation mode
-            return await self._generate_text_impl(prompt, params)
+            return await self._generate_text_impl(prompt, temp, max_tok)
 
     async def _generate_text_impl(
-        self, prompt: str, params: NormalizedGenerationParams
+        self, prompt: str, temperature: float, max_tokens: int
     ) -> GenerationResponse:
         """Internal implementation for async text generation."""
         start_length = self._begin_generation()
@@ -165,8 +176,8 @@ class AsyncSession(BaseSession):
             text = await asyncio.to_thread(
                 _foundationmodels.generate,
                 prompt,
-                params.temperature,
-                params.max_tokens,
+                temperature,
+                max_tokens,
             )
             return self._build_generation_response(text, False, start_length)
         except Exception:
@@ -177,7 +188,8 @@ class AsyncSession(BaseSession):
         self,
         prompt: str,
         schema: Union[Dict[str, Any], Type["BaseModel"]],
-        params: NormalizedGenerationParams,
+        temperature: float,
+        max_tokens: int,
     ) -> GenerationResponse:
         """Internal implementation for async structured generation."""
         start_length = self._begin_generation()
@@ -188,8 +200,8 @@ class AsyncSession(BaseSession):
                 _foundationmodels.generate_structured,
                 prompt,
                 json_schema,
-                params.temperature,
-                params.max_tokens,
+                temperature,
+                max_tokens,
             )
             return self._build_generation_response(result, True, start_length)
         except Exception:
@@ -197,7 +209,7 @@ class AsyncSession(BaseSession):
             raise
 
     async def _generate_stream_impl(
-        self, prompt: str, params: NormalizedGenerationParams
+        self, prompt: str, temperature: float, max_tokens: int
     ) -> AsyncIterator[StreamChunk]:
         """Internal implementation for async streaming generation."""
         start_length = self._begin_generation()
@@ -212,7 +224,7 @@ class AsyncSession(BaseSession):
             def run_stream():
                 try:
                     _foundationmodels.generate_stream(
-                        prompt, callback, params.temperature, params.max_tokens
+                        prompt, callback, temperature, max_tokens
                     )
                 except Exception as e:
                     queue.put(e)

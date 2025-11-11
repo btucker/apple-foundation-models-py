@@ -233,6 +233,33 @@ def extract_function_schema(func: Callable) -> Dict[str, Any]:
         ) from e
 
 
+def register_tool_for_function(func: Callable) -> Dict[str, Any]:
+    """
+    Extract schema from a function and prepare it for registration.
+
+    This is used when registering tools with a session. It extracts the
+    schema from the function signature, attaches metadata to the function
+    object, and returns the schema ready for FFI registration.
+
+    Args:
+        func: Function to register as a tool
+
+    Returns:
+        Complete tool schema ready for registration
+
+    Raises:
+        ToolCallError: If schema cannot be extracted
+    """
+    schema = extract_function_schema(func)
+
+    # Attach metadata to function for FFI access
+    func._tool_name = schema["name"]  # type: ignore[attr-defined]
+    func._tool_description = schema["description"]  # type: ignore[attr-defined]
+    func._tool_parameters = schema["parameters"]  # type: ignore[attr-defined]
+
+    return schema
+
+
 def attach_tool_metadata(
     func: Callable,
     schema: Dict[str, Any],

@@ -5,7 +5,7 @@ Provides a Pythonic interface to Apple's FoundationModels framework with
 context managers, automatic resource cleanup, and integration with the Session class.
 """
 
-from typing import Optional, List, Callable
+from typing import Optional, List, Callable, Type
 from contextlib import contextmanager
 
 from . import _foundationmodels
@@ -38,9 +38,12 @@ class Client(BaseClient):
             NotAvailableError: If Apple Intelligence is not available
             RuntimeError: If platform is not supported
         """
-        self._validate_platform()
-        self._initialize_library()
-        self._sessions: List[Session] = []
+        super().__init__()
+
+    @property
+    def _session_class(self) -> Type[Session]:
+        """Return Session class for sync client."""
+        return Session
 
     def close(self) -> None:
         """
@@ -82,11 +85,7 @@ class Client(BaseClient):
             ...     tools=[get_weather]
             ... )
         """
-        config = self._build_session_config(instructions, tools)
-        session_id = _foundationmodels.create_session(config)
-        session = Session(session_id, config)
-        self._sessions.append(session)
-        return session
+        return self._create_session_impl(instructions, tools)
 
 
 @contextmanager

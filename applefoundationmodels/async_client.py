@@ -4,14 +4,15 @@ Async Client API for applefoundationmodels Python bindings.
 Provides async/await interface following OpenAI's AsyncClient pattern.
 """
 
-from typing import Optional, List, Callable
+from typing import Optional, List, Callable, Type
 
 from . import _foundationmodels
 from .base_client import BaseClient
+from .base import AsyncContextManagedResource
 from .async_session import AsyncSession
 
 
-class AsyncClient(BaseClient):
+class AsyncClient(BaseClient, AsyncContextManagedResource):
     """
     Async client for Apple Intelligence operations.
 
@@ -43,9 +44,12 @@ class AsyncClient(BaseClient):
             NotAvailableError: If Apple Intelligence is not available
             RuntimeError: If platform is not supported
         """
-        self._validate_platform()
-        self._initialize_library()
-        self._sessions: List[AsyncSession] = []
+        super().__init__()
+
+    @property
+    def _session_class(self) -> Type[AsyncSession]:
+        """Return AsyncSession class for async client."""
+        return AsyncSession
 
     async def close(self) -> None:
         """
@@ -90,8 +94,4 @@ class AsyncClient(BaseClient):
             >>> response = await session.generate("Hello!")
             >>> print(response.text)
         """
-        config = self._build_session_config(instructions, tools)
-        session_id = _foundationmodels.create_session(config)
-        session = AsyncSession(session_id, config)
-        self._sessions.append(session)
-        return session
+        return self._create_session_impl(instructions, tools)

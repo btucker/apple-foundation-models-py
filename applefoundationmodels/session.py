@@ -27,8 +27,6 @@ import threading
 from . import _foundationmodels
 from .base_session import BaseSession
 from .types import (
-    GenerationParams,
-    NormalizedGenerationParams,
     GenerationResponse,
     StreamChunk,
 )
@@ -50,6 +48,10 @@ class Session(BaseSession):
             response = session.generate("Hello!")
             print(response)
     """
+
+    def _call_ffi(self, func, *args, **kwargs):
+        """Execute FFI call synchronously."""
+        return func(*args, **kwargs)
 
     def close(self) -> None:
         """Close the session and cleanup resources."""
@@ -135,33 +137,29 @@ class Session(BaseSession):
                 ...     print(chunk.content, end='', flush=True)
         """
         self._check_closed()
-        params = self._normalize_generation_params(temperature, max_tokens)
+        self._validate_generate_params(stream, schema)
 
-        # Validate: streaming only supports text generation
-        if stream and schema is not None:
-            raise ValueError(
-                "Streaming is not supported with structured output (schema parameter)"
-            )
+        # Apply defaults to parameters
+        temp = self._get_temperature(temperature)
+        max_tok = self._get_max_tokens(max_tokens)
 
         if stream:
             # Streaming mode: return Iterator[StreamChunk]
-            return self._generate_stream_impl(prompt, params)
+            return self._generate_stream_impl(prompt, temp, max_tok)
         elif schema is not None:
             # Structured generation mode
-            return self._generate_structured_impl(prompt, schema, params)
+            return self._generate_structured_impl(prompt, schema, temp, max_tok)
         else:
             # Text generation mode
-            return self._generate_text_impl(prompt, params)
+            return self._generate_text_impl(prompt, temp, max_tok)
 
     def _generate_text_impl(
-        self, prompt: str, params: NormalizedGenerationParams
+        self, prompt: str, temperature: float, max_tokens: int
     ) -> GenerationResponse:
         """Internal implementation for text generation."""
         start_length = self._begin_generation()
         try:
-            text = _foundationmodels.generate(
-                prompt, params.temperature, params.max_tokens
-            )
+            text = _foundationmodels.generate(prompt, temperature, max_tokens)
             return self._build_generation_response(text, False, start_length)
         except Exception:
             self._end_generation(start_length)
@@ -171,14 +169,15 @@ class Session(BaseSession):
         self,
         prompt: str,
         schema: Union[Dict[str, Any], Type["BaseModel"]],
-        params: NormalizedGenerationParams,
+        temperature: float,
+        max_tokens: int,
     ) -> GenerationResponse:
         """Internal implementation for structured generation."""
         start_length = self._begin_generation()
         try:
             json_schema = normalize_schema(schema)
             result = _foundationmodels.generate_structured(
-                prompt, json_schema, params.temperature, params.max_tokens
+                prompt, json_schema, temperature, max_tokens
             )
             return self._build_generation_response(result, True, start_length)
         except Exception:
@@ -186,7 +185,7 @@ class Session(BaseSession):
             raise
 
     def _generate_stream_impl(
-        self, prompt: str, params: NormalizedGenerationParams
+        self, prompt: str, temperature: float, max_tokens: int
     ) -> Iterator[StreamChunk]:
         """Internal implementation for streaming generation."""
         start_length = self._begin_generation()
@@ -201,7 +200,7 @@ class Session(BaseSession):
             def run_stream():
                 try:
                     _foundationmodels.generate_stream(
-                        prompt, callback, params.temperature, params.max_tokens
+                        prompt, callback, temperature, max_tokens
                     )
                 except Exception as e:
                     queue.put(e)

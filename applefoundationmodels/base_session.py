@@ -4,17 +4,18 @@ Base Session implementation for applefoundationmodels Python bindings.
 Provides shared logic for both sync and async sessions.
 """
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, Callable, List, Union, cast
 
 from . import _foundationmodels
 from .base import ContextManagedResource
 from .types import (
-    NormalizedGenerationParams,
     GenerationResponse,
+    StreamChunk,
     ToolCall,
     Function,
 )
+from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
 
 
 class BaseSession(ContextManagedResource, ABC):
@@ -39,6 +40,24 @@ class BaseSession(ContextManagedResource, ABC):
         # Initialize to current transcript length to exclude any initial instructions
         self._last_transcript_length = len(self.transcript)
 
+    @abstractmethod
+    def _call_ffi(self, func: Callable, *args, **kwargs) -> Any:
+        """
+        Execute an FFI call (sync or async depending on implementation).
+
+        This is the adapter method that subclasses must implement to handle
+        sync vs async execution of FFI calls.
+
+        Args:
+            func: The FFI function to call
+            *args: Positional arguments to pass to the function
+            **kwargs: Keyword arguments to pass to the function
+
+        Returns:
+            The result from the FFI call
+        """
+        pass
+
     def _check_closed(self) -> None:
         """
         Raise error if session is closed.
@@ -49,20 +68,13 @@ class BaseSession(ContextManagedResource, ABC):
         if self._closed:
             raise RuntimeError("Session is closed")
 
-    def _normalize_generation_params(
-        self, temperature: Optional[float], max_tokens: Optional[int]
-    ) -> NormalizedGenerationParams:
-        """
-        Normalize generation parameters with defaults.
+    def _get_temperature(self, temperature: Optional[float]) -> float:
+        """Get temperature with default applied."""
+        return temperature if temperature is not None else DEFAULT_TEMPERATURE
 
-        Args:
-            temperature: Optional temperature value
-            max_tokens: Optional max tokens value
-
-        Returns:
-            NormalizedGenerationParams with defaults applied
-        """
-        return NormalizedGenerationParams.from_optional(temperature, max_tokens)
+    def _get_max_tokens(self, max_tokens: Optional[int]) -> int:
+        """Get max_tokens with default applied."""
+        return max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS
 
     def _begin_generation(self) -> int:
         """
@@ -212,3 +224,23 @@ class BaseSession(ContextManagedResource, ABC):
         self._check_closed()
         full_transcript = self.transcript
         return full_transcript[self._last_transcript_length :]
+
+    def _validate_generate_params(
+        self,
+        stream: bool,
+        schema: Optional[Union[Dict[str, Any], type]],
+    ) -> None:
+        """
+        Validate generation parameters.
+
+        Args:
+            stream: Whether streaming is requested
+            schema: Schema if structured output is requested
+
+        Raises:
+            ValueError: If invalid parameter combination
+        """
+        if stream and schema is not None:
+            raise ValueError(
+                "Streaming is not supported with structured output (schema parameter)"
+            )

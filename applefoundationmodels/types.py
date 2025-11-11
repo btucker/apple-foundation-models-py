@@ -99,46 +99,6 @@ class GenerationParams(TypedDict, total=False):
 
 
 @dataclass
-class NormalizedGenerationParams:
-    """
-    Normalized generation parameters with defaults applied.
-
-    This dataclass ensures all generation parameters have concrete values,
-    making it easier to pass to FFI functions without None checks.
-
-    Attributes:
-        temperature: Generation randomness (0.0-2.0)
-        max_tokens: Maximum response tokens
-    """
-
-    temperature: float
-    max_tokens: int
-
-    @classmethod
-    def from_optional(
-        cls,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-    ) -> "NormalizedGenerationParams":
-        """
-        Create normalized params from optional values.
-
-        Args:
-            temperature: Optional temperature override
-            max_tokens: Optional max_tokens override
-
-        Returns:
-            NormalizedGenerationParams with defaults applied
-        """
-        from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
-
-        return cls(
-            temperature=temperature if temperature is not None else DEFAULT_TEMPERATURE,
-            max_tokens=max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS,
-        )
-
-
-@dataclass
 class Function:
     """
     Function call information from a tool call.
