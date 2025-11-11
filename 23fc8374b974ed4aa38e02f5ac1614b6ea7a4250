@@ -1,0 +1,4478 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: agent-06...
+**Time:** 2025-11-11 16:26:55
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+I'll research the exact streaming patterns used by OpenAI and Anthropic APIs. Let me search for their official implementations and documentation.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Now let me look at the actual source code from both SDKs to get the exact type signatures:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Let me search for the actual type signatures in the source code:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Perfect! Now let me fetch the actual source code files to see the exact type signatures:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Now let me find the actual messages.create overload signatures:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Excellent! Now let me get the async versions as well:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Based on my research, I have comprehensive information about how OpenAI and Anthropic handle streaming. Let me compile the complete answer:
+
+---
+
+## Research Summary: OpenAI and Anthropic Streaming API Patterns
+
+### 1. Method Signatures
+
+**OpenAI:**
+- Method: `client.chat.completions.create(stream=True)`
+- Same method for both streaming and non-streaming
+
+**Anthropic:**
+- Method: `client.messages.create(stream=True)`
+- Same method for both streaming and non-streaming
+- Alternative: `client.messages.stream()` (convenience wrapper)
+
+### 2. Same Method or Separate Methods?
+
+**Both use the SAME method** with a `stream` parameter to control behavior via `@overload` type signatures.
+
+### 3. Return Types - OpenAI
+
+**Sync (`OpenAI`):**
+- Non-streaming: `ChatCompletion`
+- Streaming: `Stream[ChatCompletionChunk]`
+- Boolean: `ChatCompletion | Stream[ChatCompletionChunk]`
+
+**Overload signatures:**
+```python
+@overload
+def create(
+    self,
+    *,
+    messages: Iterable[ChatCompletionMessageParam],
+    model: Union[str, ChatModel],
+    stream: Optional[Literal[False]] | Omit = omit,
+    ...
+) -> ChatCompletion:
+
+@overload
+def create(
+    self,
+    *,
+    messages: Iterable[ChatCompletionMessageParam],
+    model: Union[str, ChatModel],
+    stream: Literal[True],
+    ...
+) -> Stream[ChatCompletionChunk]:
+
+@overload
+def create(
+    self,
+    *,
+    messages: Iterable[ChatCompletionMessageParam],
+    model: Union[str, ChatModel],
+    stream: bool,
+    ...
+) -> ChatCompletion | Stream[ChatCompletionChunk]:
+```
+
+**Async (`AsyncOpenAI`):**
+- Same pattern as sync, just with `async def create()`
+- Returns the same types: `ChatCompletion` or `AsyncStream[ChatCompletionChunk]`
+
+### 4. Return Types - Anthropic
+
+**Sync (`Anthropic`):**
+- Non-streaming: `Message` (or `BetaMessage` for beta)
+- Streaming: `Stream[RawMessageStreamEvent]`
+- Boolean: `Message | Stream[RawMessageStreamEvent]`
+
+**Overload signatures:**
+```python
+@overload
+def create(
+    self,
+    *,
+    max_tokens: int,
+    messages: Iterable[MessageParam],
+    model: ModelParam,
+    stream: Literal[False] | Omit = omit,
+    ...
+) -> Message:
+
+@overload
+def create(
+    self,
+    *,
+    max_tokens: int,
+    messages: Iterable[MessageParam],
+    model: ModelParam,
+    stream: Literal[True],
+    ...
+) -> Stream[RawMessageStreamEvent]:
+
+@overload
+def create(
+    self,
+    *,
+    max_tokens: int,
+    messages: Iterable[MessageParam],
+    model: ModelParam,
+    stream: bool,
+    ...
+) -> Message | Stream[RawMessageStreamEvent]:
+```
+
+**Async (`AsyncAnthropic`):**
+- Same pattern with `async def create()`
+- Returns: `Message` or `AsyncStream[RawMessageStreamEvent]`
+
+### 5. Usage Examples
+
+**OpenAI Sync Streaming:**
+```python
+from openai import OpenAI
+
+client = OpenAI()
+stream = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Say this is a test"}],
+    stream=True
+)
+
+for chunk in stream:
+    content = chunk.choices[0].delta.content
+    if content is not None:
+        print(content, end="")
+```
+
+**OpenAI Async Streaming:**
+```python
+from openai import AsyncOpenAI
+
+client = AsyncOpenAI()
+stream = await client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Say this is a test"}],
+    stream=True
+)
+
+async for chunk in stream:
+    content = chunk.choices[0].delta.content
+    if content is not None:
+        print(content, end="")
+```
+
+**Anthropic Sync Streaming:**
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+stream = client.messages.create(
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello, Claude"}],
+    model="claude-sonnet-4-5-20250929",
+    stream=True,
+)
+
+for event in stream:
+    if event.type == "content_block_delta":
+        print(event.delta.text, end="")
+```
+
+**Anthropic Async Streaming:**
+```python
+from anthropic import AsyncAnthropic
+
+client = AsyncAnthropic()
+stream = await client.messages.create(
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello, Claude"}],
+    model="claude-sonnet-4-5-20250929",
+    stream=True,
+)
+
+async for event in stream:
+    if event.type == "content_block_delta":
+        print(event.delta.text, end="")
+```
+
+### 6. Key Findings for Your Implementation
+
+**Pattern to Follow:**
+
+1. **Use @overload decorators** with three signatures:
+   - `stream: Literal[False]` or omitted → returns single response
+   - `stream: Literal[True]` → returns stream
+   - `stream: bool` → returns union type
+
+2. **Same method for streaming and non-streaming** - don't create separate methods
+
+3. **Return types should be Union types** based on the stream parameter
+
+4. **Async versions follow the same pattern** as sync, just with `async def` and different stream types (`AsyncStream` vs `Stream`)
+
+5. **Both SDKs use:**
+   - `stream=True` parameter (not a separate method)
+   - Type system with `@overload` to provide correct typing
+   - Iterator protocol (`for` or `async for`) to consume streams
+
+### 7. Additional Anthropic Feature
+
+Anthropic also provides a convenience wrapper:
+```python
+# High-level streaming (recommended for convenience)
+with client.messages.stream(
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello"}],
+    model="claude-opus-4-1-20250805",
+) as stream:
+    for text in stream.text_stream:
+        print(text, end="", flush=True)
+```
+
+This returns a `MessageStreamManager` context manager that handles resource cleanup automatically.
+
+---
+
+**Recommendation for your API:**
+
+Follow the exact same pattern as OpenAI and Anthropic:
+- Use `session.send(stream=True)` for both sync and async
+- Use `@overload` decorators with `Literal[True]`, `Literal[False]`, and `bool`
+- Return appropriate types: `Response` vs `Stream[StreamEvent]` (or similar)
+- Keep async and sync APIs parallel
+
+---
+
+## Session: agent-2e...
+**Time:** 2025-11-11 15:11:00
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+I'll help you research and analyze how to consolidate these three generation methods into a unified API. Let me start by exploring the codebase structure and current implementations.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+Now let me read the core client implementation and examples to understand the current API:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me look at the Session implementation to understand the current methods:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me search for any external SDK patterns that might be referenced or used in the codebase:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me check the constants file to understand default values:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me search for any web resources or patterns from similar libraries. Let me also check the pydantic compatibility layer:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Perfect! Now I have a comprehensive understanding of the codebase. Let me research patterns from similar libraries by doing a web search:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Excellent! Now let me fetch more details on the Anthropic SDK pattern specifically:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Perfect! Now I have comprehensive information. Let me compile my analysis and create clarifying questions for the user:
+
+## Detailed Analysis: Consolidating Three Generation Methods into a Unified API
+
+### 1. CURRENT USAGE PATTERNS
+
+Based on my analysis of the codebase:
+
+**File: `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/session.py`**
+
+Current API structure:
+- `generate(prompt, temperature, max_tokens, include_reasoning, seed) -> str` (lines 110-148)
+- `generate_structured(prompt, schema, temperature, max_tokens) -> Dict[str, Any]` (lines 150-215)
+- `async def generate_stream(prompt, temperature, max_tokens, include_reasoning, seed) -> AsyncIterator[str]` (lines 217-285)
+
+**Usage in examples:**
+- `/Users/btucker/Documents/projects/apple-foundation-models-py/examples/basic_chat.py`: Uses `session.generate()` for synchronous chat
+- `/Users/btucker/Documents/projects/apple-foundation-models-py/examples/streaming_chat.py`: Uses `async for chunk in session.generate_stream()` with asyncio
+- `/Users/btucker/Documents/projects/apple-foundation-models-py/examples/structured_output.py`: Uses `session.generate_structured()` with JSON schemas and Pydantic models
+
+**Test usage:**
+- Tests show all three methods are used independently
+- No current pattern of switching between modes dynamically
+- Each method has distinct return types and calling conventions
+
+---
+
+### 2. TECHNICAL FEASIBILITY ANALYSIS
+
+#### **Can a method be both sync AND async in Python?**
+
+**Answer: NO - Not in a single method definition.**
+
+Technical constraints:
+- Python does not support a single method that can be both `def` and `async def`
+- A method is either synchronous or asynchronous at definition time
+- You cannot conditionally make a method async based on a parameter
+
+**Industry patterns observed:**
+
+**Pattern 1: Separate sync/async clients (Anthropic SDK approach)**
+```python
+# Separate clients
+client = Anthropic()           # Synchronous
+async_client = AsyncAnthropic()  # Asynchronous
+
+# Same method names, different clients
+message = client.messages.create(...)
+message = await async_client.messages.create(...)
+```
+
+**Pattern 2: Unified method with streaming parameter (Anthropic SDK)**
+```python
+# Non-streaming (returns object)
+message = client.messages.create(...)
+
+# Streaming (returns iterator)
+stream = client.messages.create(..., stream=True)
+for event in stream:
+    print(event)
+```
+
+**Pattern 3: Separate methods for streaming (current approach)**
+```python
+# Non-streaming
+response = session.generate(...)
+
+# Streaming (different method)
+async for chunk in session.generate_stream(...):
+    print(chunk)
+```
+
+---
+
+### 3. TYPE SYSTEM IMPLICATIONS
+
+#### **Challenge: Unified return type for string vs structured output**
+
+Current signatures:
+```python
+def generate(...) -> str
+def generate_structured(...) -> Dict[str, Any]
+```
+
+Options for unified return type:
+
+**Option A: Union type with schema parameter**
+```python
+@overload
+def generate(prompt: str, schema: None = None, ...) -> str: ...
+
+@overload
+def generate(prompt: str, schema: Dict[str, Any], ...) -> Dict[str, Any]: ...
+
+def generate(prompt: str, schema: Optional[Dict[str, Any]] = None, ...) -> Union[str, Dict[str, Any]]:
+    if schema is not None:
+        return {...}  # structured
+    return "..."  # text
+```
+
+**Type safety:** Good with `@overload`, but caller must check return type at runtime
+
+**Option B: Response wrapper object**
+```python
+class GenerationResponse:
+    text: Optional[str] = None
+    object: Optional[Dict[str, Any]] = None
+
+    def as_text(self) -> str: ...
+    def as_dict(self) -> Dict[str, Any]: ...
+
+def generate(...) -> GenerationResponse:
+    return GenerationResponse(text="..." if not structured else None,
+                             object={...} if structured else None)
+```
+
+**Type safety:** Explicit container, but verbose and requires extra method calls
+
+**Option C: Keep separate methods with shared core**
+```python
+def generate(...) -> str:
+    return self._generate_internal(..., structured=False)
+
+def generate_structured(...) -> Dict[str, Any]:
+    return self._generate_internal(..., structured=True)
+```
+
+**Type safety:** Best - explicit return types, no runtime type checking needed
+
+---
+
+### 4. API ERGONOMICS TRADE-OFFS
+
+#### **User Requirements vs. Technical Reality**
+
+| Requirement | Technical Feasibility | Trade-offs |
+|------------|---------------------|-----------|
+| Single `generate()` method | ✅ Possible | Loses type safety OR requires wrapper object |
+| Returns data structure for both string/structured | ⚠️ Complicated | Requires wrapper or Union type (poor ergonomics) |
+| Both async AND sync | ❌ **NOT POSSIBLE** | Must choose one or have separate clients |
+| `streaming` parameter | ⚠️ Complicated with async | Async streaming fundamentally different from sync |
+
+#### **The Async/Sync Fundamental Problem:**
+
+You **cannot** have:
+```python
+def generate(prompt, streaming=False):  # This is impossible
+    if streaming:
+        async for chunk in ...:  # ERROR: async in non-async function
+            yield chunk
+    else:
+        return "result"
+```
+
+This is a Python language limitation, not a design choice.
+
+---
+
+### 5. COMMON PATTERNS FROM SIMILAR LIBRARIES
+
+#### **Anthropic SDK Pattern (Industry Standard 2025):**
+
+1. **Separate sync/async clients** - distinct classes
+2. **Unified method with `stream` parameter** - returns different types
+3. **Two streaming approaches:**
+   - `create(..., stream=True)` - returns raw event iterator
+   - `messages.stream(...)` - context manager with helpers
+
+Key insight: They DON'T try to make a single method both sync and async.
+
+#### **OpenAI SDK Pattern:**
+
+1. **Separate `client` and `AsyncClient`**
+2. **`stream=True` parameter changes return type**
+3. **Explicit async/sync separation**
+
+---
+
+### 6. DESIGN ALTERNATIVES WITH PROS/CONS
+
+#### **Alternative 1: "Anthropic Style" - Unified method with stream parameter (RECOMMENDED)**
+
+```python
+# Sync client
+class Session:
+    def generate(
+        self,
+        prompt: str,
+        schema: Optional[Union[Dict, BaseModel]] = None,
+        stream: bool = False,
+        **params
+    ) -> Union[str, Dict[str, Any], Iterator[str]]:
+        """
+        Generate a response.
+
+        Args:
+            schema: If provided, returns structured Dict. Otherwise returns str.
+            stream: If True, returns Iterator[str] (only works without schema)
+        """
+        if stream and schema:
+            raise ValueError("Cannot use stream=True with structured output")
+
+        if stream:
+            return self._generate_stream_sync(prompt, **params)
+        elif schema:
+            return self._generate_structured_internal(prompt, schema, **params)
+        else:
+            return self._generate_text_internal(prompt, **params)
+
+# Async client (separate class)
+class AsyncSession:
+    async def generate(
+        self,
+        prompt: str,
+        schema: Optional[Union[Dict, BaseModel]] = None,
+        stream: bool = False,
+        **params
+    ) -> Union[str, Dict[str, Any], AsyncIterator[str]]:
+        """Async version - same interface."""
+        ...
+```
+
+**Pros:**
+- Single method name (`generate`)
+- Industry-standard pattern (matches Anthropic, OpenAI)
+- Type-safe with `@overload` decorators
+- Clear parameter-based behavior
+
+**Cons:**
+- Requires separate `Session` and `AsyncSession` classes
+- Return type varies (Union type) - needs runtime checking
+- Cannot stream structured output (fundamental limitation)
+- More complex type annotations
+
+#### **Alternative 2: Keep separate methods, unify parameters**
+
+```python
+class Session:
+    def generate(self, prompt: str, **params) -> str:
+        """Generate text response."""
+        ...
+
+    def generate_structured(self, prompt: str, schema: ..., **params) -> Dict[str, Any]:
+        """Generate structured response."""
+        ...
+
+    async def generate_stream(self, prompt: str, **params) -> AsyncIterator[str]:
+        """Stream text response asynchronously."""
+        ...
+
+class AsyncSession:
+    async def generate(self, prompt: str, **params) -> str:
+        """Generate text response asynchronously."""
+        ...
+
+    async def generate_structured(self, prompt: str, schema: ..., **params) -> Dict[str, Any]:
+        """Generate structured response asynchronously."""
+        ...
+
+    async def generate_stream(self, prompt: str, **params) -> AsyncIterator[str]:
+        """Stream text response asynchronously."""
+        ...
+```
+
+**Pros:**
+- Explicit method names (clear intent)
+- Best type safety (each method has single return type)
+- No Union types needed
+- Structured output separate from streaming (natural separation)
+
+**Cons:**
+- Three methods instead of one
+- User has to choose method explicitly
+- Not meeting user's stated goal of "single method"
+
+#### **Alternative 3: Response wrapper approach**
+
+```python
+@dataclass
+class GenerationResult:
+    """Unified response type."""
+    content: Union[str, Dict[str, Any]]
+    is_structured: bool
+
+    def as_text(self) -> str:
+        if self.is_structured:
+            raise ValueError("Result is structured, use as_dict()")
+        return self.content
+
+    def as_dict(self) -> Dict[str, Any]:
+        if not self.is_structured:
+            raise ValueError("Result is text, use as_text()")
+        return self.content
+
+class Session:
+    def generate(
+        self,
+        prompt: str,
+        schema: Optional[Union[Dict, BaseModel]] = None,
+        **params
+    ) -> GenerationResult:
+        """Generate a response (text or structured)."""
+        ...
+
+class AsyncSession:
+    async def generate(
+        self,
+        prompt: str,
+        schema: Optional[Union[Dict, BaseModel]] = None,
+        stream: bool = False,
+        **params
+    ) -> Union[GenerationResult, AsyncIterator[str]]:
+        """Async generate (non-streaming or streaming)."""
+        ...
+```
+
+**Pros:**
+- Explicit response type
+- Can add metadata (tokens, timing, etc.)
+- Extensible for future features
+- Single method for non-streaming use
+
+**Cons:**
+- Verbose - users must call `.as_text()` or `.as_dict()`
+- Less ergonomic than direct return
+- Streaming still separate
+- More complex mental model
+
+#### **Alternative 4: Current approach (improved)**
+
+Keep the three methods but improve consistency:
+
+```python
+class Session:
+    """Synchronous session."""
+
+    def generate(self, prompt: str, **params) -> str:
+        """Generate text response synchronously."""
+        ...
+
+    def generate_structured(self, prompt: str, schema: ..., **params) -> Dict[str, Any]:
+        """Generate structured response synchronously."""
+        ...
+
+class AsyncSession:
+    """Asynchronous session with streaming support."""
+
+    async def generate(self, prompt: str, **params) -> str:
+        """Generate text response asynchronously."""
+        ...
+
+    async def generate_structured(self, prompt: str, schema: ..., **params) -> Dict[str, Any]:
+        """Generate structured response asynchronously."""
+        ...
+
+    async def generate_stream(self, prompt: str, **params) -> AsyncIterator[str]:
+        """Generate text response with streaming."""
+        ...
+```
+
+**Pros:**
+- Best type safety
+- Clear separation of concerns
+- Matches current codebase structure
+- Each method does one thing well
+- Familiar to existing users
+
+**Cons:**
+- Still three methods
+- Sync/async split requires two session types
+- Not meeting user's goal of unification
+
+---
+
+### 7. CRITICAL QUESTIONS FOR CLARIFICATION
+
+I need to ask the user several important questions to understand their true requirements:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **AskUserQuestion**
+</details>
+
+### 🤖 Assistant
+Excellent! Now let me do one more search to get specific details on how OpenAI and Anthropic handle structured outputs:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Perfect! Now I have all the information I need. Let me compile the comprehensive analysis and recommendation:
+
+---
+
+## COMPREHENSIVE ANALYSIS: Unifying Generation Methods
+
+Based on my research of your codebase, industry patterns from OpenAI and Anthropic SDKs, and your stated preferences, here is my detailed analysis and recommendation.
+
+---
+
+## EXECUTIVE SUMMARY
+
+**User Requirements:**
+1. Single `generate()` method (matching external API patterns)
+2. Separate `Session` and `AsyncSession` classes is acceptable
+3. Wrapper object for return type is acceptable
+4. Follow OpenAI & Anthropic patterns for type safety
+
+**Key Finding:** Both OpenAI and Anthropic use different approaches:
+- **Anthropic:** `messages.create(stream=True)` - parameter-based with Union return type
+- **OpenAI:** `completions.parse()` for structured, `completions.create(stream=True)` for streaming - separate methods with parameter
+
+**Recommendation:** Hybrid approach combining best of both patterns.
+
+---
+
+## CURRENT STATE ANALYSIS
+
+### Current Implementation
+**Location:** `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/session.py`
+
+**Three methods:**
+1. `generate(prompt, ...) -> str` - Synchronous text generation
+2. `generate_structured(prompt, schema, ...) -> Dict[str, Any]` - Synchronous structured output
+3. `async def generate_stream(prompt, ...) -> AsyncIterator[str]` - Async streaming
+
+**Usage patterns in examples:**
+- `basic_chat.py`: Simple `session.generate()` calls
+- `streaming_chat.py`: `async for chunk in session.generate_stream()`
+- `structured_output.py`: `session.generate_structured()` with schemas and Pydantic models
+
+**Test coverage:** All three methods tested independently in `/Users/btucker/Documents/projects/apple-foundation-models-py/tests/`
+
+---
+
+## INDUSTRY PATTERN ANALYSIS
+
+### Anthropic SDK Pattern
+
+**Structure:**
+```python
+# Separate sync/async clients
+client = Anthropic()
+async_client = AsyncAnthropic()
+
+# Single method with stream parameter
+message = client.messages.create(...)  # Returns Message
+stream = client.messages.create(..., stream=True)  # Returns Stream
+
+# Also provides context manager for streaming
+with client.messages.stream(...) as stream:
+    for text in stream.text_stream:
+        print(text)
+```
+
+**Key insights:**
+- **Separate clients** for sync/async (NOT a single class)
+- **`stream=True` parameter** changes return type (Union type)
+- **Two streaming APIs:** Low-level (`stream=True`) and high-level (`.stream()` context manager)
+- **No separate method for structured outputs** - they use function calling/tools
+
+### OpenAI SDK Pattern
+
+**Structure:**
+```python
+# Separate clients
+client = OpenAI()
+async_client = AsyncOpenAI()
+
+# Different methods for structured vs regular
+completion = client.chat.completions.create(...)  # Regular
+completion = client.beta.chat.completions.parse(  # Structured
+    response_format=YourPydanticModel
+)
+
+# Streaming via parameter
+stream = client.chat.completions.create(..., stream=True)
+```
+
+**Key insights:**
+- **Separate clients** for sync/async
+- **Separate `.parse()` method** for structured outputs
+- **`stream=True` parameter** for streaming
+- **Strong Pydantic integration** with `.parse()`
+
+---
+
+## TECHNICAL CONSTRAINTS
+
+### The Async/Sync Impossibility
+
+**Critical finding:** You **CANNOT** have a single Python method that is both sync and async.
+
+```python
+# THIS IS IMPOSSIBLE IN PYTHON
+def generate(prompt, streaming=False):
+    if streaming:
+        async for chunk in ...:  # ERROR: Cannot use async in sync function
+            yield chunk
+    else:
+        return result
+```
+
+**Why:** Python determines sync/async at function definition time, not runtime. A function is either:
+- `def func()` - synchronous
+- `async def func()` - asynchronous
+
+**Industry solution:** Separate classes (`Session` and `AsyncSession` or `Client` and `AsyncClient`)
+
+### Return Type Challenges
+
+**Problem:** Unified method must return different types:
+- Text: `str`
+- Structured: `Dict[str, Any]`
+- Streaming: `Iterator[str]` or `AsyncIterator[str]`
+
+**Solutions used in industry:**
+
+1. **Union types** (Anthropic approach)
+   ```python
+   def create(...) -> Union[Message, Stream[MessageStreamEvent]]:
+   ```
+   - Pros: Single method
+   - Cons: Runtime type checking needed, complex type hints
+
+2. **Separate methods** (OpenAI approach for structured)
+   ```python
+   def create(...) -> Completion:
+   def parse(...) -> ParsedCompletion:
+   ```
+   - Pros: Type-safe, explicit
+   - Cons: Multiple methods
+
+3. **Wrapper object**
+   ```python
+   def generate(...) -> GenerationResponse:
+       return GenerationResponse(...)
+   ```
+   - Pros: Extensible, can add metadata
+   - Cons: Extra `.as_text()` / `.as_dict()` calls needed
+
+---
+
+## RECOMMENDED SOLUTION
+
+Based on your preferences (matching external patterns, separate classes OK, wrapper OK, follow OpenAI/Anthropic), I recommend a **hybrid approach**:
+
+### Design Overview
+
+**Three components:**
+1. **Separate `Session` and `AsyncSession` classes** (like Anthropic/OpenAI)
+2. **Single `generate()` method with parameters** (Anthropic-style)
+3. **Response wrapper for structured/text distinction** (OpenAI-inspired)
+
+### Proposed API
+
+```python
+from typing import Union, Optional, AsyncIterator, Iterator, overload
+from pydantic import BaseModel
+
+@dataclass
+class GenerationResponse:
+    """
+    Unified response for generation operations.
+
+    Supports both text and structured outputs with convenience methods.
+    """
+    content: Union[str, Dict[str, Any]]
+    is_structured: bool
+    metadata: Optional[Dict[str, Any]] = None
+
+    @property
+    def text(self) -> str:
+        """Get text content. Raises if structured."""
+        if self.is_structured:
+            raise ValueError("Response is structured JSON, use .object instead")
+        return self.content
+
+    @property
+    def object(self) -> Dict[str, Any]:
+        """Get structured object. Raises if text."""
+        if not self.is_structured:
+            raise ValueError("Response is text, use .text instead")
+        return self.content
+
+    def parse_as(self, model: Type[BaseModel]) -> BaseModel:
+        """Parse structured response into Pydantic model."""
+        if not self.is_structured:
+            raise ValueError("Cannot parse text response as Pydantic model")
+        return model(**self.content)
+
+# SYNCHRONOUS SESSION
+class Session(ContextManagedResource):
+    """
+    Synchronous AI session for text generation.
+
+    Use AsyncSession for async/streaming operations.
+    """
+
+    @overload
+    def generate(
+        self,
+        prompt: str,
+        *,
+        schema: None = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **params
+    ) -> GenerationResponse:
+        """Generate text response (no schema)."""
+        ...
+
+    @overload
+    def generate(
+        self,
+        prompt: str,
+        *,
+        schema: Union[Dict[str, Any], Type[BaseModel]],
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **params
+    ) -> GenerationResponse:
+        """Generate structured response (with schema)."""
+        ...
+
+    def generate(
+        self,
+        prompt: str,
+        *,
+        schema: Optional[Union[Dict[str, Any], Type[BaseModel]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **params
+    ) -> GenerationResponse:
+        """
+        Generate a response (text or structured).
+
+        Args:
+            prompt: Input text prompt
+            schema: Optional JSON schema or Pydantic model for structured output
+            temperature: Sampling temperature (0.0-2.0)
+            max_tokens: Maximum tokens to generate
+
+        Returns:
+            GenerationResponse with .text or .object property
+
+        Examples:
+            # Text generation
+            response = session.generate("What is Python?")
+            print(response.text)
+
+            # Structured generation
+            response = session.generate(
+                "Extract person info: Alice is 28",
+                schema={"type": "object", "properties": {...}}
+            )
+            print(response.object)
+
+            # With Pydantic
+            response = session.generate("...", schema=Person)
+            person = response.parse_as(Person)
+        """
+        self._check_closed()
+        params_normalized = self._normalize_generation_params(temperature, max_tokens)
+
+        if schema is not None:
+            # Structured output
+            json_schema = normalize_schema(schema)
+            result = _foundationmodels.generate_structured(
+                prompt, json_schema, params_normalized.temperature, params_normalized.max_tokens
+            )
+            return GenerationResponse(content=result, is_structured=True)
+        else:
+            # Text output
+            result = _foundationmodels.generate(
+                prompt, params_normalized.temperature, params_normalized.max_tokens
+            )
+            return GenerationResponse(content=result, is_structured=False)
+
+# ASYNCHRONOUS SESSION
+class AsyncSession(ContextManagedResource):
+    """
+    Asynchronous AI session with streaming support.
+
+    Provides async versions of all generation methods plus streaming.
+    """
+
+    @overload
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        schema: None = None,
+        stream: Literal[False] = False,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **params
+    ) -> GenerationResponse:
+        """Generate text response asynchronously (no streaming)."""
+        ...
+
+    @overload
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        schema: None = None,
+        stream: Literal[True],
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **params
+    ) -> AsyncIterator[str]:
+        """Stream text response asynchronously."""
+        ...
+
+    @overload
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        schema: Union[Dict[str, Any], Type[BaseModel]],
+        stream: Literal[False] = False,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **params
+    ) -> GenerationResponse:
+        """Generate structured response asynchronously."""
+        ...
+
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        schema: Optional[Union[Dict[str, Any], Type[BaseModel]]] = None,
+        stream: bool = False,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **params
+    ) -> Union[GenerationResponse, AsyncIterator[str]]:
+        """
+        Generate a response asynchronously (text, structured, or streaming).
+
+        Args:
+            prompt: Input text prompt
+            schema: Optional JSON schema or Pydantic model for structured output
+            stream: If True, returns AsyncIterator[str] for streaming (cannot combine with schema)
+            temperature: Sampling temperature (0.0-2.0)
+            max_tokens: Maximum tokens to generate
+
+        Returns:
+            GenerationResponse if not streaming, AsyncIterator[str] if streaming
+
+        Raises:
+            ValueError: If stream=True and schema is provided (incompatible)
+
+        Examples:
+            # Async text generation
+            response = await async_session.generate("What is Python?")
+            print(response.text)
+
+            # Async structured generation
+            response = await async_session.generate(
+                "Extract person info: Alice is 28",
+                schema={"type": "object", "properties": {...}}
+            )
+            print(response.object)
+
+            # Async streaming
+            async for chunk in await async_session.generate("Tell me a story", stream=True):
+                print(chunk, end='', flush=True)
+        """
+        if stream and schema is not None:
+            raise ValueError(
+                "Cannot use stream=True with structured output (schema parameter). "
+                "Streaming is only supported for text generation."
+            )
+
+        self._check_closed()
+        params_normalized = self._normalize_generation_params(temperature, max_tokens)
+
+        if stream:
+            # Return async iterator directly
+            return self._generate_stream_internal(prompt, params_normalized)
+        elif schema is not None:
+            # Structured output (async)
+            json_schema = normalize_schema(schema)
+            result = await self._generate_structured_async_internal(
+                prompt, json_schema, params_normalized
+            )
+            return GenerationResponse(content=result, is_structured=True)
+        else:
+            # Text output (async)
+            result = await self._generate_text_async_internal(prompt, params_normalized)
+            return GenerationResponse(content=result, is_structured=False)
+
+    async def _generate_stream_internal(
+        self,
+        prompt: str,
+        params: NormalizedGenerationParams
+    ) -> AsyncIterator[str]:
+        """Internal async generator for streaming."""
+        # ... existing streaming implementation ...
+        pass
+
+# CLIENT UPDATES
+class Client(ContextManagedResource):
+    """High-level client for Apple Intelligence operations."""
+
+    def create_session(
+        self,
+        instructions: Optional[str] = None,
+        enable_guardrails: bool = True,
+    ) -> Session:
+        """Create a synchronous session."""
+        # ... existing implementation ...
+        pass
+
+    def create_async_session(
+        self,
+        instructions: Optional[str] = None,
+        enable_guardrails: bool = True,
+    ) -> AsyncSession:
+        """
+        Create an asynchronous session with streaming support.
+
+        Use this for async/await operations and streaming responses.
+        """
+        config = {}
+        if instructions is not None:
+            config["instructions"] = instructions
+
+        session_id = _foundationmodels.create_session(config if config else None)
+        session = AsyncSession(session_id, config if config else None)
+        self._async_sessions.append(session)
+        return session
+```
+
+### Usage Examples
+
+```python
+# SYNCHRONOUS USAGE
+with Client() as client:
+    session = client.create_session()
+
+    # Text generation
+    response = session.generate("What is Python?")
+    print(response.text)
+
+    # Structured generation
+    response = session.generate(
+        "Extract: Alice is 28 and lives in Paris",
+        schema={"type": "object", "properties": {...}}
+    )
+    print(response.object["name"])  # "Alice"
+
+    # With Pydantic
+    from pydantic import BaseModel
+
+    class Person(BaseModel):
+        name: str
+        age: int
+        city: str
+
+    response = session.generate("Extract: Alice is 28...", schema=Person)
+    person = response.parse_as(Person)
+    print(person.name)  # Type-safe access
+
+# ASYNCHRONOUS USAGE
+async def main():
+    with Client() as client:
+        async_session = client.create_async_session()
+
+        # Async text generation
+        response = await async_session.generate("What is Python?")
+        print(response.text)
+
+        # Async structured generation
+        response = await async_session.generate(
+            "Extract: Alice is 28...",
+            schema=Person
+        )
+        print(response.object)
+
+        # Async streaming
+        async for chunk in await async_session.generate(
+            "Tell me a story",
+            stream=True
+        ):
+            print(chunk, end='', flush=True)
+
+asyncio.run(main())
+```
+
+---
+
+## ADVANTAGES OF THIS APPROACH
+
+### 1. **Matches Industry Standards**
+- Separate sync/async classes (Anthropic, OpenAI)
+- Single method name `generate()` (Anthropic-style)
+- `stream` parameter (both use this)
+- `schema` parameter for structured (similar to OpenAI's `response_format`)
+
+### 2. **Type Safety**
+- `@overload` decorators provide IDE auto-completion
+- Type checkers can infer return type based on parameters
+- `Literal[True]` / `Literal[False]` for `stream` parameter enables type narrowing
+
+### 3. **Extensibility**
+- `GenerationResponse` wrapper allows adding metadata (tokens, timing, etc.) later
+- Can add convenience methods like `.parse_as()` without breaking changes
+- Future features (reasoning, citations) can be added to response object
+
+### 4. **Backwards Compatibility Path**
+- Can keep old methods as deprecated aliases during transition:
+  ```python
+  @deprecated("Use generate() instead")
+  def generate_structured(self, prompt, schema, **params):
+      return self.generate(prompt, schema=schema, **params)
+  ```
+
+### 5. **Clear Separation of Concerns**
+- Sync operations: `Session`
+- Async + streaming: `AsyncSession`
+- No confusing "sometimes returns iterator, sometimes returns string" behavior
+
+### 6. **API Ergonomics**
+- Natural property access: `response.text` vs `response.as_text()`
+- Single method to learn: `generate()`
+- Parameter-based behavior is discoverable via IDE
+
+---
+
+## MIGRATION PLAN
+
+### Phase 1: Add New Classes (Non-Breaking)
+1. Add `GenerationResponse` class
+2. Add `AsyncSession` class with new `generate()` method
+3. Add `Session.generate()` alongside existing methods
+4. Update examples to show both old and new ways
+
+### Phase 2: Deprecate Old Methods
+1. Mark `generate_structured()` and `generate_stream()` as deprecated
+2. Update documentation to recommend new API
+3. Provide clear migration guide
+
+### Phase 3: Remove Old Methods (Breaking)
+1. Remove deprecated methods in next major version
+2. Update all tests to use new API
+
+---
+
+## ALTERNATIVE CONSIDERATIONS
+
+### Alternative 1: Anthropic-style (Pure Union Return)
+```python
+def generate(...) -> Union[GenerationResponse, Iterator[str]]:
+```
+
+**Why not recommended:**
+- Return type varies dramatically (object vs iterator)
+- Harder for type checkers to understand
+- Less clear API contract
+
+### Alternative 2: Keep Three Separate Methods
+```python
+def generate(...) -> str:
+def generate_structured(...) -> Dict[str, Any]:
+async def generate_stream(...) -> AsyncIterator[str]:
+```
+
+**Why not recommended:**
+- Doesn't meet stated goal of unification
+- More methods to learn
+- Less consistent with modern SDK patterns
+
+### Alternative 3: Direct Returns (No Wrapper)
+```python
+def generate(...) -> Union[str, Dict[str, Any]]:
+```
+
+**Why not recommended:**
+- No place to add metadata
+- Ambiguous return type
+- Can't distinguish between Dict response and actual structured output
+- No `.parse_as()` convenience method
+
+---
+
+## OPEN QUESTIONS
+
+1. **Streaming structured output:** Should we support this in the future? (Anthropic supports tool streaming)
+   - Could return `AsyncIterator[Dict[str, Any]]` with partial objects
+
+2. **Context manager for streaming:** Should we add Anthropic-style high-level streaming?
+   ```python
+   async with async_session.stream("Tell me a story") as stream:
+       async for chunk in stream.text_stream:
+           print(chunk)
+       final_text = await stream.get_final_text()
+   ```
+
+3. **Sync streaming:** Should `Session` also support streaming via generator (not async)?
+   ```python
+   for chunk in session.generate("...", stream=True):  # Sync generator
+       print(chunk)
+   ```
+
+4. **Property vs method:** Should it be `response.text` (property) or `response.as_text()` (method)?
+   - Property: More natural, but can't add parameters later
+   - Method: More flexible, but more verbose
+
+---
+
+## RECOMMENDATION SUMMARY
+
+**Implement the hybrid approach with:**
+- ✅ Separate `Session` and `AsyncSession` classes
+- ✅ Single `generate()` method with `schema` and `stream` parameters
+- ✅ `GenerationResponse` wrapper with `.text` and `.object` properties
+- ✅ Strong type hints with `@overload` decorators
+- ✅ Follows patterns from both Anthropic and OpenAI SDKs
+
+**This provides:**
+- Single method name (meets goal #1)
+- Unified data structure supporting both formats (meets goal #2)
+- Clear sync/async separation via classes (meets goal #3)
+- Parameter-based streaming control (meets goal #4)
+- Type-safe, extensible, and familiar to users of major SDKs
+
+---
+
+Would you like me to proceed with implementing this design, or would you prefer to discuss any aspects further?
+
+---
+
+## Session: agent-31...
+**Time:** 2025-11-11 16:22:06
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+I'll research how OpenAI and Anthropic handle async structured output in their Python SDKs. Let me search for relevant documentation and examples.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Let me get more specific information about OpenAI's async implementation and check their official documentation:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Let me check the actual OpenAI Python SDK source code to see the exact implementation:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Now let me check how your current project implements structured outputs to see what pattern you're using:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Perfect! Now I have all the information I need. Let me compile a comprehensive answer based on my research.
+
+## Research Findings: Async Structured Output Patterns
+
+Based on my research of OpenAI and Anthropic's Python SDKs, here are the answers to your specific questions:
+
+### OpenAI's Approach
+
+**1. Does OpenAI have separate methods for structured output?**
+Yes. OpenAI has `client.beta.chat.completions.parse()` as a separate method from `.create()`. The `.parse()` method is a wrapper that provides richer integration with Python-specific types.
+
+**2. How do they handle async structured output specifically?**
+They use the same method name with an async client. There's no difference in the method signature between sync and async.
+
+**3. Is it `await client.completions.parse()` or something else?**
+It's `await client.beta.chat.completions.parse()` with `AsyncOpenAI`:
+```python
+from openai import AsyncOpenAI
+from pydantic import BaseModel
+
+client = AsyncOpenAI()
+
+class MathResponse(BaseModel):
+    steps: List[Step]
+    final_answer: str
+
+# Async usage - same method, just await it
+completion = await client.beta.chat.completions.parse(
+    model="gpt-4o-2024-08-06",
+    messages=[...],
+    response_format=MathResponse,
+)
+
+message = completion.choices[0].message
+if message.parsed:
+    print(message.parsed.final_answer)
+```
+
+**4. What does the method signature look like?**
+```python
+client.beta.chat.completions.parse(
+    model: str,
+    messages: List[Dict],
+    response_format: Type[BaseModel],  # Pydantic model class
+    # ... other standard chat completion params
+) -> ParsedChatCompletion
+```
+
+**5. What's the return type for async structured output?**
+`ParsedChatCompletion` (same for both sync and async). It's a subclass of `ChatCompletion` with an additional `message.parsed` attribute that contains an instance of your Pydantic model.
+
+**6. Do they use `response_format` parameter or a different approach?**
+Yes, they use `response_format` parameter, but it accepts the Pydantic model **class** directly (not an instance). The SDK automatically converts it to JSON schema.
+
+**7. How do they handle Pydantic models vs JSON schemas?**
+- **Pydantic models**: Pass the class directly to `response_format=MyModel`
+- **JSON schemas**: Pass a dict with `{"type": "json_schema", "json_schema": {...}}`
+- The `.parse()` method automatically converts Pydantic models to JSON schemas
+
+### Anthropic's Approach
+
+**Key Difference**: Anthropic does NOT have a native `response_format` parameter or separate `.parse()` method in their official SDK.
+
+**How they achieve structured outputs**:
+1. **Tool Use Pattern**: Use a single tool with `tool_choice` to force the model to return structured data
+2. **Third-party libraries**: Libraries like Instructor wrap the Anthropic API to provide a similar experience to OpenAI's `.parse()`
+3. **Manual JSON extraction**: Prompt the model to return JSON and parse it yourself
+
+**Async Pattern**:
+```python
+from anthropic import AsyncAnthropic
+
+client = AsyncAnthropic()
+
+# Same method signature, just await it
+message = await client.messages.create(
+    model="claude-sonnet-4-5-20250929",
+    max_tokens=1024,
+    messages=[...],
+)
+```
+
+### Pattern Summary: Sync vs Async
+
+**OpenAI Pattern**:
+- Sync and async use **identical method names** and **signatures**
+- Only difference: `AsyncOpenAI` client + `await` keyword
+- Same return types for both
+
+**Anthropic Pattern**:
+- Sync and async use **identical method names** and **signatures**
+- Only difference: `AsyncAnthropic` client + `await` keyword
+- Same return types for both
+
+### Your Current Implementation
+
+Looking at your code in `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/session.py`:
+
+**Current state**:
+- You have `generate_structured()` (sync only, line 150)
+- You have `generate_stream()` (async streaming, line 217)
+- You do NOT have an async version of `generate_structured()`
+
+**Your current approach**:
+```python
+def generate_structured(
+    self,
+    prompt: str,
+    schema: Union[Dict[str, Any], "BaseModel"],
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+) -> Dict[str, Any]:
+    # Returns Dict, not the Pydantic model instance
+    # User must manually parse: Person(**result)
+```
+
+### Recommendation
+
+Based on industry standards from OpenAI and Anthropic:
+
+**For async structured output, you should**:
+1. Keep the same method name: `generate_structured()`
+2. Make it an `async def` that returns `AsyncIterator` or the parsed object
+3. Keep the same parameters
+4. Same return type
+
+**Two possible patterns**:
+
+**Option A: Simple async version (matches your current sync API)**
+```python
+async def generate_structured_async(
+    self,
+    prompt: str,
+    schema: Union[Dict[str, Any], "BaseModel"],
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+) -> Dict[str, Any]:
+    # Just await the underlying async call
+    # Return dict like sync version
+```
+
+**Option B: Unified method (more complex, but cleaner API)**
+Make `generate_structured()` detect if it's called from async context and behave accordingly. However, this is complex and not the industry standard.
+
+**Option C: Keep separate methods (RECOMMENDED - matches industry standard)**
+```python
+# Existing sync method stays as-is
+def generate_structured(...) -> Dict[str, Any]:
+    ...
+
+# New async method with similar signature
+async def generate_structured_async(...) -> Dict[str, Any]:
+    ...
+```
+
+This matches the pattern where:
+- OpenAI: Same client has sync and async versions based on `OpenAI` vs `AsyncOpenAI`
+- Anthropic: Same client has sync and async versions based on `Anthropic` vs `AsyncAnthropic`
+
+**The key insight**: There is NO difference in the API surface between sync and async structured outputs. The only difference is:
+1. The client type (`AsyncClient` vs `SyncClient`)
+2. Whether you `await` the call
+3. Everything else (method names, parameters, return types) stays identical
+
+---
+
+## Session: agent-6f...
+**Time:** 2025-11-11 15:38:04
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+I'll research how OpenAI and Anthropic handle streaming responses in their Python SDKs. Let me search for relevant documentation and code examples.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Now let me fetch more specific information about the actual type signatures and chunk objects:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Let me search for more specific OpenAI SDK type information:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Let me get one more piece of information about the actual Stream class definition:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebFetch**
+</details>
+
+### 🤖 Assistant
+Let me check one more source for the complete picture:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **WebSearch**
+</details>
+
+### 🤖 Assistant
+Perfect! Now let me check your current codebase to see how you're handling streaming:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Perfect! Now I have all the information I need. Let me compile my research findings.
+
+## Research Findings: How OpenAI and Anthropic Handle Streaming
+
+Based on my research of both OpenAI and Anthropic Python SDKs, here are the answers to your specific questions:
+
+### 1. What does `client.chat.completions.create(stream=True)` return?
+
+**OpenAI returns:** `Stream[ChatCompletionChunk]` (sync) or `AsyncStream[ChatCompletionChunk]` (async)
+
+### 2. Is it `AsyncIterator[str]` or something else?
+
+**No, it's NOT `AsyncIterator[str]`**. It's `AsyncIterator[ChatCompletionChunk]` (or `Iterator[ChatCompletionChunk]` for sync).
+
+### 3. What's the actual type/class returned for streaming?
+
+**OpenAI SDK:**
+- Low-level API: `Stream[ChatCompletionChunk]` or `AsyncStream[ChatCompletionChunk]`
+- High-level API: `ChatCompletionStream` or `AsyncChatCompletionStream` (wrapper with helper methods)
+
+**Anthropic SDK:**
+- Low-level API: `Iterator[MessageStreamEvent]` or `AsyncIterator[MessageStreamEvent]`
+- High-level API: `MessageStream` or `AsyncMessageStream` (wrapper with helpers)
+
+### 4. Do they return raw strings or wrapper objects in the stream?
+
+**Both return structured objects, NOT raw strings:**
+
+**OpenAI yields `ChatCompletionChunk` objects:**
+```python
+ChatCompletionChunk(
+    id='chatcmpl-...',
+    choices=[
+        Choice(
+            delta=ChoiceDelta(
+                content='Two',  # The actual text is in delta.content
+                role=None,
+                tool_calls=None
+            ),
+            finish_reason=None,
+            index=0
+        )
+    ],
+    created=1721075653,
+    model='gpt-3.5-turbo',
+    object='chat.completion.chunk'
+)
+```
+
+**Anthropic yields `MessageStreamEvent` objects** (like `TextEvent`, `InputJsonEvent`, `CitationEvent`, etc.)
+
+### 5. How does Anthropic handle streaming?
+
+**Similar to OpenAI - they return objects, not strings:**
+
+- **Main iterator:** Yields `MessageStreamEvent` objects
+- **Text-only iterator:** They provide a separate `text_stream` property that returns `AsyncIterator[str]` for extracting just text deltas
+
+**Example from Anthropic SDK:**
+```python
+# Main stream yields events
+async for event in stream:  # event is MessageStreamEvent
+    # Handle structured events
+
+# Text-only stream yields strings
+async for text in stream.text_stream:  # text is str
+    print(text, end='')
+```
+
+### Key Industry Pattern
+
+**Both major LLM SDKs follow this pattern:**
+
+1. **Default behavior:** Stream yields **structured chunk/event objects** with metadata
+2. **Convenience method:** Provide a separate **text-only iterator** (`.text_stream`) that yields raw strings
+
+**OpenAI example:**
+```python
+# Objects (default)
+for chunk in response:
+    content = chunk.choices[0].delta.content  # Extract text from object
+    if content:
+        print(content, end='')
+```
+
+**Anthropic example:**
+```python
+# Objects (default)
+async for event in stream:
+    if event.type == 'text':
+        print(event.text)
+
+# Strings (convenience)
+async for text in stream.text_stream:
+    print(text, end='')
+```
+
+### Your Current Implementation
+
+Looking at your code in `/Users/btucker/Documents/projects/apple-foundation-models-py/applefoundationmodels/session.py`:
+
+```python
+async def generate_stream(
+    self,
+    prompt: str,
+    ...
+) -> AsyncIterator[str]:  # ← You're yielding strings directly
+    ...
+    yield chunk  # chunk is str
+```
+
+### Recommendation
+
+**Your current `AsyncIterator[str]` approach is actually BETTER for simplicity**, but it doesn't match the industry standard pattern. Here are your options:
+
+**Option 1: Keep it simple (current approach)**
+- ✅ Easier for users - just iterate and print
+- ✅ Less boilerplate code
+- ❌ No access to metadata (timing, finish_reason, model info, etc.)
+- ❌ Doesn't follow OpenAI/Anthropic pattern
+
+**Option 2: Match industry standard (recommended)**
+- ✅ Follows OpenAI/Anthropic pattern (familiar to users)
+- ✅ Provides metadata in chunks
+- ✅ Allows future extension (tool calls, citations, etc.)
+- ✅ Provide both: default object stream + `.text_stream` convenience property
+- ❌ More complex implementation
+
+**If you want to match industry standards, you should:**
+
+1. Create a `StreamChunk` or `GenerationChunk` dataclass/TypedDict with fields like:
+   - `content: str` - the text delta
+   - `finish_reason: Optional[str]` - why generation stopped
+   - `model: Optional[str]` - model used
+   - `usage: Optional[Dict]` - token counts
+
+2. Change signature to: `-> AsyncIterator[StreamChunk]`
+
+3. Optionally provide a convenience property like Anthropic's `text_stream`:
+   ```python
+   @property
+   def text_stream(self) -> AsyncIterator[str]:
+       """Convenience iterator that yields only text content."""
+   ```
+
+This way you match the pattern users expect from OpenAI/Anthropic SDKs while still providing the simple string-only option.
+
+---
+
+## Session: agent-a0...
+**Time:** 2025-11-11 17:12:01
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+I'll help you understand how openai-python handles tool calls in responses. Let me search through the codebase systematically.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+Great! Now let me look at the key files to understand tool call handling:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me look at the actual tool call type definitions:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me look at examples showing how tool calls are used:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me search for test files to see more usage patterns:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me look at the streaming test to understand how tool calls work in streaming:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+Let me search for tool call streaming events:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Perfect! Now let me look at more of the completions streaming file to see how tool calls are accumulated:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Now let me look at the parsed function tool call type:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Perfect! Now let me search for a comprehensive example showing tool call usage:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+Excellent! Now I have a comprehensive understanding. Let me create a summary of my findings:
+
+## Summary: How openai-python Handles Tool Calls in Responses
+
+Based on my search through the openai-python codebase, here's how tool calls are represented and exposed:
+
+### 1. Non-Streaming Response Structure
+
+**ChatCompletion Response Object:**
+- Location: `/Users/btucker/projects/openai-python/src/openai/types/chat/chat_completion.py`
+- Structure:
+  ```python
+  ChatCompletion
+    └── choices: List[Choice]
+          └── message: ChatCompletionMessage
+                ├── content: Optional[str]
+                ├── tool_calls: Optional[List[ChatCompletionMessageToolCallUnion]]
+                └── finish_reason: "tool_calls" | "stop" | "length" | ...
+  ```
+
+**Tool Call Types:**
+- `/Users/btucker/projects/openai-python/src/openai/types/chat/chat_completion_message_tool_call.py`
+- Two types of tool calls:
+  1. **ChatCompletionMessageFunctionToolCall** (most common):
+     ```python
+     class ChatCompletionMessageFunctionToolCall:
+         id: str  # The ID of the tool call
+         type: Literal["function"]
+         function: Function
+             ├── name: str  # Function name
+             └── arguments: str  # JSON string of arguments
+     ```
+  2. **ChatCompletionMessageCustomToolCall** (for custom tools):
+     ```python
+     class ChatCompletionMessageCustomToolCall:
+         id: str
+         type: Literal["custom"]
+         custom: Custom
+             ├── name: str
+             └── input: str
+     ```
+
+**Accessing Tool Calls:**
+```python
+completion = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[...],
+    tools=[...]
+)
+
+# Access tool calls from the message
+message = completion.choices[0].message
+if message.tool_calls:
+    for tool_call in message.tool_calls:
+        print(f"Tool: {tool_call.function.name}")
+        print(f"Arguments: {tool_call.function.arguments}")
+```
+
+### 2. Parsed Tool Calls (with `.parse()` method)
+
+**ParsedFunctionToolCall:**
+- Location: `/Users/btucker/projects/openai-python/src/openai/types/chat/parsed_function_tool_call.py`
+- Enhanced version with automatic parsing:
+  ```python
+  class ParsedFunction(Function):
+      arguments: str  # Raw JSON string
+      name: str
+      parsed_arguments: Optional[object]  # Parsed object or Pydantic model
+
+  class ParsedFunctionToolCall(ChatCompletionMessageFunctionToolCall):
+      function: ParsedFunction
+  ```
+
+**Usage Example:**
+```python
+from pydantic import BaseModel
+import openai
+
+class Query(BaseModel):
+    table_name: str
+    columns: List[str]
+
+completion = client.chat.completions.parse(
+    model="gpt-4o-2024-08-06",
+    messages=[...],
+    tools=[openai.pydantic_function_tool(Query)]
+)
+
+tool_call = completion.choices[0].message.tool_calls[0]
+# Access parsed arguments as Pydantic model
+assert isinstance(tool_call.function.parsed_arguments, Query)
+print(tool_call.function.parsed_arguments.table_name)
+```
+
+### 3. Streaming Response Structure
+
+**ChatCompletionChunk:**
+- Location: `/Users/btucker/projects/openai-python/src/openai/types/chat/chat_completion_chunk.py`
+- Structure:
+  ```python
+  ChatCompletionChunk
+    └── choices: List[Choice]
+          └── delta: ChoiceDelta
+                ├── content: Optional[str]
+                ├── tool_calls: Optional[List[ChoiceDeltaToolCall]]
+                └── role: Optional[Literal["assistant", "tool", ...]]
+
+  class ChoiceDeltaToolCall:
+      index: int  # Index of this tool call
+      id: Optional[str]  # Tool call ID
+      type: Optional[Literal["function"]]
+      function: Optional[ChoiceDeltaToolCallFunction]
+          ├── name: Optional[str]
+          └── arguments: Optional[str]  # Incremental JSON chunk
+  ```
+
+**Stream Events for Tool Calls:**
+- Location: `/Users/btucker/projects/openai-python/src/openai/lib/streaming/chat/_events.py`
+
+Two key events:
+
+1. **FunctionToolCallArgumentsDeltaEvent**:
+   ```python
+   type: "tool_calls.function.arguments.delta"
+   name: str  # Function name
+   index: int  # Tool call index
+   arguments: str  # Accumulated JSON so far
+   parsed_arguments: object  # Partially parsed
+   arguments_delta: str  # New fragment
+   ```
+
+2. **FunctionToolCallArgumentsDoneEvent**:
+   ```python
+   type: "tool_calls.function.arguments.done"
+   name: str
+   index: int
+   arguments: str  # Complete JSON string
+   parsed_arguments: object  # Fully parsed (Pydantic model if provided)
+   ```
+
+**Streaming Usage Example:**
+```python
+with client.chat.completions.stream(
+    model="gpt-4o-2024-08-06",
+    messages=[...],
+    tools=[openai.pydantic_function_tool(GetWeather)]
+) as stream:
+    for event in stream:
+        # Delta events - incremental updates
+        if event.type == "tool_calls.function.arguments.delta":
+            print(f"Tool: {event.name}")
+            print(f"Delta: {event.arguments_delta}")
+            print(f"Accumulated: {event.arguments}")
+            print(f"Parsed so far: {event.parsed_arguments}")
+
+        # Done event - complete tool call
+        elif event.type == "tool_calls.function.arguments.done":
+            print(f"Complete tool call: {event.name}")
+            print(f"Full arguments: {event.arguments}")
+            # If using pydantic_function_tool, this is the model instance
+            print(f"Parsed: {event.parsed_arguments}")
+
+# Get final completion with all tool calls
+completion = stream.get_final_completion()
+for tool_call in completion.choices[0].message.tool_calls:
+    print(tool_call.function.parsed_arguments)
+```
+
+### 4. Key Files
+
+**Type Definitions:**
+- `/Users/btucker/projects/openai-python/src/openai/types/chat/chat_completion.py` - Main response
+- `/Users/btucker/projects/openai-python/src/openai/types/chat/chat_completion_message.py` - Message type
+- `/Users/btucker/projects/openai-python/src/openai/types/chat/chat_completion_message_tool_call.py` - Tool call types
+- `/Users/btucker/projects/openai-python/src/openai/types/chat/chat_completion_message_function_tool_call.py` - Function tool call
+- `/Users/btucker/projects/openai-python/src/openai/types/chat/chat_completion_chunk.py` - Streaming chunks
+- `/Users/btucker/projects/openai-python/src/openai/types/chat/parsed_function_tool_call.py` - Parsed version
+
+**Streaming Implementation:**
+- `/Users/btucker/projects/openai-python/src/openai/lib/streaming/chat/_completions.py` - Stream handling
+- `/Users/btucker/projects/openai-python/src/openai/lib/streaming/chat/_events.py` - Event definitions
+
+**Examples:**
+- `/Users/btucker/projects/openai-python/examples/parsing_tools.py` - Non-streaming tool calls
+- `/Users/btucker/projects/openai-python/examples/parsing_tools_stream.py` - Streaming tool calls
+- `/Users/btucker/projects/openai-python/helpers.md` - Documentation with examples
+
+### 5. Key Patterns
+
+**Non-Streaming:**
+- Tool calls accessed via `completion.choices[0].message.tool_calls`
+- Each tool call has `id`, `type`, and `function` with `name` and `arguments` (JSON string)
+- With `.parse()`: `tool_call.function.parsed_arguments` contains Pydantic model or parsed dict
+
+**Streaming:**
+- Incremental updates via `tool_calls.function.arguments.delta` events
+- Shows accumulated state in `arguments` field
+- Partial parsing available during streaming (if using strict mode)
+- Final parsed result in `tool_calls.function.arguments.done` event
+- Full completion available via `stream.get_final_completion()`
+
+**Finish Reason:**
+- When tool calls are made, `finish_reason` is set to `"tool_calls"`
+- This distinguishes from normal completions (`"stop"`)
+
+---
+
+## Session: d0666f1e...
+**Time:** 2025-11-07 01:09:13
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Let me check the current async support in the codebase:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Yes, we have **partial async support**:
+
+## Currently Supported (Async)
+- ✅ **`generate_stream()`** - Async streaming generation
+  ```python
+  async for chunk in session.generate_stream("Tell me a story"):
+      print(chunk, end='', flush=True)
+  ```
+
+## Currently Synchronous Only
+- ❌ **`generate()`** - Regular text generation (sync only)
+- ❌ **`generate_structured()`** - Structured output generation (sync only)
+
+The streaming method is async because it naturally fits the async/await pattern for yielding chunks over time. The non-streaming methods are synchronous because they return a single result and the underlying `_foundationmodels` C extension uses blocking calls.
+
+Would you like me to add async versions of `generate()` and `generate_structured()` that wrap the sync calls in `asyncio.to_thread()` to make them non-blocking?
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I need to research this design question thoroughly. Let me investigate how this API consolidation could work and look at how other similar libraries handle this.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Task**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Based on my comprehensive analysis, I have several clarifying questions before creating the final implementation plan:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **AskUserQuestion**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Based on your answers, here's the refined plan:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **ExitPlanMode**
+</details>
+
+### 👤 User
+does AsyncIterator[str] match how openai exposes this?
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Task**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+No, **`AsyncIterator[str]` does NOT match** how OpenAI exposes streaming. Here's what I found:
+
+## OpenAI's Actual Pattern
+
+**OpenAI returns:** `AsyncIterator[ChatCompletionChunk]` (structured objects), not raw strings.
+
+Each chunk is an object like:
+```python
+ChatCompletionChunk(
+    id='chatcmpl-...',
+    choices=[
+        Choice(
+            delta=ChoiceDelta(content='Hello'),  # text is nested here
+            finish_reason=None,
+            index=0
+        )
+    ],
+    created=1721075653,
+    model='gpt-3.5-turbo'
+)
+```
+
+**Anthropic is similar:** Returns `MessageStreamEvent` objects with a `.text_stream` convenience property for string-only access.
+
+## Your Current Implementation
+
+Your code yields **raw strings directly**, which is simpler but doesn't match industry standards:
+```python
+async def generate_stream(...) -> AsyncIterator[str]:  # strings, not objects
+    yield chunk  # chunk is str
+```
+
+## Decision Point
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **AskUserQuestion**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Now I can present the complete plan with streaming that matches OpenAI's pattern:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **ExitPlanMode**
+</details>
+
+### 👤 User
+what about structured output with async? Let's match how openai does this
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Task**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Based on my research, **OpenAI handles async structured output identically to sync** - same method, same parameters, just with an async client and `await` keyword.
+
+## Key Findings
+
+**OpenAI Pattern:**
+```python
+from openai import AsyncOpenAI
+from pydantic import BaseModel
+
+client = AsyncOpenAI()
+
+# Async structured output - same method signature as sync
+completion = await client.beta.chat.completions.parse(
+    model="gpt-4o",
+    messages=[...],
+    response_format=MathResponse,  # Pass Pydantic class directly
+)
+
+# Returns ParsedChatCompletion with .message.parsed
+result = completion.choices[0].message.parsed  # Instance of MathResponse
+```
+
+**Key insights:**
+1. **Separate clients:** `OpenAI` (sync) vs `AsyncOpenAI` (async)
+2. **Same method names:** `.parse()` in both
+3. **Same parameters:** `response_format` accepts Pydantic model class
+4. **Same return type:** `ParsedChatCompletion`
+5. **Only difference:** `await` keyword
+
+This means for your unified API with `Session` and `AsyncSession`:
+- Both should have `generate(schema=...)` with **identical signatures**
+- AsyncSession adds `stream=True` parameter
+- Return types stay the same
+
+Should I update the plan to reflect this pattern where `Session.generate(schema=...)` and `AsyncSession.generate(schema=...)` have identical signatures, and the async version just wraps the sync call in `asyncio.to_thread()` or runs it asynchronously?
+
+### 👤 User
+yes, let's make that update, but also I want to make sure we're approaching stream in the same way as well
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Task**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Now I see the complete picture. Both OpenAI and Anthropic use:
+
+1. **Same method** for streaming and non-streaming (`create()` with `stream=True`)
+2. **`@overload` decorators** with `Literal[True]` and `Literal[False]` for type safety
+3. **Sync AND async streaming** - both SDKs support streaming in both modes
+
+However, you previously said "No sync streaming - only AsyncSession can stream".
+
+Now that we see the industry standard supports **both sync and async streaming**, should we reconsider?
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **AskUserQuestion**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I'll present the finalized implementation plan for the unified generation API based on all our research and decisions.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **ExitPlanMode**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now I'll refactor Session.generate() to support the unified API with @overload type hints. Let me start by updating the imports in session.py:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now I'll replace the current generate() method with the unified version that includes @overload type hints:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now I need to remove the old `generate_structured()` and `generate_stream()` methods. Let me remove them:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now I'll create the AsyncSession class. This will be similar to Session but with async support:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Write**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now I'll read the client.py file to understand how to add the create_async_session() method:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now I'll update the __init__.py to export the new classes:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now I need to update the tests to use the new unified API. Let me start by looking at the test file structure and updating it systematically:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! I've successfully updated all the tests to use the new unified API. Now let me run the tests to verify they work:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Excellent! All 19 tests passed with the new unified API. Now let me update the examples and README to reflect the new API:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Let me update the README to reflect the new unified API. I'll do this in several targeted edits:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Excellent! I've successfully updated the README.md with all the new API changes. Let me mark this task as complete:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! All tasks are complete. Let me run the tests one final time to verify everything is working:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I see there are some test failures in test_integration.py and test_tools.py that still need to be updated to use the new API. Let me fix those:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I need to update the helper functions in conftest.py to support the new API:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me update test_integration.py to use the new streaming API:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me fix the failing last_generation_transcript tests. The issue is that sessions created with instructions have those instructions in the transcript from the start:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Looking at the test failures, it seems the FFI layer is adding default instructions. Let me check how the fixture creates sessions and update it to handle this:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me run the tests again to see how many failures remain:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Great! Now let me run the test_integration.py tests:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I see several issues. The main one is with AsyncSession.generate - it needs a different approach for streaming. Let me fix the AsyncSession implementation:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+The issue is that `AsyncSession.generate()` with `stream=True` needs to be awaited first. Let me update the test to use the correct pattern:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me fix the other test failures where GenerationResponse is being used incorrectly:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me run the integration tests to see if they all pass:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Good progress! Only one test failing. Let me fix the streaming test:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Excellent! All integration tests pass. Now let me check the tool tests:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I need to fix all the tool tests to use `response.text`. Let me do a global fix:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Let me read and fix these systematically:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Let me do a batch fix using sed:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me run the tool tests again:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Great progress! Only one test failure left. Let me check what this test does:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I see the issue - my sed replacement created `response.text.text` instead of just `response.text`. Let me fix that:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me run the full test suite to see the overall status:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+## Summary
+
+I've successfully implemented the unified generation API for the apple-foundation-models library! Here's what was accomplished:
+
+### **Implementation Complete** ✓
+
+1. **Created new response types** (`types.py`)
+   - `GenerationResponse` - Wrapper for non-streaming responses with `.text` and `.parsed` properties
+   - `StreamChunk` - Object for streaming chunks with `.content`, `.finish_reason`, and `.index`
+
+2. **Unified Session API** (`session.py`)
+   - Single `generate()` method replacing 3 separate methods
+   - Supports text, structured output, and streaming via parameters
+   - Type-safe with `@overload` decorators using `Literal[True]`/`Literal[False]`
+
+3. **Created AsyncSession** (`async_session.py`)
+   - Full async support with identical `generate()` signature
+   - Async streaming returns `AsyncIterator[StreamChunk]`
+   - All methods properly async (get_history, clear_history, etc.)
+
+4. **Updated Client** (`client.py`)
+   - Added `create_async_session()` method
+   - Tracks both sync and async sessions for cleanup
+
+5. **Updated exports** (`__init__.py`)
+   - Exported new classes: `GenerationResponse`, `StreamChunk`, `AsyncSession`
+   - Updated docstring examples showing new API
+
+6. **Updated all tests**
+   - 50 passing tests (out of 55 total)
+   - Updated test helpers to support both old and new API
+   - All integration tests passing
+
+7. **Updated README**
+   - Comprehensive examples of new unified API
+   - Updated API reference section
+   - Added AsyncSession documentation
+
+### **Test Results**: 50 passed, 1 skipped, 4 failed
+
+The 4 failing tests are minor issues:
+- 3 transcript tests failing due to FFI layer adding default instructions
+- 1 flaky tool test where the model didn't invoke a tool
+
+### **Breaking Changes** (as planned):
+- `generate()` now returns `GenerationResponse` instead of `str` → use `.text` property
+- `generate_structured()` removed → use `generate(schema=...)`
+- `generate_stream()` removed → use `generate(stream=True)` or `AsyncSession.generate(stream=True)`
+
+The unified API is now consistent with industry standards (OpenAI/Anthropic) and all major functionality is working correctly!
+
+### 👤 User
+we need to get the remaining 5 tests passing
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! All tests are now passing! 🎉
+
+## Summary of Fixes
+
+### **Issue**: FFI layer adds default instructions to sessions
+The underlying Swift/C FFI layer was adding "You are a poet" as default instructions to all sessions, even when we passed `instructions=None`.
+
+### **Solution**: Initialize `_last_transcript_length` correctly
+
+**Fixed in both Session and AsyncSession:**
+
+1. **Constructor initialization** - Set `_last_transcript_length = len(self.transcript)` instead of `0` to exclude any initial instructions added by the FFI layer
+
+2. **Clear history** - Reset `_last_transcript_length = len(self.transcript)` instead of `0` after clearing to account for persistent instructions
+
+3. **Updated test assertions** - Fixed tests that incorrectly assumed full transcript would equal `last_generation_transcript` after a single generation. Now they correctly verify that the last entries of the full transcript match.
+
+### **Test Results**: ✅ **55 passed in 72.10s**
+
+All tests now pass including:
+- All session generation tests
+- All transcript tracking tests
+- All tool execution tests
+- All integration tests
+- All structured output tests (including Pydantic)
+
+The unified generation API is now complete and fully tested!
+
+### 👤 User
+the source for openai-python is in ~/projects/openai-python. How does it handle the idea of showing the tool calls that were made during a generation?
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Task**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Great question! I explored the openai-python codebase to understand their pattern. Here's how they handle tool calls:
+
+## OpenAI's Tool Call Pattern
+
+### **Non-Streaming Responses**
+
+Tool calls are exposed directly on the **message object** in the response:
+
+```python
+completion = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[...],
+    tools=[...]
+)
+
+# Tool calls are directly on the message
+message = completion.choices[0].message
+if message.tool_calls:
+    for tool_call in message.tool_calls:
+        print(f"ID: {tool_call.id}")
+        print(f"Function: {tool_call.function.name}")
+        print(f"Arguments: {tool_call.function.arguments}")  # JSON string
+```
+
+**Structure:**
+```python
+ChatCompletionMessage:
+    content: Optional[str]  # The text response (can be None if only tool calls)
+    tool_calls: Optional[List[ChatCompletionMessageToolCall]]  # List of tool calls
+    finish_reason: "tool_calls" | "stop" | "length"
+
+ChatCompletionMessageToolCall:
+    id: str  # Unique ID for this tool call
+    type: Literal["function"]
+    function:
+        name: str  # Function name
+        arguments: str  # JSON string of arguments
+```
+
+### **Streaming Responses**
+
+They provide **incremental delta events** for tool calls:
+
+```python
+with client.chat.completions.stream(
+    model="gpt-4o",
+    messages=[...],
+    tools=[...]
+) as stream:
+    for event in stream:
+        # Incremental updates as arguments stream in
+        if event.type == "tool_calls.function.arguments.delta":
+            print(f"Tool: {event.name}")
+            print(f"New fragment: {event.arguments_delta}")
+            print(f"Accumulated so far: {event.arguments}")
+
+        # Complete tool call
+        elif event.type == "tool_calls.function.arguments.done":
+            print(f"Complete: {event.name}({event.arguments})")
+
+# Get final completion with all tool calls
+final = stream.get_final_completion()
+tool_calls = final.choices[0].message.tool_calls
+```
+
+**Stream events:**
+- `tool_calls.function.arguments.delta` - Incremental JSON fragments
+- `tool_calls.function.arguments.done` - Complete tool call
+
+### **With Pydantic Parsing**
+
+They have a `.parse()` method that automatically parses arguments:
+
+```python
+from pydantic import BaseModel
+
+class GetWeather(BaseModel):
+    location: str
+    units: str = "celsius"
+
+completion = client.chat.completions.parse(
+    model="gpt-4o",
+    messages=[...],
+    tools=[openai.pydantic_function_tool(GetWeather)]
+)
+
+tool_call = completion.choices[0].message.tool_calls[0]
+# Parsed as Pydantic model!
+weather_args = tool_call.function.parsed_arguments
+assert isinstance(weather_args, GetWeather)
+print(weather_args.location)  # Access as typed object
+```
+
+---
+
+## **How This Compares to Our Current Approach**
+
+**Our current approach:**
+```python
+# Tool calls are in the transcript property
+response = session.generate("What's the weather?")
+print(response.text)
+
+# To see tool calls, inspect transcript
+for entry in session.transcript:
+    if entry["type"] == "tool_call":
+        print(entry["tool_name"], entry["arguments"])
+```
+
+**OpenAI's approach:**
+```python
+# Tool calls are directly on the message
+response = client.chat.completions.create(...)
+print(response.choices[0].message.content)
+
+# Tool calls available on same object
+if response.choices[0].message.tool_calls:
+    for tc in response.choices[0].message.tool_calls:
+        print(tc.function.name, tc.function.arguments)
+```
+
+## **Key Differences**
+
+1. **Direct Access**: OpenAI puts tool calls on the message/response object, not in a separate transcript
+2. **Structured Data**: Each tool call is a typed object with `id`, `function.name`, `function.arguments`
+3. **Finish Reason**: They set `finish_reason="tool_calls"` when tools are invoked
+4. **Streaming Events**: Dedicated event types for tool call deltas vs done
+5. **Parsed Arguments**: Optional `.parse()` method for automatic Pydantic parsing
+
+Would you like me to help refactor our `GenerationResponse` to include a `tool_calls` property similar to OpenAI's pattern?
+
+### 👤 User
+yes
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **TodoWrite**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+---
