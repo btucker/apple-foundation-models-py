@@ -74,7 +74,7 @@ jobs:
 
       - name: Build wheel
         env:
-          MACOSX_DEPLOYMENT_TARGET: "11.0"
+          MACOSX_DEPLOYMENT_TARGET: "26.0"
           ARCHFLAGS: "-arch arm64"
         run: |
           uv build --wheel
@@ -84,11 +84,11 @@ jobs:
           echo "Build artifacts:"
           ls -lh dist/
           echo ""
-          echo "Checking wheel platform tag (should be macosx_11_0_arm64):"
-          if ls dist/*-macosx_11_0_arm64.whl 1> /dev/null 2>&1; then
-            echo "✓ macOS wheel found: $(ls dist/*-macosx_11_0_arm64.whl)"
+          echo "Checking wheel platform tag (should be macosx_26_0_arm64):"
+          if ls dist/*-macosx_26_0_arm64.whl 1> /dev/null 2>&1; then
+            echo "✓ macOS wheel found: $(ls dist/*-macosx_26_0_arm64.whl)"
           else
-            echo "⚠ Warning: Expected macosx_11_0_arm64 wheel"
+            echo "⚠ Warning: Expected macosx_26_0_arm64 wheel"
             echo "Found wheels:"
             ls dist/*.whl
           fi
