@@ -1,0 +1,2 @@
+- PyPI now supports wheels specifically targeting macosx_26. update the github
+  action to publish that
