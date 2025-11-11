@@ -1,0 +1,3 @@
+- why is pluggy a requirement?
+- @README.md still references some things that no-longer exist, like
+  enable_guardrails
