@@ -1,0 +1,2 @@
+- In applefoundationmodels/async_client.py around line 12, remove the
+  module-level
