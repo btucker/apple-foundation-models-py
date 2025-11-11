@@ -1,0 +1,117 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: d0666f1e...
+**Time:** 2025-11-07 01:09:13
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 👤 User
+does streaming with structured outputs work?
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+No, streaming with structured outputs **does not work** and is explicitly blocked. Here's what I found:
+
+## Current Behavior
+
+Both `Session.generate()` and `AsyncSession.generate()` explicitly raise a `ValueError` if you try to use both:
+
+```python
+# From session.py:141-144 and async_session.py:143-146
+if stream and schema is not None:
+    raise ValueError(
+        "Streaming is not supported with structured output (schema parameter)"
+    )
+```
+
+## Why It's Blocked
+
+Looking at the underlying Apple FoundationModels Swift APIs:
+
+**For streaming (text only):**
+```swift
+let stream = try await session.streamResponse(options: options) {
+    promptString
+}
+```
+
+**For structured output (non-streaming):**
+```swift
+let response = try await session.respond(
+    to: promptString,
+    schema: generationSchema,
+    options: options
+)
+```
+
+These are **two separate APIs** in Apple's FoundationModels framework - there's no `streamResponse(schema:)` method that would enable streaming structured outputs.
+
+## What You Can Do
+
+You have two options:
+1. **Structured output (no streaming)**: Get the complete JSON object in one response
+2. **Streaming (no schema)**: Get incremental text chunks as they're generated
+
+If you need both, you'd have to stream text and then parse it as JSON after completion, but that defeats the purpose of structured outputs (guaranteed valid JSON).
+
+---
