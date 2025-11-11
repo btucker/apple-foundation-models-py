@@ -1,0 +1,36 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: d0666f1e...
+**Time:** 2025-11-07 01:09:13
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! All 55 tests are now passing. Here's what I did to fix the flaky test:
+
+## Changes to make `test_tool_with_mixed_types` less flaky:
+
+**1. More explicit prompt:**
+- **Before**: `"Show me the top 3 products"` (vague, missing category)
+- **After**: `"Show me the top 3 electronics products. Use the get_top_items tool."` (provides category, explicitly requests tool use)
+
+**2. Added session instructions:**
+- Added: `"You are a helpful assistant. Always use the tools provided and include their results in your response."`
+- This encourages the model to actually use the tool
+
+**3. Better tool documentation:**
+- Changed docstring from `"Get top items."` to `"Get top items in a category."` for clarity
+
+**4. More reliable assertions:**
+- **Before**: Only checked if response text contained "Item 1" or "top" (flaky because depends on model including tool result in response)
+- **After**: Now checks:
+  - ✅ Tool was called with correct parameters (`count=3`, `category` exists)
+  - ✅ `response.tool_calls` property shows tool was invoked
+  - ✅ Correct tool name was used
+
+The key insight is that the old test was checking the *model's response text*, which is non-deterministic. The new test focuses on verifying the *tool calling mechanism* works correctly, which is deterministic and what we actually want to test.
+
+**Result**: 55/55 tests passing! 🎉
+
+---
