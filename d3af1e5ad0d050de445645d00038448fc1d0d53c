@@ -1,0 +1,95 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: d0666f1e...
+**Time:** 2025-11-07 01:09:13
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 👤 User
+PyPI now supports wheels specifically targeting macosx_26. update the github action to publish that
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I'll help you update the GitHub Actions workflow to publish wheels targeting macOS 26.
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Glob**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! I've updated the GitHub Actions workflow to publish wheels targeting macOS 26.
+
+## Changes Made to `.github/workflows/publish-to-pypi.yml`
+
+### 1. **Build Environment** (line 77)
+```yaml
+# Before:
+MACOSX_DEPLOYMENT_TARGET: "11.0"
+
+# After:
+MACOSX_DEPLOYMENT_TARGET: "26.0"
+```
+
+### 2. **Wheel Verification** (lines 87-91)
+```yaml
+# Before:
+echo "Checking wheel platform tag (should be macosx_11_0_arm64):"
+if ls dist/*-macosx_11_0_arm64.whl 1> /dev/null 2>&1; then
+  echo "✓ macOS wheel found: $(ls dist/*-macosx_11_0_arm64.whl)"
+else
+  echo "⚠ Warning: Expected macosx_11_0_arm64 wheel"
+
+# After:
+echo "Checking wheel platform tag (should be macosx_26_0_arm64):"
+if ls dist/*-macosx_26_0_arm64.whl 1> /dev/null 2>&1; then
+  echo "✓ macOS wheel found: $(ls dist/*-macosx_26_0_arm64.whl)"
+else
+  echo "⚠ Warning: Expected macosx_26_0_arm64 wheel"
+```
+
+## What This Accomplishes
+
+✅ **Proper platform tagging**: Wheels will now be tagged as `macosx_26_0_arm64.whl`
+✅ **PyPI compatibility**: PyPI now supports and correctly interprets the `macosx_26` platform tag
+✅ **Pip install behavior**: `pip install` will correctly identify these wheels as requiring macOS 26.0+
+✅ **Consistency**: Aligns with the code requirement in `base_client.py` that checks for macOS 26.0 or later
+✅ **No more misleading tags**: Previously, wheels tagged as `macosx_11_0` could be mistakenly installed on older macOS versions, causing runtime failures
+
+## Example Wheel Names
+
+The workflow will now produce wheels like:
+```
+applefoundationmodels-0.2.0-cp310-cp310-macosx_26_0_arm64.whl
+applefoundationmodels-0.2.0-cp311-cp311-macosx_26_0_arm64.whl
+applefoundationmodels-0.2.0-cp312-cp312-macosx_26_0_arm64.whl
+```
+
+Users on macOS 26+ will be able to install these, while pip will correctly skip them on older macOS versions.
+
+---
