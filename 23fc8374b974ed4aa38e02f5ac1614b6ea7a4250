@@ -1,0 +1,8 @@
+- does AsyncIterator[str] match how openai exposes this?
+- what about structured output with async? Let's match how openai does this
+- yes, let's make that update, but also I want to make sure we're approaching
+  stream in the same way as well
+- we need to get the remaining 5 tests passing
+- the source for openai-python is in ~/projects/openai-python. How does it
+  handle the idea of showing the tool calls that were made during a generation?
+- yes
