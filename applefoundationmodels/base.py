@@ -42,7 +42,8 @@ class AsyncContextManagedResource(ABC):
     Base class for resources that support async context manager protocol.
 
     Provides standard __aenter__ and __aexit__ methods that call the
-    close() method on exit. Subclasses must implement async close().
+    aclose() method on exit. Subclasses must implement both close() for
+    sync cleanup and aclose() for async cleanup.
     """
 
     async def __aenter__(self: AT) -> AT:
@@ -51,13 +52,14 @@ class AsyncContextManagedResource(ABC):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit with automatic cleanup."""
-        await self.close()
+        await self.aclose()
 
     @abstractmethod
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         """
         Close and cleanup resources asynchronously.
 
-        Must be implemented by subclasses.
+        Must be implemented by subclasses. This is called by the async
+        context manager (__aexit__).
         """
         pass

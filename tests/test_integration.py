@@ -160,7 +160,7 @@ async def test_streaming():
     full_response = assert_valid_chunks(chunks)
     print(f"✓ Received {len(chunks)} chunks totaling {len(full_response)} characters")
 
-    await client.close()
+    await client.aclose()
     print()
 
 

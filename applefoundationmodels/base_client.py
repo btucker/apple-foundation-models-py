@@ -8,7 +8,6 @@ import platform
 from typing import Optional, List, Dict, Any, Callable, TYPE_CHECKING, Type, Union
 from abc import ABC, abstractmethod
 
-from . import _foundationmodels
 from .base import ContextManagedResource
 from .types import Availability
 from .exceptions import NotAvailableError
@@ -90,6 +89,8 @@ class BaseClient(ContextManagedResource, ABC):
         This is called automatically on first client creation.
         """
         if not BaseClient._initialized:
+            from . import _foundationmodels
+
             _foundationmodels.init()
             BaseClient._initialized = True
 
@@ -109,6 +110,8 @@ class BaseClient(ContextManagedResource, ABC):
             >>> if status == Availability.AVAILABLE:
             ...     print("Apple Intelligence is available!")
         """
+        from . import _foundationmodels
+
         return Availability(_foundationmodels.check_availability())
 
     @staticmethod
@@ -120,6 +123,8 @@ class BaseClient(ContextManagedResource, ABC):
             Detailed status description with actionable guidance,
             or None if library not initialized
         """
+        from . import _foundationmodels
+
         return _foundationmodels.get_availability_reason()
 
     @staticmethod
@@ -130,6 +135,8 @@ class BaseClient(ContextManagedResource, ABC):
         Returns:
             True if ready for use, False otherwise
         """
+        from . import _foundationmodels
+
         return _foundationmodels.is_ready()
 
     @staticmethod
@@ -140,6 +147,8 @@ class BaseClient(ContextManagedResource, ABC):
         Returns:
             Version string in format "major.minor.patch"
         """
+        from . import _foundationmodels
+
         return _foundationmodels.get_version()
 
     def _create_session_impl(
@@ -160,6 +169,8 @@ class BaseClient(ContextManagedResource, ABC):
         Returns:
             New session instance (Session or AsyncSession based on _session_class)
         """
+        from . import _foundationmodels
+
         config = self._build_session_config(instructions, tools)
         session_id = _foundationmodels.create_session(config)
         session = self._session_class(session_id, config)
@@ -183,6 +194,7 @@ class BaseClient(ContextManagedResource, ABC):
         """
         # Register tools if provided
         if tools:
+            from . import _foundationmodels
             from .tools import register_tool_for_function
 
             # Build tool dictionary with function objects

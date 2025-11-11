@@ -6,6 +6,7 @@ Provides session management, text generation, and async streaming support.
 
 import asyncio
 import json
+import logging
 from typing import (
     Optional,
     Dict,
@@ -34,6 +35,8 @@ from .pydantic_compat import normalize_schema
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class Session(BaseSession):
@@ -230,7 +233,20 @@ class Session(BaseSession):
                 yield StreamChunk(content=item, finish_reason=None, index=chunk_index)
                 chunk_index += 1
 
-            thread.join(timeout=1.0)
+            # Wait for streaming thread to complete cleanup
+            # By this point we've received the None sentinel, so the stream is done
+            # and the thread should finish quickly. We wait up to 5 seconds for
+            # clean shutdown.
+            thread.join(timeout=5.0)
+
+            if thread.is_alive():
+                # Thread didn't finish in time - this shouldn't normally happen
+                # since we've already received the end-of-stream signal
+                logger.warning(
+                    "Streaming thread did not complete within 5 seconds after "
+                    "stream end. Thread will continue as daemon and be cleaned up "
+                    "at process exit."
+                )
         finally:
             self._end_generation(start_length)
 

@@ -8,7 +8,6 @@ context managers, automatic resource cleanup, and integration with the Session c
 from typing import Optional, List, Callable, Type
 from contextlib import contextmanager
 
-from . import _foundationmodels
 from .base_client import BaseClient
 from .session import Session
 

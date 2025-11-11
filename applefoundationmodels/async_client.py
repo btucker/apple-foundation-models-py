@@ -4,9 +4,9 @@ Async Client API for applefoundationmodels Python bindings.
 Provides async/await interface following OpenAI's AsyncClient pattern.
 """
 
+import asyncio
 from typing import Optional, List, Callable, Type
 
-from . import _foundationmodels
 from .base_client import BaseClient
 from .base import AsyncContextManagedResource
 from .async_session import AsyncSession
@@ -30,7 +30,7 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
         client = AsyncClient()
         session = await client.create_session()
         response = await session.generate("Hello!")
-        await client.close()
+        await client.aclose()
     """
 
     def __init__(self):
@@ -51,14 +51,42 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
         """Return AsyncSession class for async client."""
         return AsyncSession
 
-    async def close(self) -> None:
+    def close(self) -> None:
         """
-        Close the client and cleanup all resources.
+        Close the client and cleanup all resources synchronously.
 
-        Closes all async sessions asynchronously.
+        This method runs the async cleanup on the event loop. For async
+        contexts, prefer using aclose() or the async context manager.
+
+        Note: This satisfies the ContextManagedResource.close() contract
+        inherited from BaseClient.
+        """
+        try:
+            # Check if we're in an async context with a running event loop
+            loop = asyncio.get_running_loop()
+            # If we get here, there's a running loop - we can't use asyncio.run()
+            # User should call aclose() instead in async contexts
+            raise RuntimeError(
+                "close() called from async context. Use 'await client.aclose()' instead."
+            )
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            asyncio.run(self.aclose())
+
+    async def aclose(self) -> None:
+        """
+        Close the client and cleanup all resources asynchronously.
+
+        Closes all async sessions asynchronously. This method should be
+        used in async contexts or with the async context manager.
+
+        Example:
+            >>> client = AsyncClient()
+            >>> # ... use client ...
+            >>> await client.aclose()
         """
         for session in self._sessions:
-            await session.close()
+            await session.aclose()
         self._sessions.clear()
 
     async def create_session(

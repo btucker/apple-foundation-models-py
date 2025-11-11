@@ -5,6 +5,7 @@ Provides async session management, text generation, and async streaming support.
 """
 
 import asyncio
+import logging
 from typing import (
     Optional,
     Dict,
@@ -33,6 +34,8 @@ from .pydantic_compat import normalize_schema
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class AsyncSession(BaseSession, AsyncContextManagedResource):
@@ -66,8 +69,40 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         # Other functions can be safely wrapped
         return await asyncio.to_thread(func, *args, **kwargs)
 
-    async def close(self) -> None:
-        """Close the session and cleanup resources."""
+    def close(self) -> None:
+        """
+        Close the session and cleanup resources synchronously.
+
+        This method runs the async cleanup on the event loop. For async
+        contexts, prefer using aclose() or the async context manager.
+
+        Note: This satisfies the ContextManagedResource.close() contract
+        inherited from BaseSession.
+        """
+        try:
+            # Check if we're in an async context with a running event loop
+            loop = asyncio.get_running_loop()
+            # If we get here, there's a running loop - we can't use asyncio.run()
+            # User should call aclose() instead in async contexts
+            raise RuntimeError(
+                "close() called from async context. Use 'await session.aclose()' instead."
+            )
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            asyncio.run(self.aclose())
+
+    async def aclose(self) -> None:
+        """
+        Close the session and cleanup resources asynchronously.
+
+        This method should be used in async contexts or with the async
+        context manager.
+
+        Example:
+            >>> session = await client.create_session()
+            >>> # ... use session ...
+            >>> await session.aclose()
+        """
         self._closed = True
 
     # Type overloads for non-streaming text generation
@@ -257,7 +292,20 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
                 yield StreamChunk(content=item, finish_reason=None, index=chunk_index)
                 chunk_index += 1
 
-            thread.join(timeout=1.0)
+            # Wait for streaming thread to complete cleanup
+            # By this point we've received the None sentinel, so the stream is done
+            # and the thread should finish quickly. We wait up to 5 seconds for
+            # clean shutdown.
+            thread.join(timeout=5.0)
+
+            if thread.is_alive():
+                # Thread didn't finish in time - this shouldn't normally happen
+                # since we've already received the end-of-stream signal
+                logger.warning(
+                    "Streaming thread did not complete within 5 seconds after "
+                    "stream end. Thread will continue as daemon and be cleaned up "
+                    "at process exit."
+                )
         finally:
             self._end_generation(start_length)
 
