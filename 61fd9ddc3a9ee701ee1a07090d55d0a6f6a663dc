@@ -1,0 +1,4 @@
+- look at the complete diff of this branch against main and use the code quality
+  agent to look for opportunities to simplify and DRY up the code
+- Let's tackle critical, medium, and minor issues now
+- continue
