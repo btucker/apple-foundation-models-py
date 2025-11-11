@@ -14,6 +14,7 @@ from typing import (
     Any,
     Union,
     Dict,
+    List,
     Type,
     TYPE_CHECKING,
     cast,
@@ -144,6 +145,56 @@ class NormalizedGenerationParams:
 
 
 @dataclass
+class Function:
+    """
+    Function call information from a tool call.
+
+    Represents the function that was called, including its name and arguments.
+    Follows OpenAI's pattern for tool call representation.
+
+    Attributes:
+        name: The name of the function that was called
+        arguments: JSON string containing the function arguments
+
+    Example:
+        >>> func = Function(name="get_weather", arguments='{"location": "Paris"}')
+        >>> print(func.name)
+        get_weather
+    """
+
+    name: str
+    arguments: str  # JSON string of arguments
+
+
+@dataclass
+class ToolCall:
+    """
+    A tool call made during generation.
+
+    Represents a single tool/function call that occurred during text generation.
+    Follows OpenAI's pattern where tool calls are exposed directly on the response.
+
+    Attributes:
+        id: Unique identifier for this tool call
+        type: Type of tool call (currently only "function" is supported)
+        function: The function call details (name and arguments)
+
+    Example:
+        >>> tool_call = ToolCall(
+        ...     id="call_123",
+        ...     type="function",
+        ...     function=Function(name="get_weather", arguments='{"location": "Paris"}')
+        ... )
+        >>> print(tool_call.function.name)
+        get_weather
+    """
+
+    id: str
+    type: str  # "function" - matches OpenAI's pattern
+    function: Function
+
+
+@dataclass
 class GenerationResponse:
     """
     Response from non-streaming generation.
@@ -154,6 +205,8 @@ class GenerationResponse:
     Attributes:
         content: The generated content (str for text, dict for structured)
         is_structured: True if response is structured JSON, False for text
+        tool_calls: List of tool calls made during generation (None if no tools called)
+        finish_reason: Reason generation stopped ("stop", "tool_calls", "length", etc.)
         metadata: Optional metadata about the generation
 
     Example (text):
@@ -164,10 +217,18 @@ class GenerationResponse:
         >>> response = session.generate("Extract name and age", schema={...})
         >>> data = response.parsed
         >>> person = Person(**data)  # Parse into Pydantic model
+
+    Example (tool calls):
+        >>> response = session.generate("What's the weather in Paris?")
+        >>> if response.tool_calls:
+        ...     for tool_call in response.tool_calls:
+        ...         print(f"Called {tool_call.function.name}")
     """
 
     content: Union[str, Dict[str, Any]]
     is_structured: bool
+    tool_calls: Optional[List[ToolCall]] = None
+    finish_reason: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
     @property

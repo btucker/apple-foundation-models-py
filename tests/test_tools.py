@@ -252,6 +252,100 @@ class TestToolExecution:
         assert "22°" in response.text or "sunny" in response.text.lower()
 
 
+class TestToolCallsProperty:
+    """Tests for tool_calls and finish_reason properties on GenerationResponse."""
+
+    def test_tool_calls_property_without_tools(self, session):
+        """Test that tool_calls is None when no tools are registered."""
+        response = session.generate("What is 2 plus 2?")
+
+        # Verify response has tool_calls and finish_reason properties
+        assert hasattr(response, "tool_calls")
+        assert hasattr(response, "finish_reason")
+
+        # No tools registered, so tool_calls should be None
+        assert response.tool_calls is None
+        # finish_reason should be "stop" since no tools were called
+        assert response.finish_reason == "stop"
+
+    def test_tool_calls_property_with_tools_not_called(self, session):
+        """Test that tool_calls is None when tools exist but aren't called."""
+
+        @session.tool()
+        def get_weather(location: str) -> str:
+            """Get weather for a location."""
+            return f"Weather in {location}: 20°C"
+
+        # Generate something that doesn't trigger the tool
+        response = session.generate("What is 2 plus 2?")
+
+        # Tool wasn't called, so tool_calls should be None
+        assert response.tool_calls is None
+        assert response.finish_reason == "stop"
+
+    def test_tool_calls_property_with_tools_called(self, session):
+        """Test that tool_calls is populated when tools are called."""
+
+        @session.tool()
+        def get_weather(location: str) -> str:
+            """Get weather for a location."""
+            return f"Weather in {location}: 22°C"
+
+        response = session.generate("What's the weather in Paris?")
+
+        # Verify tool_calls is populated
+        assert response.tool_calls is not None
+        assert len(response.tool_calls) > 0
+
+        # Verify finish_reason is "tool_calls"
+        assert response.finish_reason == "tool_calls"
+
+        # Verify structure of tool call
+        tool_call = response.tool_calls[0]
+        assert hasattr(tool_call, "id")
+        assert hasattr(tool_call, "type")
+        assert hasattr(tool_call, "function")
+        assert tool_call.type == "function"
+
+        # Verify function structure
+        assert hasattr(tool_call.function, "name")
+        assert hasattr(tool_call.function, "arguments")
+        assert tool_call.function.name == "get_weather"
+
+        # Verify arguments is a JSON string
+        import json
+
+        args = json.loads(tool_call.function.arguments)
+        assert "location" in args
+        assert args["location"] == "Paris"
+
+    def test_tool_calls_property_with_multiple_tools(self, session):
+        """Test tool_calls with multiple tool invocations."""
+
+        @session.tool()
+        def get_weather(location: str) -> str:
+            """Get weather for a location."""
+            return f"Weather in {location}: 22°C"
+
+        @session.tool()
+        def get_time(timezone: str = "UTC") -> str:
+            """Get current time for a timezone."""
+            return f"Time in {timezone}: 12:00 PM"
+
+        response = session.generate("What's the weather and time in Paris?")
+
+        # May call one or both tools depending on model behavior
+        if response.tool_calls:
+            assert response.finish_reason == "tool_calls"
+            assert len(response.tool_calls) >= 1
+
+            # Verify all tool calls have proper structure
+            for tool_call in response.tool_calls:
+                assert tool_call.type == "function"
+                assert tool_call.function.name in ["get_weather", "get_time"]
+                assert isinstance(tool_call.function.arguments, str)
+
+
 class TestTranscript:
     """Tests for transcript access with tool calls."""
 

@@ -354,7 +354,7 @@ class TestTranscriptTracking:
         assert len(last_transcript) == 0, "Should be empty after clearing history"
 
         # Generate again
-        response2 = session.generate("Goodbye", temperature=0.3)
+        response2 = session.generate("What is 3 plus 3?", temperature=0.3)
         assert isinstance(response2.text, str), "Response should have text property"
 
         # Now should have entries from the new generation

@@ -28,6 +28,8 @@ from .types import (
     NormalizedGenerationParams,
     GenerationResponse,
     StreamChunk,
+    ToolCall,
+    Function,
 )
 from .pydantic_compat import normalize_schema
 from .tools import extract_function_schema, attach_tool_metadata
@@ -118,6 +120,33 @@ class AsyncSession(ContextManagedResource):
             start_length: The transcript length captured at generation start
         """
         self._last_transcript_length = start_length
+
+    def _extract_tool_calls_from_transcript(
+        self, transcript_entries: List[Dict[str, Any]]
+    ) -> Optional[List[ToolCall]]:
+        """
+        Extract tool calls from transcript entries.
+
+        Args:
+            transcript_entries: List of transcript entries to search
+
+        Returns:
+            List of ToolCall objects if any tool calls found, None otherwise
+        """
+        tool_calls = []
+        for entry in transcript_entries:
+            if entry.get("type") == "tool_call":
+                tool_call = ToolCall(
+                    id=entry.get("tool_id", ""),
+                    type="function",
+                    function=Function(
+                        name=entry.get("tool_name", ""),
+                        arguments=entry.get("arguments", "{}"),
+                    ),
+                )
+                tool_calls.append(tool_call)
+
+        return tool_calls if tool_calls else None
 
     # Type overloads for non-streaming text generation
     @overload
@@ -230,9 +259,28 @@ class AsyncSession(ContextManagedResource):
                 params.temperature,
                 params.max_tokens,
             )
-            return GenerationResponse(content=text, is_structured=False)
-        finally:
+
+            # Update the generation boundary marker
             self._end_generation(start_length)
+
+            # Extract tool calls from the generation transcript
+            tool_calls = self._extract_tool_calls_from_transcript(
+                self.last_generation_transcript
+            )
+
+            # Set finish reason based on whether tools were called
+            finish_reason = "tool_calls" if tool_calls else "stop"
+
+            return GenerationResponse(
+                content=text,
+                is_structured=False,
+                tool_calls=tool_calls,
+                finish_reason=finish_reason,
+            )
+        except Exception:
+            # Still update boundary on error
+            self._end_generation(start_length)
+            raise
 
     async def _generate_structured_impl(
         self,
@@ -252,9 +300,21 @@ class AsyncSession(ContextManagedResource):
                 params.temperature,
                 params.max_tokens,
             )
-            return GenerationResponse(content=result, is_structured=True)
-        finally:
+
+            # Update the generation boundary marker
             self._end_generation(start_length)
+
+            # Structured generation does not support tool calls
+            return GenerationResponse(
+                content=result,
+                is_structured=True,
+                tool_calls=None,
+                finish_reason="stop",
+            )
+        except Exception:
+            # Still update boundary on error
+            self._end_generation(start_length)
+            raise
 
     async def _generate_stream_impl(
         self, prompt: str, params: NormalizedGenerationParams
