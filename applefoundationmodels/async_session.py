@@ -20,7 +20,6 @@ from typing import (
     Type,
 )
 from typing_extensions import Literal
-from queue import Queue, Empty
 import threading
 
 from . import _foundationmodels
@@ -82,14 +81,15 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         try:
             # Check if we're in an async context with a running event loop
             loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            asyncio.run(self.aclose())
+        else:
             # If we get here, there's a running loop - we can't use asyncio.run()
             # User should call aclose() instead in async contexts
             raise RuntimeError(
                 "close() called from async context. Use 'await session.aclose()' instead."
             )
-        except RuntimeError:
-            # No running loop, safe to use asyncio.run()
-            asyncio.run(self.aclose())
 
     async def aclose(self) -> None:
         """
@@ -249,11 +249,15 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         """Internal implementation for async streaming generation."""
         start_length = self._begin_generation()
         try:
-            # Use a queue to collect chunks from callback
-            queue: Queue = Queue()
+            # Use asyncio.Queue for truly async coordination
+            queue: asyncio.Queue = asyncio.Queue()
+
+            # Get the event loop for thread-safe queue operations
+            loop = asyncio.get_event_loop()
 
             def callback(chunk: Optional[str]) -> None:
-                queue.put(chunk)
+                # Use run_coroutine_threadsafe to put items from background thread
+                asyncio.run_coroutine_threadsafe(queue.put(chunk), loop)
 
             # Run streaming in a background thread
             def run_stream():
@@ -262,7 +266,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
                         prompt, callback, temperature, max_tokens
                     )
                 except Exception as e:
-                    queue.put(e)
+                    asyncio.run_coroutine_threadsafe(queue.put(e), loop)
 
             thread = threading.Thread(target=run_stream, daemon=True)
             thread.start()
@@ -270,13 +274,8 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             # Yield StreamChunk objects asynchronously
             chunk_index = 0
             while True:
-                # Use asyncio.sleep to yield control
-                await asyncio.sleep(0)
-
-                try:
-                    item = queue.get(timeout=0.1)
-                except Empty:
-                    continue
+                # Truly async get - no polling needed
+                item = await queue.get()
 
                 if isinstance(item, Exception):
                     raise item

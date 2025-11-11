@@ -5,11 +5,13 @@ Provides a Pythonic interface to Apple's FoundationModels framework with
 context managers, automatic resource cleanup, and integration with the Session class.
 """
 
-from typing import Optional, List, Callable, Type
+from typing import Optional, List, Callable, Type, cast, TYPE_CHECKING
 from contextlib import contextmanager
 
 from .base_client import BaseClient
-from .session import Session
+
+if TYPE_CHECKING:
+    from .session import Session
 
 
 class Client(BaseClient):
@@ -40,8 +42,10 @@ class Client(BaseClient):
         super().__init__()
 
     @property
-    def _session_class(self) -> Type[Session]:
+    def _session_class(self) -> Type["Session"]:
         """Return Session class for sync client."""
+        from .session import Session
+
         return Session
 
     def close(self) -> None:
@@ -58,7 +62,7 @@ class Client(BaseClient):
         self,
         instructions: Optional[str] = None,
         tools: Optional[List[Callable]] = None,
-    ) -> Session:
+    ) -> "Session":
         """
         Create a new AI session.
 
@@ -84,7 +88,9 @@ class Client(BaseClient):
             ...     tools=[get_weather]
             ... )
         """
-        return self._create_session_impl(instructions, tools)
+        from .session import Session
+
+        return cast(Session, self._create_session_impl(instructions, tools))
 
 
 @contextmanager

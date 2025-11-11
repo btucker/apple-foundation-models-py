@@ -5,7 +5,7 @@ Provides async/await interface following OpenAI's AsyncClient pattern.
 """
 
 import asyncio
-from typing import Optional, List, Callable, Type
+from typing import Optional, List, Callable, Type, cast
 
 from .base_client import BaseClient
 from .base import AsyncContextManagedResource
@@ -64,14 +64,15 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
         try:
             # Check if we're in an async context with a running event loop
             loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            asyncio.run(self.aclose())
+        else:
             # If we get here, there's a running loop - we can't use asyncio.run()
             # User should call aclose() instead in async contexts
             raise RuntimeError(
                 "close() called from async context. Use 'await client.aclose()' instead."
             )
-        except RuntimeError:
-            # No running loop, safe to use asyncio.run()
-            asyncio.run(self.aclose())
 
     async def aclose(self) -> None:
         """
@@ -122,4 +123,4 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
             >>> response = await session.generate("Hello!")
             >>> print(response.text)
         """
-        return self._create_session_impl(instructions, tools)
+        return cast(AsyncSession, self._create_session_impl(instructions, tools))
