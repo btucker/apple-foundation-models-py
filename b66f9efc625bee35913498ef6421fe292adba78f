@@ -1,0 +1,3 @@
+- In applefoundationmodels/async_client.py around lines 47 to 58, the class
+- hread resource leak if streaming doesn't complete within timeout.
+- In applefoundationmodels/base_client.py around line 11, the top-level import
