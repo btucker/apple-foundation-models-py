@@ -1,0 +1,15 @@
+- take out the references to OpenAI in @README.md
+- the @session.tool decorator seems like the wrong name, it's not really related
+  to the @session.
+- Isn't there a way to have the tool description in a comment?
+- If we use the docstring, then couldn't we pass the tools in as a parameter to
+  generate and skip the decorator?
+- let's do this and change the underlying implementation
+- the concept of recreating the session concerns me. Look at the apple
+  foundation models SDK docs, does it have a better way to do this?
+- I'm seeing a bunch of stuff left in the code that's "not used in simplified
+  interface." we should get rid of all that
+- yes, let's remove them
+- do we have stubs that should be removed?
+- let's remove them all
+- take we try to make that test less flaky?
