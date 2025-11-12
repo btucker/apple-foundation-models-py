@@ -1,0 +1,5 @@
+- In applefoundationmodels/async_client.py around lines 58 to 65, the close()
+- In tests/test_session_lifecycle.py lines 17-22, the assertion list of
+  acceptable
+- In tests/test_session_lifecycle.py around lines 24 to 28, the test currently
+- In tests/conftest.py around lines 51 to 53, the code raises an AssertionError
