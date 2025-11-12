@@ -6,15 +6,13 @@ import pytest
 import applefoundationmodels
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def check_availability():
-    """Check if Apple Intelligence is available before running tests."""
+    """Check if Apple Intelligence is available before running tests that need it."""
     status = applefoundationmodels.Session.check_availability()
     if status != applefoundationmodels.Availability.AVAILABLE:
         reason = applefoundationmodels.Session.get_availability_reason()
-        pytest.skip(
-            f"Apple Intelligence not available: {reason}", allow_module_level=True
-        )
+        pytest.skip(f"Apple Intelligence not available: {reason}")
     return True
 
 
