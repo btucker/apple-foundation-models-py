@@ -1,15 +1,13 @@
 # apple-foundation-models
 
-Python bindings for Apple's FoundationModels framework - Direct access to on-device Apple Intelligence.
+Unofficial Python bindings for Apple's [Foundation Models framework](https://developer.apple.com/documentation/FoundationModels) - Direct access to the on-device LLM available in MacOS 26+.
 
 ## Features
 
-- **High-level Pythonic API**: Context managers, async/await, type hints
+- **Async Support**: Full async/await support with `AsyncSession`
+- **Tool Calling**: Register Python functions as tools for the model to call
 - **Structured Outputs**: JSON Schema and Pydantic model support
-- **Async Streaming**: Native `async for` support for streaming responses
-- **Type Safety**: Full type annotations with mypy support
-- **Memory Safe**: Automatic resource cleanup, no manual memory management
-- **Thread Safe**: All operations are thread-safe
+- **Streaming**: Real-time token-by-token response generation
 
 ## Requirements
 
@@ -58,30 +56,21 @@ pip install -e .
 ```python
 from applefoundationmodels import Session
 
-# Create a session (library auto-initializes)
-with Session() as session:
-    # Check if Apple Intelligence is available
-    if not Session.is_ready():
-        print("Apple Intelligence is not available")
-        print(Session.get_availability_reason())
-        return
-
-    # Generate a response
-    response = session.generate(
-        "What is the capital of France?",
-        instructions="You are a helpful assistant."
-    )
-    print(response.text)  # Access text via .text property
-
-    # Get conversation history
-    history = session.get_history()
-    for msg in history:
-        print(f"{msg['role']}: {msg['content']}")
+with Session(instructions="You are a helpful assistant.") as session:
+    response = session.generate("What is the capital of France?")
+    print(response.text)
 ```
 
-### Async Streaming
+### Streaming
 
-Use `AsyncSession` for async operations:
+```python
+# Sync streaming
+with Session() as session:
+    for chunk in session.generate("Tell me a story", stream=True):
+        print(chunk.content, end='', flush=True)
+```
+
+### Async/Await
 
 ```python
 import asyncio
@@ -89,28 +78,15 @@ from applefoundationmodels import AsyncSession
 
 async def main():
     async with AsyncSession() as session:
-        # Stream response chunks as they arrive
-        async for chunk in session.generate("Tell me a story about a robot", stream=True):
+        # Use await for non-streaming
+        response = await session.generate("What is 2 + 2?")
+        print(response.text)
+
+        # Use async for with streaming
+        async for chunk in session.generate("Tell a story", stream=True):
             print(chunk.content, end='', flush=True)
-        print()  # Newline after stream
 
 asyncio.run(main())
-```
-
-**Sync vs Async:**
-
-- **Sync**: `Session()` → `session.generate()`
-- **Async**: `AsyncSession()` → `await session.generate()`
-
-Same method signatures, just `await` for async:
-
-```python
-# Synchronous
-from applefoundationmodels import Session
-
-with Session() as session:
-    for chunk in session.generate("Tell me a story", stream=True):
-        print(chunk.content, end='', flush=True)
 ```
 
 ### Structured Output
@@ -205,102 +181,6 @@ with Session(tools=[get_weather, calculate]) as session:
     print(f"Finish reason: {response.finish_reason}")
     # "tool_calls" if tools were called, "stop" otherwise
 ```
-
-**Accessing Tool Calls:**
-
-Tool calls are exposed directly on the response object:
-
-```python
-def get_weather(location: str) -> str:
-    """Get current weather for a location."""
-    return f"Weather in {location}: 22°C, sunny"
-
-# Tools registered at session creation
-with Session(tools=[get_weather]) as session:
-    response = session.generate("What's the weather in Paris?")
-
-    # Access tool calls directly from the response
-    if response.tool_calls:
-        for tool_call in response.tool_calls:
-            print(f"Called: {tool_call.function.name}")
-
-            # Parse arguments as JSON
-            import json
-            args = json.loads(tool_call.function.arguments)
-            print(f"Args: {args}")
-
-    # Check finish reason
-    if response.finish_reason == "tool_calls":
-        print("Generation stopped to call tools")
-    elif response.finish_reason == "stop":
-        print("Generation completed normally")
-```
-
-You can also view the full conversation history including tool outputs:
-
-```python
-# View the full conversation including tool calls and outputs
-for entry in session.transcript:
-    print(f"{entry['type']}: {entry.get('content', '')}")
-```
-
-**Schema Extraction:**
-
-The library automatically extracts JSON schemas from your Python functions using their docstrings and type hints:
-
-```python
-def search_docs(query: str, limit: int = 10, category: str = "all") -> list:
-    """Search the documentation database."""
-    # Implementation...
-    return results
-
-# Tools registered at session creation - automatically generates schema:
-# {
-#   "name": "search_docs",
-#   "description": "Search the documentation database.",
-#   "parameters": {
-#     "type": "object",
-#     "properties": {
-#       "query": {"type": "string"},
-#       "limit": {"type": "integer"},
-#       "category": {"type": "string"}
-#     },
-#     "required": ["query"]
-#   }
-# }
-
-with Session(tools=[search_docs]) as session:
-    response = session.generate("Search for 'authentication' in the API docs")
-```
-
-**Transcript Access:**
-
-View the complete conversation history including tool interactions:
-
-```python
-# After generating with tools
-for entry in session.transcript:
-    match entry['type']:
-        case 'prompt':
-            print(f"User: {entry['content']}")
-        case 'tool_calls':
-            for call in entry['tool_calls']:
-                print(f"Calling tool: {call['id']}")
-        case 'tool_output':
-            print(f"Tool result: {entry['content']}")
-        case 'response':
-            print(f"Assistant: {entry['content']}")
-```
-
-**Supported Parameter Types:**
-
-Tool calling works with various parameter signatures:
-
-- No parameters
-- Single parameters (string, int, float, bool)
-- Multiple parameters with mixed types
-- Optional parameters with default values
-- Lists and nested objects
 
 See `examples/tool_calling_comprehensive.py` for complete examples of all supported patterns.
 
