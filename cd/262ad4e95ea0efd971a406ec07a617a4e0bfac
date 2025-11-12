@@ -1,0 +1,3 @@
+- skil tp the last item on the todo list: Consolidate tool metadata helpers –
+  The type maps _BASIC_TYPE_MAP vs _STRING_TYPE_MAP express the same data twice
+  (applefoundationmodels/tools.py:22-37), and
