@@ -621,7 +621,8 @@ class BaseSession(ContextManagedResource, ABC):
             >>> if status == Availability.AVAILABLE:
             ...     print("Apple Intelligence is available!")
         """
-        return Availability(get_foundationmodels().check_availability())
+        status = cast(int, get_foundationmodels().check_availability())
+        return Availability(status)
 
     @staticmethod
     def get_availability_reason() -> Optional[str]:
@@ -632,7 +633,8 @@ class BaseSession(ContextManagedResource, ABC):
             Detailed status description with actionable guidance,
             or None if library not initialized
         """
-        return get_foundationmodels().get_availability_reason()
+        reason = cast(Optional[str], get_foundationmodels().get_availability_reason())
+        return reason
 
     @staticmethod
     def is_ready() -> bool:
@@ -642,7 +644,8 @@ class BaseSession(ContextManagedResource, ABC):
         Returns:
             True if ready for use, False otherwise
         """
-        return get_foundationmodels().is_ready()
+        ready = cast(bool, get_foundationmodels().is_ready())
+        return ready
 
     @staticmethod
     def get_version() -> str:
@@ -652,4 +655,5 @@ class BaseSession(ContextManagedResource, ABC):
         Returns:
             Version string in format "major.minor.patch"
         """
-        return get_foundationmodels().get_version()
+        version = cast(str, get_foundationmodels().get_version())
+        return version
