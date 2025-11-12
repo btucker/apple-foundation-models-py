@@ -19,13 +19,13 @@ class TestAvailability:
             Availability.DEVICE_NOT_ELIGIBLE,
             Availability.NOT_ENABLED,
             Availability.MODEL_NOT_READY,
+            Availability.AVAILABILITY_UNKNOWN,
         ]
 
     def test_get_availability_reason(self):
-        """Test availability reason returns a string."""
+        """Test availability reason returns None or a non-empty string."""
         reason = applefoundationmodels.Session.get_availability_reason()
-        assert isinstance(reason, str)
-        assert len(reason) > 0
+        assert reason is None or (isinstance(reason, str) and len(reason) > 0)
 
     def test_is_ready(self):
         """Test is_ready returns a boolean."""

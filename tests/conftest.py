@@ -48,7 +48,7 @@ def assert_valid_response(response, min_length=0, message="Response validation f
     elif isinstance(response, str):
         text = response
     else:
-        raise AssertionError(
+        raise TypeError(
             f"{message}: should be GenerationResponse or string, got {type(response)}"
         )
 
@@ -78,9 +78,8 @@ def assert_valid_chunks(chunks):
     elif all(isinstance(chunk, str) for chunk in chunks):
         full_response = "".join(chunks)
     else:
-        raise AssertionError(
+        raise TypeError(
             "All chunks should be StreamChunk objects or all should be strings"
         )
 
-    assert len(full_response) >= 0, "Combined response should exist"
     return full_response
