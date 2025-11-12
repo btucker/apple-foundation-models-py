@@ -1,12 +1,30 @@
 #!/usr/bin/env python3
 """
 Comprehensive integration tests for apple-foundation-models-py
+
+These tests require Apple Intelligence to be available and enabled on the system.
+In CI environments (detected via CI=true environment variable), most tests are
+automatically skipped since Apple Intelligence is not available on hosted runners.
+
+To run locally:
+    pytest tests/test_integration.py
+
+To simulate CI behavior:
+    CI=true pytest tests/test_integration.py
 """
 
 import asyncio
+import os
+import pytest
 import applefoundationmodels
 from applefoundationmodels import Availability
 from conftest import assert_valid_response, assert_valid_chunks
+
+# Skip integration tests in CI environments where Apple Intelligence is not available
+skip_in_ci = pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Apple Intelligence not available in CI environment",
+)
 
 
 def test_availability():
@@ -38,6 +56,7 @@ def test_availability():
     print()
 
 
+@skip_in_ci
 def test_version():
     """Test version information"""
     print("=" * 60)
@@ -56,6 +75,7 @@ def test_version():
     print()
 
 
+@skip_in_ci
 def test_basic_generation():
     """Test basic text generation"""
     print("=" * 60)
@@ -93,6 +113,7 @@ def test_basic_generation():
     print()
 
 
+@skip_in_ci
 def test_conversation_context():
     """Test multi-turn conversation"""
     print("=" * 60)
@@ -131,6 +152,7 @@ def test_conversation_context():
     print()
 
 
+@skip_in_ci
 async def test_streaming():
     """Test streaming generation"""
     print("=" * 60)
@@ -164,6 +186,7 @@ async def test_streaming():
     print()
 
 
+@skip_in_ci
 def test_temperature_variations():
     """Test temperature parameter"""
     print("=" * 60)
@@ -197,6 +220,7 @@ def test_temperature_variations():
     print()
 
 
+@skip_in_ci
 def test_session_management():
     """Test session lifecycle"""
     print("=" * 60)
@@ -240,6 +264,7 @@ def test_session_management():
     print()
 
 
+@skip_in_ci
 def test_error_handling():
     """Test error handling"""
     print("=" * 60)
@@ -285,6 +310,7 @@ def test_error_handling():
     print()
 
 
+@skip_in_ci
 def test_context_manager():
     """Test context manager functionality"""
     print("=" * 60)
