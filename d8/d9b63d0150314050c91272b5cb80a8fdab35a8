@@ -1,0 +1,2 @@
+- In applefoundationmodels/async_session.py around lines 250 to 264, the async
+  FFI
