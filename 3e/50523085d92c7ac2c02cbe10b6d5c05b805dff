@@ -1,0 +1,101 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: 1b1589f7...
+**Time:** 2025-11-12 02:35:27
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! The unused `tool()` decorator has been successfully removed. Here's what was cleaned up:
+
+## Summary
+
+**Removed:**
+- The `tool()` decorator function (~37 lines) from `applefoundationmodels/tools.py`
+- References to `def tool(...)` from README.md API documentation (both Session and AsyncSession sections)
+
+**Verified:**
+- ✅ All 17 tool tests still pass
+- ✅ Tool calling comprehensive example still works correctly
+- ✅ The actual tool registration mechanism (`register_tool_for_function`) is still in place and working
+
+**Why it was safe to remove:**
+1. The `tool()` decorator was never exported in `__init__.py`
+2. It wasn't used anywhere in the codebase (not in tests, examples, or implementation)
+3. Tools are actually registered via the `tools=` parameter in the Session constructor
+4. The underlying tool registration functions (`extract_function_schema`, `attach_tool_metadata`, `register_tool_for_function`) remain in place and working
+
+The codebase is now cleaner with no unused API surface area!
+
+---
