@@ -1,0 +1,10 @@
+- it seems like there's a bunch of overlap/duplication between clients &
+  sessions
+- yes, please refactor
+- Do we even need the client at all? should we just start at either Session or
+  AsyncSession?
+- yes, do this
+- why do we still have client.py & async_client.py?
+- what about all the associated tests?
+- now update @README.md
+- ERROR tests/test_tools.py - NameError: name 'Client' is not defined
