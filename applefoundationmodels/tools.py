@@ -19,15 +19,13 @@ from typing import (
 from .exceptions import ToolCallError
 
 
-# Type mapping tables for efficient schema generation
-_BASIC_TYPE_MAP = {
+# Type mapping for efficient schema generation
+# Maps Python types and their string names to JSON schema types
+_TYPE_MAP = {
     str: "string",
     int: "integer",
     float: "number",
     bool: "boolean",
-}
-
-_STRING_TYPE_MAP = {
     "str": "string",
     "int": "integer",
     "float": "number",
@@ -128,13 +126,9 @@ def python_type_to_json_schema(python_type: Any) -> Dict[str, Any]:
         inner_type = unwrap_optional(python_type)
         return python_type_to_json_schema(inner_type)
 
-    # Check basic types via lookup table
-    if python_type in _BASIC_TYPE_MAP:
-        return {"type": _BASIC_TYPE_MAP[python_type]}
-
-    # Check string type annotations
-    if isinstance(python_type, str) and python_type in _STRING_TYPE_MAP:
-        return {"type": _STRING_TYPE_MAP[python_type]}
+    # Check basic types and string annotations via unified lookup table
+    if python_type in _TYPE_MAP:
+        return {"type": _TYPE_MAP[python_type]}
 
     # Get origin for generic types
     origin = get_origin(python_type)
@@ -233,6 +227,29 @@ def extract_function_schema(func: Callable) -> Dict[str, Any]:
         ) from e
 
 
+def register_tool_for_function(func: Callable) -> Dict[str, Any]:
+    """
+    Extract schema from a function and prepare it for registration.
+
+    This is used when registering tools with a session. It extracts the
+    schema from the function signature, attaches metadata to the function
+    object, and returns the schema ready for FFI registration.
+
+    Args:
+        func: Function to register as a tool
+
+    Returns:
+        Complete tool schema ready for registration
+
+    Raises:
+        ToolCallError: If schema cannot be extracted
+    """
+    schema = extract_function_schema(func)
+
+    # Use shared helper to attach metadata
+    return attach_tool_metadata(func, schema)
+
+
 def attach_tool_metadata(
     func: Callable,
     schema: Dict[str, Any],
@@ -266,39 +283,3 @@ def attach_tool_metadata(
     func._tool_parameters = schema["parameters"]  # type: ignore[attr-defined]
 
     return schema
-
-
-def tool(
-    description: Optional[str] = None,
-    name: Optional[str] = None,
-) -> Callable:
-    """
-    Decorator to mark a function as a tool and attach metadata.
-
-    Args:
-        description: Optional tool description (uses docstring if not provided)
-        name: Optional tool name (uses function name if not provided)
-
-    Returns:
-        Decorated function with tool metadata attached
-
-    Note:
-        Tool output size limits:
-        - Initial buffer: 16KB
-        - Maximum size: 1MB (automatically retried with larger buffers)
-        - Tools returning outputs larger than 1MB will raise an error
-        - For large outputs, consider returning references or summaries
-
-    Example:
-        @tool(description="Get the current weather")
-        def get_weather(location: str) -> str:
-            return f"Weather in {location}: sunny"
-    """
-
-    def decorator(func: Callable) -> Callable:
-        # Extract schema and attach metadata
-        schema = extract_function_schema(func)
-        attach_tool_metadata(func, schema, description, name)
-        return func
-
-    return decorator

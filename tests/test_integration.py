@@ -1,12 +1,30 @@
 #!/usr/bin/env python3
 """
 Comprehensive integration tests for apple-foundation-models-py
+
+These tests require Apple Intelligence to be available and enabled on the system.
+In CI environments (detected via CI=true environment variable), most tests are
+automatically skipped since Apple Intelligence is not available on hosted runners.
+
+To run locally:
+    pytest tests/test_integration.py
+
+To simulate CI behavior:
+    CI=true pytest tests/test_integration.py
 """
 
 import asyncio
+import os
+import pytest
 import applefoundationmodels
 from applefoundationmodels import Availability
 from conftest import assert_valid_response, assert_valid_chunks
+
+# Skip integration tests in CI environments where Apple Intelligence is not available
+skip_in_ci = pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Apple Intelligence not available in CI environment",
+)
 
 
 def test_availability():
@@ -15,9 +33,9 @@ def test_availability():
     print("TEST 1: Availability Check")
     print("=" * 60)
 
-    status = applefoundationmodels.Client.check_availability()
-    reason = applefoundationmodels.Client.get_availability_reason()
-    is_ready = applefoundationmodels.Client.is_ready()
+    status = applefoundationmodels.Session.check_availability()
+    reason = applefoundationmodels.Session.get_availability_reason()
+    is_ready = applefoundationmodels.Session.is_ready()
 
     print(f"Status: {status} ({status.name if hasattr(status, 'name') else status})")
     print(f"Reason: {reason}")
@@ -38,45 +56,37 @@ def test_availability():
     print()
 
 
+@skip_in_ci
 def test_version():
     """Test version information"""
     print("=" * 60)
     print("TEST 2: Version Information")
     print("=" * 60)
 
-    with applefoundationmodels.Client() as client:
-        version = client.get_version()
-        print(f"Version: {version}")
+    version = applefoundationmodels.Session.get_version()
+    print(f"Version: {version}")
 
-        languages = client.get_supported_languages()
-        print(f"Supported languages: {', '.join(languages)}")
-
-        # Assertions
-        assert version, "Version should not be empty"
-        assert isinstance(version, str), "Version should be a string"
-        assert isinstance(languages, list), "Languages should be a list"
-        assert len(languages) > 0, "Should support at least one language"
-        assert all(
-            isinstance(lang, str) for lang in languages
-        ), "All languages should be strings"
+    # Assertions
+    assert version, "Version should not be empty"
+    assert isinstance(version, str), "Version should be a string"
 
     print("\n✓ Version information retrieved")
     print()
 
 
+@skip_in_ci
 def test_basic_generation():
     """Test basic text generation"""
     print("=" * 60)
     print("TEST 3: Basic Text Generation")
     print("=" * 60)
 
-    with applefoundationmodels.Client() as client:
-        session = client.create_session()
+    with applefoundationmodels.Session() as session:
 
         # Test simple math
         print("Q: What is 7 + 15?")
         response = session.generate("What is 7 + 15?", temperature=0.3)
-        print(f"A: {response}")
+        print(f"A: {response.text}")
         assert_valid_response(response)
         print()
 
@@ -85,98 +95,102 @@ def test_basic_generation():
         response = session.generate(
             "What is the largest planet in our solar system?", temperature=0.5
         )
-        print(f"A: {response}")
-        assert_valid_response(response)
-        assert "jupiter" in response.lower(), "Response should mention Jupiter"
+        print(f"A: {response.text}")
+        response_text = assert_valid_response(response)
+        assert "jupiter" in response_text.lower(), "Response should mention Jupiter"
         print()
 
         # Test creative generation
         print("Q: Write a haiku about coding")
         response = session.generate("Write a haiku about coding", temperature=1.0)
-        print(f"A: {response}")
-        assert_valid_response(response)
-        assert len(response) > 10, "Haiku should have substantial content"
+        print(f"A: {response.text}")
+        response_text = assert_valid_response(response)
+        assert len(response_text) > 10, "Haiku should have substantial content"
 
     print("\n✓ Basic generation tests passed")
     print()
 
 
+@skip_in_ci
 def test_conversation_context():
     """Test multi-turn conversation"""
     print("=" * 60)
     print("TEST 4: Conversation Context")
     print("=" * 60)
 
-    with applefoundationmodels.Client() as client:
-        session = client.create_session(
-            instructions="You are a helpful assistant. Remember information from previous messages."
-        )
+    with applefoundationmodels.Session(
+        instructions="You are a helpful assistant. Remember information from previous messages."
+    ) as session:
 
         # First message - establish context
         print("User: Remember this: The code name is BLUE42")
         response1 = session.generate("Remember this: The code name is BLUE42")
-        print(f"Assistant: {response1}")
+        print(f"Assistant: {response1.text}")
         assert_valid_response(response1)
         print()
 
         # Follow-up that requires context
         print("User: What code name did I just tell you?")
         response2 = session.generate("What code name did I just tell you?")
-        print(f"Assistant: {response2}")
-        assert_valid_response(response2)
+        print(f"Assistant: {response2.text}")
+        response2_text = assert_valid_response(response2)
         print()
 
         # Check if context was maintained
         # More lenient check - if the model refuses or doesn't maintain context,
         # at least verify it responded with a valid message
-        if "blue42" in response2.lower() or "blue 42" in response2.lower():
+        if "blue42" in response2_text.lower() or "blue 42" in response2_text.lower():
             print("✓ Context maintained across turns")
         else:
-            print(f"⚠️  Context not fully maintained - got: {response2[:100]}")
+            print(f"⚠️  Context not fully maintained - got: {response2_text[:100]}")
             # Still pass if we got a coherent response (not a refusal)
-            assert len(response2) > 5, "Should still provide a meaningful response"
+            assert len(response2_text) > 5, "Should still provide a meaningful response"
 
     print()
 
 
+@skip_in_ci
 async def test_streaming():
     """Test streaming generation"""
     print("=" * 60)
     print("TEST 5: Streaming Generation")
     print("=" * 60)
 
-    client = applefoundationmodels.Client()
-    session = client.create_session()
+    async with applefoundationmodels.AsyncSession() as session:
+        print(
+            "Prompt: Tell me a short story about a robot learning to paint (2 sentences)"
+        )
+        print("Response: ", end="", flush=True)
 
-    print("Prompt: Tell me a short story about a robot learning to paint (2 sentences)")
-    print("Response: ", end="", flush=True)
+        chunks = []
+        # Stream is returned directly (no await needed for the iterator itself)
+        async for chunk in session.generate(
+            "Tell me a short story about a robot learning to paint in exactly 2 sentences",
+            stream=True,
+            temperature=0.8,
+        ):
+            print(chunk.content, end="", flush=True)
+            chunks.append(chunk)
 
-    chunks = []
-    async for chunk in session.generate_stream(
-        "Tell me a short story about a robot learning to paint in exactly 2 sentences",
-        temperature=0.8,
-    ):
-        print(chunk, end="", flush=True)
-        chunks.append(chunk)
+        print("\n")
 
-    print("\n")
+        # Assertions
+        full_response = assert_valid_chunks(chunks)
+        print(
+            f"✓ Received {len(chunks)} chunks totaling {len(full_response)} characters"
+        )
 
-    # Assertions
-    assert_valid_chunks(chunks)
-    print(f"✓ Received {len(chunks)} chunks totaling {len(''.join(chunks))} characters")
-
-    client.close()
     print()
 
 
+@skip_in_ci
 def test_temperature_variations():
     """Test temperature parameter"""
     print("=" * 60)
     print("TEST 6: Temperature Variations")
     print("=" * 60)
 
-    with applefoundationmodels.Client() as client:
-        session = client.create_session()
+    with applefoundationmodels.Session() as session:
 
         prompt = "Complete this sentence: The sky is"
 
@@ -202,57 +216,55 @@ def test_temperature_variations():
     print()
 
 
+@skip_in_ci
 def test_session_management():
     """Test session lifecycle"""
     print("=" * 60)
     print("TEST 7: Session Management")
     print("=" * 60)
 
-    client = applefoundationmodels.Client()
-
     # Create multiple sessions
-    session1 = client.create_session(instructions="You are a math tutor.")
-    session2 = client.create_session(instructions="You are a poet.")
+    session1 = applefoundationmodels.Session(instructions="You are a math tutor.")
+    session2 = applefoundationmodels.Session(instructions="You are a poet.")
 
     # Test each session maintains its own context
     print("Session 1 (Math): What is 12 * 8?")
     response1 = session1.generate("What is 12 * 8?")
-    print(f"Response: {response1}")
-    assert_valid_response(response1)
+    print(f"Response: {response1.text}")
+    response1_text = assert_valid_response(response1)
     assert (
-        "96" in response1 or "ninety" in response1.lower()
+        "96" in response1_text or "ninety" in response1_text.lower()
     ), "Math response should contain the answer"
     print()
 
     print("Session 2 (Poetry): Write one line of poetry about the moon")
     response2 = session2.generate("Write one line of poetry about the moon")
-    print(f"Response: {response2}")
-    assert_valid_response(response2)
-    assert len(response2) > 5, "Poetry response should have content"
+    print(f"Response: {response2.text}")
+    response2_text = assert_valid_response(response2)
+    assert len(response2_text) > 5, "Poetry response should have content"
     print()
 
     # Verify sessions are independent
     assert (
-        response1 != response2
+        response1_text != response2_text
     ), "Different sessions should produce different responses"
 
     # Close sessions
     session1.close()
     session2.close()
-    client.close()
 
     print("✓ Multiple sessions managed successfully")
     print()
 
 
+@skip_in_ci
 def test_error_handling():
     """Test error handling"""
     print("=" * 60)
     print("TEST 8: Error Handling")
     print("=" * 60)
 
-    client = applefoundationmodels.Client()
-    session = client.create_session()
+    session = applefoundationmodels.Session()
 
     # Try with empty prompt
     print("Testing empty prompt...")
@@ -286,24 +298,23 @@ def test_error_handling():
 
     assert long_handled, "Long prompt should be handled somehow"
 
-    client.close()
+    session.close()
     print()
 
 
+@skip_in_ci
 def test_context_manager():
     """Test context manager functionality"""
     print("=" * 60)
     print("TEST 9: Context Managers")
     print("=" * 60)
 
-    # Test client context manager
-    with applefoundationmodels.Client() as client:
-        assert client is not None, "Client should be created"
-        with client.create_session() as session:
-            assert session is not None, "Session should be created"
-            response = session.generate("Say 'Context managers work!'")
-            print(f"Response: {response}")
-            assert_valid_response(response)
+    # Test session context manager
+    with applefoundationmodels.Session() as session:
+        assert session is not None, "Session should be created"
+        response = session.generate("Say 'Context managers work!'")
+        print(f"Response: {response.text}")
+        assert_valid_response(response)
 
     print("✓ Context managers cleaned up properly")
     print()

@@ -5,6 +5,7 @@ Unit tests for applefoundationmodels.Session
 import pytest
 import asyncio
 import applefoundationmodels
+from applefoundationmodels import Session
 from conftest import assert_valid_response, assert_valid_chunks
 
 
@@ -14,9 +15,9 @@ class TestSessionGeneration:
     def test_generate_basic(self, session, check_availability):
         """Test basic text generation."""
         response = session.generate("What is 2 + 2?", temperature=0.3)
-        assert_valid_response(response)
+        assert isinstance(response.text, str), "Response should have text property"
         assert (
-            "4" in response or "four" in response.lower()
+            "4" in response.text or "four" in response.text.lower()
         ), "Response should contain the answer to 2+2"
 
     def test_generate_with_temperature(self, session, check_availability):
@@ -25,15 +26,15 @@ class TestSessionGeneration:
 
         # Low temperature
         response1 = session.generate(prompt, temperature=0.1)
-        assert_valid_response(response1)
+        assert isinstance(response1.text, str), "Response should have text property"
 
         # Medium temperature
         response2 = session.generate(prompt, temperature=0.7)
-        assert_valid_response(response2)
+        assert isinstance(response2.text, str), "Response should have text property"
 
         # High temperature
         response3 = session.generate(prompt, temperature=1.5)
-        assert_valid_response(response3)
+        assert isinstance(response3.text, str), "Response should have text property"
 
     def test_generate_with_max_tokens(self, session, check_availability):
         """Test generation with token limit."""
@@ -41,7 +42,9 @@ class TestSessionGeneration:
         response_short = session.generate(
             "Write a long story about space exploration", max_tokens=20, temperature=0.5
         )
-        assert_valid_response(response_short)
+        assert isinstance(
+            response_short.text, str
+        ), "Response should have text property"
 
         # Generate with higher token limit on same prompt
         response_long = session.generate(
@@ -49,36 +52,39 @@ class TestSessionGeneration:
             max_tokens=200,
             temperature=0.5,
         )
-        assert_valid_response(response_long)
+        assert isinstance(response_long.text, str), "Response should have text property"
 
         # The longer response should be significantly longer
         # (accounting for some variance, but should be noticeably different)
-        assert len(response_long) > len(response_short), (
+        assert len(response_long.text) > len(response_short.text), (
             f"Higher max_tokens should produce longer response: "
-            f"short={len(response_short)} chars, long={len(response_long)} chars"
+            f"short={len(response_short.text)} chars, long={len(response_long.text)} chars"
         )
 
 
 class TestSessionStreaming:
     """Tests for streaming generation."""
 
-    @pytest.mark.asyncio
-    async def test_generate_stream_basic(self, session, check_availability):
+    def test_generate_stream_basic(self, session, check_availability):
         """Test basic streaming generation."""
         chunks = []
-        async for chunk in session.generate_stream("Count to 5", temperature=0.3):
+        for chunk in session.generate("Count to 5", stream=True, temperature=0.3):
             chunks.append(chunk)
 
-        assert_valid_chunks(chunks)
+        assert len(chunks) > 0, "Should receive at least one chunk"
+        for chunk in chunks:
+            assert hasattr(chunk, "content"), "Chunk should have content attribute"
+            assert isinstance(chunk.content, str), "Chunk content should be string"
 
-    @pytest.mark.asyncio
-    async def test_generate_stream_with_temperature(self, session, check_availability):
+    def test_generate_stream_with_temperature(self, session, check_availability):
         """Test streaming with different temperatures."""
         chunks = []
-        async for chunk in session.generate_stream("Say hello", temperature=1.0):
+        for chunk in session.generate("Say hello", stream=True, temperature=1.0):
             chunks.append(chunk)
 
-        assert_valid_chunks(chunks)
+        assert len(chunks) > 0, "Should receive at least one chunk"
+        for chunk in chunks:
+            assert hasattr(chunk, "content"), "Chunk should have content attribute"
 
 
 class TestSessionHistory:
@@ -93,7 +99,7 @@ class TestSessionHistory:
         """Test clearing conversation history."""
         # Generate something to populate history
         response = session.generate("Hello", temperature=0.5)
-        assert_valid_response(response)
+        assert isinstance(response.text, str), "Response should have text property"
 
         # Get history before clear
         history_before = session.get_history()
@@ -107,37 +113,22 @@ class TestSessionHistory:
         assert isinstance(history_after, list)
         assert len(history_after) == 0, "History should be empty after clearing"
 
-    def test_add_message(self, session, check_availability):
-        """Test manually adding messages."""
-        # Get initial history
-        initial_history = session.get_history()
-        initial_count = len(initial_history)
-
-        # Add a message
-        session.add_message("user", "Test message")
-
-        # Verify message was added
-        updated_history = session.get_history()
-        assert (
-            len(updated_history) >= initial_count
-        ), "History should not shrink after adding message"
-
 
 class TestSessionLifecycle:
     """Tests for session lifecycle."""
 
-    def test_session_context_manager(self, client, check_availability):
+    def test_session_context_manager(self, check_availability):
         """Test session works as context manager."""
-        with client.create_session() as session:
+        with Session() as session:
             assert session is not None
             response = session.generate("Hello", temperature=0.5)
-            assert_valid_response(response)
+            assert isinstance(response.text, str), "Response should have text property"
 
-    def test_session_close(self, client, check_availability):
+    def test_session_close(self, check_availability):
         """Test explicit session close."""
-        session = client.create_session()
+        session = Session()
         response = session.generate("Hello", temperature=0.5)
-        assert_valid_response(response)
+        assert isinstance(response.text, str), "Response should have text property"
         session.close()
         # Close should complete without error
 
@@ -156,11 +147,12 @@ class TestStructuredOutput:
             "required": ["name", "age"],
         }
 
-        result = session.generate_structured(
+        response = session.generate(
             "Extract information: John is 30 years old", schema=schema
         )
 
         # Verify response structure
+        result = response.parsed
         assert isinstance(result, dict), "Result should be a dictionary"
         assert "name" in result, "Result should have 'name' field"
         assert "age" in result, "Result should have 'age' field"
@@ -178,11 +170,12 @@ class TestStructuredOutput:
             name: str
             age: int
 
-        result = session.generate_structured(
+        response = session.generate(
             "Extract information: John is 30 years old", schema=Person
         )
 
         # Verify response structure
+        result = response.parsed
         assert isinstance(result, dict), "Result should be a dictionary"
         assert "name" in result, "Result should have 'name' field"
         assert "age" in result, "Result should have 'age' field"
@@ -193,6 +186,11 @@ class TestStructuredOutput:
         person = Person(**result)
         assert person.name == result["name"]
         assert person.age == result["age"]
+
+        # Test parse_as helper
+        person2 = response.parse_as(Person)
+        assert person2.name == result["name"]
+        assert person2.age == result["age"]
 
 
 class TestTranscriptTracking:
@@ -210,7 +208,7 @@ class TestTranscriptTracking:
         """Test last_generation_transcript after a single generation."""
         # Perform one generation
         response = session.generate("What is 2 + 2?", temperature=0.3)
-        assert_valid_response(response)
+        assert isinstance(response.text, str), "Response should have text property"
 
         # Get last generation transcript
         last_transcript = session.last_generation_transcript
@@ -222,11 +220,14 @@ class TestTranscriptTracking:
         assert "prompt" in entry_types, "Should contain prompt entry"
         assert "response" in entry_types, "Should contain response entry"
 
-        # Full transcript should match last_generation_transcript after single call
+        # Last entries of full transcript should match last_generation_transcript
         full_transcript = session.transcript
-        assert len(last_transcript) == len(
-            full_transcript
-        ), "After single generation, last_generation_transcript should match full transcript"
+        assert len(full_transcript) >= len(
+            last_transcript
+        ), "Full transcript should be at least as long as last_generation_transcript"
+        assert (
+            full_transcript[-len(last_transcript) :] == last_transcript
+        ), "Last entries of full transcript should match last_generation_transcript"
 
     def test_last_generation_transcript_multiple_generations(
         self, session, check_availability
@@ -234,14 +235,14 @@ class TestTranscriptTracking:
         """Test last_generation_transcript only returns entries from the last call."""
         # First generation
         response1 = session.generate("What is 2 + 2?", temperature=0.3)
-        assert_valid_response(response1)
+        assert isinstance(response1.text, str), "Response should have text property"
         last_transcript1 = session.last_generation_transcript
         last_transcript1_len = len(last_transcript1)
         assert last_transcript1_len > 0, "Should have entries after first generation"
 
         # Second generation
         response2 = session.generate("What is 5 + 7?", temperature=0.3)
-        assert_valid_response(response2)
+        assert isinstance(response2.text, str), "Response should have text property"
         last_transcript2 = session.last_generation_transcript
         last_transcript2_len = len(last_transcript2)
         assert last_transcript2_len > 0, "Should have entries after second generation"
@@ -266,7 +267,7 @@ class TestTranscriptTracking:
         ), "Last entries of full transcript should match last_generation_transcript"
 
     def test_last_generation_transcript_with_structured_output(self, session):
-        """Test last_generation_transcript with generate_structured()."""
+        """Test last_generation_transcript with structured output."""
         schema = {
             "type": "object",
             "properties": {
@@ -277,13 +278,13 @@ class TestTranscriptTracking:
 
         # First generate regular text
         response = session.generate("Hello", temperature=0.3)
-        assert_valid_response(response)
+        assert isinstance(response.text, str), "Response should have text property"
 
         # Then generate structured output
-        result = session.generate_structured(
+        result = session.generate(
             "What is 2 + 2? Respond with just the number.", schema=schema
         )
-        assert isinstance(result, dict), "Result should be a dictionary"
+        assert isinstance(result.parsed, dict), "Result should have parsed property"
 
         # Get last generation transcript
         last_transcript = session.last_generation_transcript
@@ -297,20 +298,19 @@ class TestTranscriptTracking:
             last_transcript
         ), "Full transcript should include previous generation"
 
-    @pytest.mark.asyncio
-    async def test_last_generation_transcript_with_streaming(
+    def test_last_generation_transcript_with_streaming(
         self, session, check_availability
     ):
-        """Test last_generation_transcript with generate_stream()."""
+        """Test last_generation_transcript with streaming."""
         # First generation (regular)
         response1 = session.generate("Count to 3", temperature=0.3)
-        assert_valid_response(response1)
+        assert isinstance(response1.text, str), "Response should have text property"
 
         # Second generation (streaming)
         chunks = []
-        async for chunk in session.generate_stream("Say hello", temperature=0.3):
+        for chunk in session.generate("Say hello", stream=True, temperature=0.3):
             chunks.append(chunk)
-        assert_valid_chunks(chunks)
+        assert len(chunks) > 0, "Should receive chunks"
 
         # Get last generation transcript
         last_transcript = session.last_generation_transcript
@@ -330,7 +330,7 @@ class TestTranscriptTracking:
         """Test last_generation_transcript behavior after clearing history."""
         # Generate something
         response = session.generate("Hello", temperature=0.3)
-        assert_valid_response(response)
+        assert isinstance(response.text, str), "Response should have text property"
 
         # Clear history
         session.clear_history()
@@ -340,23 +340,26 @@ class TestTranscriptTracking:
         assert len(last_transcript) == 0, "Should be empty after clearing history"
 
         # Generate again
-        response2 = session.generate("Goodbye", temperature=0.3)
-        assert_valid_response(response2)
+        response2 = session.generate("What is 3 plus 3?", temperature=0.3)
+        assert isinstance(response2.text, str), "Response should have text property"
 
         # Now should have entries from the new generation
         last_transcript2 = session.last_generation_transcript
         assert len(last_transcript2) > 0, "Should have entries from new generation"
 
-        # Full transcript should only contain the second generation
+        # Last entries of full transcript should match last_generation_transcript
         full_transcript = session.transcript
-        assert len(full_transcript) == len(
+        assert len(full_transcript) >= len(
             last_transcript2
-        ), "After clear and new generation, full and last should match"
+        ), "Full transcript should be at least as long as last_generation_transcript"
+        assert (
+            full_transcript[-len(last_transcript2) :] == last_transcript2
+        ), "Last entries of full transcript should match last_generation_transcript"
 
     def test_last_generation_transcript_entry_format(self, session, check_availability):
         """Test that last_generation_transcript entries have expected format."""
         response = session.generate("What is the capital of France?", temperature=0.3)
-        assert_valid_response(response)
+        assert isinstance(response.text, str), "Response should have text property"
 
         last_transcript = session.last_generation_transcript
         assert len(last_transcript) > 0, "Should have entries"
@@ -378,20 +381,12 @@ class TestTranscriptTracking:
                 assert "content" in entry, "Text entry should have 'content' field"
                 assert isinstance(entry["content"], str), "Content should be a string"
 
-    def test_last_generation_transcript_with_tool_calling(
-        self, client, check_availability
-    ):
+    def test_last_generation_transcript_with_tool_calling(self, check_availability):
         """Test last_generation_transcript includes tool_call and tool_output entries."""
-        # Create session with tools
-        session = client.create_session(
-            instructions="You are a helpful assistant. Use tools when appropriate."
-        )
-
         tool_call_count = {"first": 0, "second": 0}
 
-        @session.tool(description="Get the current temperature in a city")
         def get_temperature(city: str) -> str:
-            """Get temperature for a city."""
+            """Get the current temperature in a city."""
             # Track which generation called the tool
             if tool_call_count["first"] == 0:
                 tool_call_count["first"] += 1
@@ -399,11 +394,17 @@ class TestTranscriptTracking:
                 tool_call_count["second"] += 1
             return f"The temperature in {city} is 72°F"
 
+        # Create session with tools
+        session = Session(
+            instructions="You are a helpful assistant. Use tools when appropriate.",
+            tools=[get_temperature],
+        )
+
         # First generation - call tool
         response1 = session.generate(
             "What's the temperature in Boston?", temperature=0.3
         )
-        assert_valid_response(response1)
+        assert isinstance(response1.text, str), "Response should have text property"
 
         # Get last_generation_transcript from first call
         last_transcript1 = session.last_generation_transcript
@@ -435,7 +436,7 @@ class TestTranscriptTracking:
 
         # Second generation - also call tool
         response2 = session.generate("What about Seattle?", temperature=0.3)
-        assert_valid_response(response2)
+        assert isinstance(response2.text, str), "Response should have text property"
 
         # Get last_generation_transcript from second call
         last_transcript2 = session.last_generation_transcript

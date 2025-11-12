@@ -1,15 +1,13 @@
 # apple-foundation-models
 
-Python bindings for Apple's FoundationModels framework - Direct access to on-device Apple Intelligence.
+Unofficial Python bindings for Apple's [Foundation Models framework](https://developer.apple.com/documentation/FoundationModels) - Direct access to the on-device LLM available in macOS 26+.
 
 ## Features
 
-- **High-level Pythonic API**: Context managers, async/await, type hints
+- **Async Support**: Full async/await support with `AsyncSession`
+- **Tool Calling**: Register Python functions as tools for the model to call
 - **Structured Outputs**: JSON Schema and Pydantic model support
-- **Async Streaming**: Native `async for` support for streaming responses
-- **Type Safety**: Full type annotations with mypy support
-- **Memory Safe**: Automatic resource cleanup, no manual memory management
-- **Thread Safe**: All operations are thread-safe
+- **Streaming**: Real-time token-by-token response generation
 
 ## Requirements
 
@@ -56,46 +54,37 @@ pip install -e .
 ### Basic Usage
 
 ```python
-from applefoundationmodels import Client
+from applefoundationmodels import Session
 
-# Create a client (library auto-initializes)
-with Client() as client:
-    # Check if Apple Intelligence is available
-    if not client.is_ready():
-        print("Apple Intelligence is not available")
-        print(client.get_availability_reason())
-        return
-
-    # Create a session
-    session = client.create_session(
-        instructions="You are a helpful assistant.",
-        enable_guardrails=True
-    )
-
-    # Generate a response
+with Session(instructions="You are a helpful assistant.") as session:
     response = session.generate("What is the capital of France?")
-    print(response)
-
-    # Get conversation history
-    history = session.get_history()
-    for msg in history:
-        print(f"{msg['role']}: {msg['content']}")
+    print(response.text)
 ```
 
-### Async Streaming
+### Streaming
+
+```python
+# Sync streaming
+with Session() as session:
+    for chunk in session.generate("Tell me a story", stream=True):
+        print(chunk.content, end='', flush=True)
+```
+
+### Async/Await
 
 ```python
 import asyncio
-from applefoundationmodels import Client
+from applefoundationmodels import AsyncSession
 
 async def main():
-    with Client() as client:
-        session = client.create_session()
+    async with AsyncSession() as session:
+        # Use await for non-streaming
+        response = await session.generate("What is 2 + 2?")
+        print(response.text)
 
-        # Stream response chunks as they arrive
-        async for chunk in session.generate_stream("Tell me a story about a robot"):
-            print(chunk, end='', flush=True)
-        print()  # Newline after stream
+        # Use async for with streaming
+        async for chunk in session.generate("Tell a story", stream=True):
+            print(chunk.content, end='', flush=True)
 
 asyncio.run(main())
 ```
@@ -103,11 +92,9 @@ asyncio.run(main())
 ### Structured Output
 
 ```python
-from applefoundationmodels import Client
+from applefoundationmodels import Session
 
-with Client() as client:
-    session = client.create_session()
-
+with Session() as session:
     # Define a JSON schema
     schema = {
         "type": "object",
@@ -120,12 +107,12 @@ with Client() as client:
     }
 
     # Generate structured response
-    result = session.generate_structured(
+    response = session.generate(
         "Extract person info: Alice is 28 and lives in Paris",
         schema=schema
     )
 
-    print(result)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
+    print(response.parsed)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
 ```
 
 #### Using Pydantic Models
@@ -133,7 +120,7 @@ with Client() as client:
 You can also use Pydantic models for structured outputs (requires `pip install pydantic>=2.0`):
 
 ```python
-from applefoundationmodels import Client
+from applefoundationmodels import Session
 from pydantic import BaseModel
 
 class Person(BaseModel):
@@ -141,188 +128,131 @@ class Person(BaseModel):
     age: int
     city: str
 
-with Client() as client:
-    session = client.create_session()
-
+with Session() as session:
     # Pass Pydantic model directly - no need for JSON schema!
-    result = session.generate_structured(
+    response = session.generate(
         "Extract person info: Alice is 28 and lives in Paris",
         schema=Person
     )
 
-    print(result)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
+    print(response.parsed)  # {'name': 'Alice', 'age': 28, 'city': 'Paris'}
 
     # Parse directly into a Pydantic model for validation
-    person = Person(**result)
+    person = Person(**response.parsed)
+    # Or use the convenience method:
+    person = response.parse_as(Person)
     print(person.name, person.age, person.city)  # Alice 28 Paris
 ```
 
 ### Tool Calling
 
-Tool calling allows the model to call your Python functions to access real-time data, perform actions, or integrate with external systems. Tools work with a simple decorator-based API:
+Tool calling allows the model to call your Python functions to access real-time data, perform actions, or integrate with external systems. Tools are registered when you create a session and remain available for all generate() calls on that session:
 
 ```python
-from applefoundationmodels import Client
+from applefoundationmodels import Session
 
-with Client() as client:
-    session = client.create_session()
+# Define tools as regular Python functions with docstrings
+def get_weather(location: str, units: str = "celsius") -> str:
+    """Get current weather for a location."""
+    # Your implementation here
+    return f"Weather in {location}: 22°{units[0].upper()}, sunny"
 
-    # Register a tool with the @session.tool decorator
-    @session.tool(description="Get current weather for a location")
-    def get_weather(location: str, units: str = "celsius") -> str:
-        """Fetch weather information from your weather API."""
-        # Your implementation here
-        return f"Weather in {location}: 22°{units[0].upper()}, sunny"
+def calculate(expression: str) -> float:
+    """Evaluate a mathematical expression safely."""
+    # Your implementation here
+    return eval(expression)  # Use safe_eval in production!
 
-    @session.tool()
-    def calculate(expression: str) -> float:
-        """Evaluate a mathematical expression safely."""
-        # Your implementation here
-        return eval(expression)  # Use safe_eval in production!
-
+# Register tools at session creation - they'll be available for all generate() calls
+with Session(tools=[get_weather, calculate]) as session:
     # The model will automatically call tools when needed
-    response = session.generate(
-        "What's the weather in Paris and what's 15 times 23?"
-    )
-    print(response)
+    response = session.generate("What's the weather in Paris and what's 15 times 23?")
+    print(response.text)
     # "The weather in Paris is 22°C and sunny. 15 times 23 equals 345."
 
-    # View the full conversation including tool calls
-    for entry in session.transcript:
-        print(f"{entry['type']}: {entry.get('content', '')}")
+    # Check if tools were called using the tool_calls property
+    if response.tool_calls:
+        print(f"Tools called: {len(response.tool_calls)}")
+        for tool_call in response.tool_calls:
+            print(f"  - {tool_call.function.name}")
+            print(f"    ID: {tool_call.id}")
+            print(f"    Args: {tool_call.function.arguments}")
+
+    # Check why generation stopped
+    print(f"Finish reason: {response.finish_reason}")
+    # "tool_calls" if tools were called, "stop" otherwise
 ```
-
-**Features:**
-- **Automatic schema generation** from Python type hints
-- **Parallel tool execution** when the model calls multiple tools
-- **Full transcript access** showing all tool calls and outputs
-- **Error handling** with detailed error information
-- **Type-safe** with complete type annotations
-
-**Schema Extraction:**
-
-The library automatically extracts JSON schemas from your Python functions:
-
-```python
-@session.tool(description="Search documentation")
-def search_docs(query: str, limit: int = 10, category: str = "all") -> list:
-    """Search the documentation database."""
-    # Implementation...
-    return results
-
-# Automatically generates:
-# {
-#   "name": "search_docs",
-#   "description": "Search documentation",
-#   "parameters": {
-#     "type": "object",
-#     "properties": {
-#       "query": {"type": "string"},
-#       "limit": {"type": "integer"},
-#       "category": {"type": "string"}
-#     },
-#     "required": ["query"]
-#   }
-# }
-```
-
-**Transcript Access:**
-
-View the complete conversation history including tool interactions:
-
-```python
-# After generating with tools
-for entry in session.transcript:
-    match entry['type']:
-        case 'prompt':
-            print(f"User: {entry['content']}")
-        case 'tool_calls':
-            for call in entry['tool_calls']:
-                print(f"Calling tool: {call['id']}")
-        case 'tool_output':
-            print(f"Tool result: {entry['content']}")
-        case 'response':
-            print(f"Assistant: {entry['content']}")
-```
-
-**Supported Parameter Types:**
-
-Tool calling works with various parameter signatures:
-- No parameters
-- Single parameters (string, int, float, bool)
-- Multiple parameters with mixed types
-- Optional parameters with default values
-- Lists and nested objects
 
 See `examples/tool_calling_comprehensive.py` for complete examples of all supported patterns.
 
 ### Generation Parameters
 
 ```python
-# Control generation with parameters
-response = session.generate(
-    "Write a creative story",
-    temperature=1.5,      # Higher = more creative (0.0-2.0)
-    max_tokens=500,       # Limit response length
-    seed=42               # Reproducible outputs
-)
+from applefoundationmodels import Session
+
+with Session() as session:
+    # Control generation with parameters
+    response = session.generate(
+        "Write a creative story",
+        temperature=1.5,      # Higher = more creative (0.0-2.0)
+        max_tokens=500        # Limit response length
+    )
+    print(response.text)
 ```
 
 ### Session Management
 
 ```python
-with Client() as client:
-    # Create multiple sessions
-    chat_session = client.create_session(
-        instructions="You are a friendly chatbot"
-    )
-    code_session = client.create_session(
-        instructions="You are a code review assistant"
-    )
+from applefoundationmodels import Session
 
-    # Each session maintains separate conversation history
-    chat_response = chat_session.generate("Hello!")
-    code_response = code_session.generate("Review this code: ...")
+# Create multiple sessions
+chat_session = Session(
+    instructions="You are a friendly chatbot"
+)
+code_session = Session(
+    instructions="You are a code review assistant"
+)
 
-    # Clear history while keeping session
-    chat_session.clear_history()
+# Each session maintains separate conversation history
+chat_response = chat_session.generate("Hello!")
+print(chat_response.text)
 
-    # Manually add messages
-    chat_session.add_message("system", "Be concise")
-```
+code_response = code_session.generate("Review this code: ...")
+print(code_response.text)
 
-### Statistics
+# Clear history while keeping session
+chat_session.clear_history()
 
-```python
-with Client() as client:
-    session = client.create_session()
-
-    # Generate some responses
-    for i in range(5):
-        session.generate(f"Question {i}")
-
-    # Get statistics
-    stats = client.get_stats()
-    print(f"Total requests: {stats['total_requests']}")
-    print(f"Success rate: {stats['successful_requests'] / stats['total_requests'] * 100:.1f}%")
-    print(f"Avg response time: {stats['average_response_time']:.2f}s")
-
-    # Reset statistics
-    client.reset_stats()
+# Clean up
+chat_session.close()
+code_session.close()
 ```
 
 ## API Reference
 
-### Client
+### Sync vs Async Pattern
 
-The main entry point for using libai.
+We provide separate session classes for sync and async:
+
+- **`Session`**: Synchronous operations with context manager support
+- **`AsyncSession`**: Async operations with async context manager support
+
+Both have identical method signatures - just use `await` with `AsyncSession`.
+
+### Session
+
+Manages conversation state and text generation (synchronous).
 
 ```python
-class Client:
-    def __init__() -> None: ...
-    def __enter__() -> Client: ...
+class Session:
+    def __init__(
+        instructions: Optional[str] = None,
+        tools: Optional[List[Callable]] = None
+    ) -> None: ...
+
+    def __enter__() -> Session: ...
     def __exit__(...) -> None: ...
 
+    # Static utility methods
     @staticmethod
     def check_availability() -> Availability: ...
     @staticmethod
@@ -331,36 +261,90 @@ class Client:
     def is_ready() -> bool: ...
     @staticmethod
     def get_version() -> str: ...
-    @staticmethod
-    def get_supported_languages() -> List[str]: ...
 
-    def create_session(...) -> Session: ...
-    def get_stats() -> Stats: ...
-    def reset_stats() -> None: ...
-    def close() -> None: ...
-```
+    # Unified generation method
+    def generate(
+        prompt: str,
+        schema: Optional[Union[dict, Type[BaseModel]]] = None,
+        stream: bool = False,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None
+    ) -> Union[GenerationResponse, Iterator[StreamChunk]]: ...
 
-### Session
-
-Manages conversation state and text generation.
-
-```python
-class Session:
-    def __enter__() -> Session: ...
-    def __exit__(...) -> None: ...
-
-    def generate(prompt: str, **params) -> str: ...
-    def generate_structured(prompt: str, schema: dict, **params) -> dict: ...
-    async def generate_stream(prompt: str, **params) -> AsyncIterator[str]: ...
-
-    def tool(description: str = None, name: str = None) -> Callable: ...
     @property
     def transcript() -> List[dict]: ...
+    @property
+    def last_generation_transcript() -> List[dict]: ...
 
     def get_history() -> List[dict]: ...
     def clear_history() -> None: ...
-    def add_message(role: str, content: str) -> None: ...
     def close() -> None: ...
+```
+
+### AsyncSession
+
+Manages conversation state and text generation (asynchronous).
+
+```python
+class AsyncSession:
+    def __init__(
+        instructions: Optional[str] = None,
+        tools: Optional[List[Callable]] = None
+    ) -> None: ...
+
+    async def __aenter__() -> AsyncSession: ...
+    async def __aexit__(...) -> None: ...
+
+    # Static utility methods (inherited from Session)
+    @staticmethod
+    def check_availability() -> Availability: ...
+    @staticmethod
+    def get_availability_reason() -> str: ...
+    @staticmethod
+    def is_ready() -> bool: ...
+    @staticmethod
+    def get_version() -> str: ...
+
+    # Unified async generation method
+    def generate(
+        prompt: str,
+        schema: Optional[Union[dict, Type[BaseModel]]] = None,
+        stream: bool = False,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None
+    ) -> Union[Coroutine[GenerationResponse], AsyncIterator[StreamChunk]]: ...
+
+    @property
+    def transcript() -> List[dict]: ...
+    @property
+    def last_generation_transcript() -> List[dict]: ...
+
+    async def get_history() -> List[dict]: ...
+    async def clear_history() -> None: ...
+    async def close() -> None: ...
+```
+
+### Response Types
+
+```python
+@dataclass
+class GenerationResponse:
+    """Response from non-streaming generation."""
+    content: Union[str, Dict[str, Any]]
+    is_structured: bool
+
+    @property
+    def text() -> str: ...  # For text responses
+    @property
+    def parsed() -> Dict[str, Any]: ...  # For structured responses
+    def parse_as(model: Type[BaseModel]) -> BaseModel: ...  # Parse into Pydantic
+
+@dataclass
+class StreamChunk:
+    """Chunk from streaming generation."""
+    content: str  # Text delta
+    finish_reason: Optional[str] = None
+    index: int = 0
 ```
 
 ### Types
@@ -374,22 +358,11 @@ class Availability(IntEnum):
 
 class SessionConfig(TypedDict):
     instructions: Optional[str]
-    tools_json: Optional[str]
-    enable_guardrails: bool
-    prewarm: bool
 
 class GenerationParams(TypedDict):
     temperature: float
     max_tokens: int
     seed: int
-
-class Stats(TypedDict):
-    total_requests: int
-    successful_requests: int
-    failed_requests: int
-    total_tokens_generated: int
-    average_response_time: float
-    total_processing_time: float
 ```
 
 ### Exceptions
@@ -415,8 +388,9 @@ All exceptions inherit from `FoundationModelsError`:
 
 See the `examples/` directory for complete working examples:
 
-- `basic_chat.py` - Simple conversation
-- `streaming_chat.py` - Async streaming
+- `basic_chat.py` - Simple synchronous conversation
+- `basic_async_chat.py` - Async conversation with await (no streaming)
+- `streaming_chat.py` - Async streaming responses
 - `structured_output.py` - JSON schema validation
 - `tool_calling_comprehensive.py` - Complete tool calling demonstration with all parameter types
 
@@ -463,8 +437,10 @@ apple-foundation-models-py/
 │   ├── __init__.py     # Public API
 │   ├── _foundationmodels.pyx  # Cython bindings
 │   ├── _foundationmodels.pxd  # C declarations
-│   ├── client.py       # High-level Client
-│   ├── session.py      # Session management
+│   ├── base.py         # Base context manager classes
+│   ├── base_session.py # Shared session logic
+│   ├── session.py      # Synchronous session
+│   ├── async_session.py # Asynchronous session
 │   ├── types.py        # Type definitions
 │   ├── exceptions.py   # Exception classes
 │   └── swift/          # Swift FoundationModels bindings
@@ -481,7 +457,7 @@ apple-foundation-models-py/
 apple-foundation-models-py uses a layered architecture for optimal performance:
 
 ```
-Python API (client.py, session.py)
+Python API (session.py, async_session.py)
          ↓
     Cython FFI (_foundationmodels.pyx)
          ↓
@@ -514,7 +490,7 @@ If you get `NotAvailableError`:
 
 1. Ensure you're running macOS 26.0 (Sequoia) or later
 2. Check System Settings → Apple Intelligence → Enable
-3. Wait for models to download (check with `client.get_availability_reason()`)
+3. Wait for models to download (check with `Session.get_availability_reason()`)
 
 ### Import errors
 

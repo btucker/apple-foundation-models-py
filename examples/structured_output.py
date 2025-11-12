@@ -9,7 +9,7 @@ Demonstrates:
 """
 
 import json
-from applefoundationmodels import Client
+from applefoundationmodels import Session
 from utils import check_availability_or_exit
 
 
@@ -18,8 +18,7 @@ def main():
     if not check_availability_or_exit(verbose=False):
         return
 
-    with Client() as client:
-        session = client.create_session()
+    with Session() as session:
 
         # Example 1: Extract person information
         print("Example 1: Person Information Extraction")
@@ -36,13 +35,13 @@ def main():
             "required": ["name", "age", "city"],
         }
 
-        result = session.generate_structured(
+        result = session.generate(
             "Extract person info: Alice is 28 years old, lives in Paris, and works as a software engineer.",
             schema=person_schema,
         )
 
         print("Extracted data:")
-        print(json.dumps(result["object"], indent=2))
+        print(json.dumps(result.parsed, indent=2))
         print()
 
         # Example 2: Extract list of items
@@ -66,13 +65,13 @@ def main():
             },
         }
 
-        result = session.generate_structured(
+        result = session.generate(
             "I need to buy: 2 apples, 1 loaf of bread, 3 bottles of milk, and 1 box of eggs.",
             schema=shopping_schema,
         )
 
         print("Shopping list:")
-        for item in result["object"]["items"]:
+        for item in result.parsed["items"]:
             print(
                 f"  - {item['quantity']} x {item['name']} ({item.get('category', 'N/A')})"
             )
@@ -102,10 +101,10 @@ def main():
         ]
 
         for text in texts:
-            result = session.generate_structured(
+            result = session.generate(
                 f"Analyze sentiment of: {text}", schema=sentiment_schema
             )
-            data = result["object"]
+            data = result.parsed
             print(f"Text: {text}")
             print(
                 f"  Sentiment: {data['sentiment']} ({data['confidence']:.2f} confidence)"

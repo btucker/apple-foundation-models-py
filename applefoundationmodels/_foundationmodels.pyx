@@ -133,35 +133,6 @@ def is_ready() -> bool:
 
 
 # ============================================================================
-# Language support (stub for compatibility)
-# ============================================================================
-
-def get_supported_languages_count() -> int:
-    """
-    Get the number of languages supported by Apple Intelligence.
-
-    Returns:
-        Number of supported languages (stub returns 1)
-    """
-    return 1  # Stub
-
-
-def get_supported_language(int index) -> Optional[str]:
-    """
-    Get the display name of a supported language by index.
-
-    Args:
-        index: Zero-based language index
-
-    Returns:
-        Localized language display name, or None if index is invalid
-    """
-    if index == 0:
-        return "English"
-    return None
-
-
-# ============================================================================
 # Session management
 # ============================================================================
 
@@ -173,7 +144,7 @@ def create_session(config: Optional[Dict[str, Any]] = None) -> int:
         config: Optional configuration dictionary with 'instructions' key
 
     Returns:
-        Session ID (always 0 in simplified API)
+        Session ID (always 0 for single global session)
 
     Raises:
         InitializationError: If session creation fails
@@ -191,7 +162,7 @@ def create_session(config: Optional[Dict[str, Any]] = None) -> int:
         result = apple_ai_create_session(config_json)
 
     _check_result(result)
-    return 0  # Simplified API uses single global session
+    return 0  # Always returns 0 for single global session
 
 
 # ============================================================================
@@ -523,7 +494,7 @@ def generate_stream(
     cdef double temp_c = temperature
     cdef int32_t tokens_c = max_tokens
 
-    # Store callback globally (simplified for single-threaded use)
+    # Store callback globally for single-threaded use
     _current_stream_callback = callback
 
     try:
@@ -570,56 +541,3 @@ def clear_history() -> None:
     with nogil:
         apple_ai_clear_history()
 
-
-def add_message(role: str, content: str) -> None:
-    """
-    Add a message to conversation history.
-
-    Args:
-        role: Message role ('user', 'assistant', 'system')
-        content: Message content
-
-    Note: This is a stub for API compatibility. Use generate() instead.
-    """
-    # The Swift implementation doesn't support manual message addition
-    # This is a stub for API compatibility
-    pass
-
-
-# ============================================================================
-# Statistics
-# ============================================================================
-
-def get_stats() -> Dict[str, Any]:
-    """
-    Get usage statistics.
-
-    Returns:
-        Dictionary with statistics (stub implementation)
-    """
-    cdef char *stats_json
-
-    with nogil:
-        stats_json = apple_ai_get_stats()
-
-    if stats_json == NULL:
-        return {
-            "total_requests": 0,
-            "successful_requests": 0,
-            "failed_requests": 0,
-            "total_tokens_generated": 0,
-            "average_response_time": 0.0,
-            "total_processing_time": 0.0
-        }
-
-    try:
-        stats_str = _decode_string(stats_json)
-        return json.loads(stats_str)
-    finally:
-        apple_ai_free_string(stats_json)
-
-
-def reset_stats() -> None:
-    """Reset usage statistics."""
-    with nogil:
-        apple_ai_reset_stats()

@@ -1,29 +1,27 @@
 #!/usr/bin/env python3
 """
-Basic chat example.
+Basic async chat example.
 
 Demonstrates:
-- Creating a session
-- Synchronous text generation
-- Conversation history
-- Error handling
+- Creating an async session
+- Async text generation without streaming
+- Conversation history in async context
+- Error handling with async/await
 """
 
-from applefoundationmodels import Session, NotAvailableError
+import asyncio
+from applefoundationmodels import AsyncSession, NotAvailableError
 from utils import check_availability_or_exit, handle_example_error
 
 
-def main():
+async def main():
     try:
         # Check availability
         if not check_availability_or_exit():
             return
 
-        print(f"Version: {Session.get_version()}")
-        print()
-
-        # Create a session with instructions
-        with Session(
+        # Create an async session with instructions
+        async with AsyncSession(
             instructions="You are a helpful assistant. Be concise."
         ) as session:
             # Have a conversation
@@ -36,8 +34,8 @@ def main():
             for question in questions:
                 print(f"User: {question}")
 
-                # Generate response
-                response = session.generate(question, temperature=0.7)
+                # Generate response using await (not streaming)
+                response = await session.generate(question, temperature=0.7)
 
                 print(f"Assistant: {response.text}")
                 print()
@@ -46,7 +44,7 @@ def main():
             print("=" * 60)
             print("Conversation History:")
             print("=" * 60)
-            history = session.get_history()
+            history = await session.get_history()
             for msg in history:
                 role = msg["role"].capitalize()
                 content = msg["content"]
@@ -60,4 +58,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

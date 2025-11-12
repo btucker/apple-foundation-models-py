@@ -7,8 +7,22 @@ interaction with the library.
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TypedDict, Optional, Callable, Any
+from typing import (
+    TypedDict,
+    Optional,
+    Callable,
+    Any,
+    Union,
+    Dict,
+    List,
+    Type,
+    TYPE_CHECKING,
+    cast,
+)
 from typing_extensions import NotRequired
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 
 class Result(IntEnum):
@@ -59,15 +73,9 @@ class SessionConfig(TypedDict, total=False):
 
     Attributes:
         instructions: Optional system instructions to guide AI behavior
-        tools_json: Optional JSON array of tool definitions in Claude format
-        enable_guardrails: Whether to enable content safety filtering (default: True)
-        prewarm: Whether to preload session resources for faster first response (default: False)
     """
 
     instructions: NotRequired[Optional[str]]
-    tools_json: NotRequired[Optional[str]]
-    enable_guardrails: NotRequired[bool]
-    prewarm: NotRequired[bool]
 
 
 class GenerationParams(TypedDict, total=False):
@@ -91,66 +99,175 @@ class GenerationParams(TypedDict, total=False):
 
 
 @dataclass
-class NormalizedGenerationParams:
+class Function:
     """
-    Normalized generation parameters with defaults applied.
+    Function call information from a tool call.
 
-    This dataclass ensures all generation parameters have concrete values,
-    making it easier to pass to FFI functions without None checks.
+    Represents the function that was called, including its name and arguments.
+    Follows OpenAI's pattern for tool call representation.
 
     Attributes:
-        temperature: Generation randomness (0.0-2.0)
-        max_tokens: Maximum response tokens
+        name: The name of the function that was called
+        arguments: JSON string containing the function arguments
+
+    Example:
+        >>> func = Function(name="get_weather", arguments='{"location": "Paris"}')
+        >>> print(func.name)
+        get_weather
     """
 
-    temperature: float
-    max_tokens: int
+    name: str
+    arguments: str  # JSON string of arguments
 
-    @classmethod
-    def from_optional(
-        cls,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-    ) -> "NormalizedGenerationParams":
+
+@dataclass
+class ToolCall:
+    """
+    A tool call made during generation.
+
+    Represents a single tool/function call that occurred during text generation.
+    Follows OpenAI's pattern where tool calls are exposed directly on the response.
+
+    Attributes:
+        id: Unique identifier for this tool call
+        type: Type of tool call (currently only "function" is supported)
+        function: The function call details (name and arguments)
+
+    Example:
+        >>> tool_call = ToolCall(
+        ...     id="call_123",
+        ...     type="function",
+        ...     function=Function(name="get_weather", arguments='{"location": "Paris"}')
+        ... )
+        >>> print(tool_call.function.name)
+        get_weather
+    """
+
+    id: str
+    type: str  # "function" - matches OpenAI's pattern
+    function: Function
+
+
+@dataclass
+class GenerationResponse:
+    """
+    Response from non-streaming generation.
+
+    Provides a unified interface for both text and structured generation results.
+    Use the .text property for text responses and .parsed for structured outputs.
+
+    Attributes:
+        content: The generated content (str for text, dict for structured)
+        is_structured: True if response is structured JSON, False for text
+        tool_calls: List of tool calls made during generation (None if no tools called)
+        finish_reason: Reason generation stopped ("stop", "tool_calls", "length", etc.)
+        metadata: Optional metadata about the generation
+
+    Example (text):
+        >>> response = session.generate("Hello")
+        >>> print(response.text)
+
+    Example (structured):
+        >>> response = session.generate("Extract name and age", schema={...})
+        >>> data = response.parsed
+        >>> person = Person(**data)  # Parse into Pydantic model
+
+    Example (tool calls):
+        >>> response = session.generate("What's the weather in Paris?")
+        >>> if response.tool_calls:
+        ...     for tool_call in response.tool_calls:
+        ...         print(f"Called {tool_call.function.name}")
+    """
+
+    content: Union[str, Dict[str, Any]]
+    is_structured: bool
+    tool_calls: Optional[List[ToolCall]] = None
+    finish_reason: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+    @property
+    def text(self) -> str:
         """
-        Create normalized params from optional values.
-
-        Args:
-            temperature: Optional temperature override
-            max_tokens: Optional max_tokens override
+        Get response as text.
 
         Returns:
-            NormalizedGenerationParams with defaults applied
+            The generated text
+
+        Raises:
+            ValueError: If response is structured (use .parsed instead)
         """
-        from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
+        if self.is_structured:
+            raise ValueError(
+                "Response is structured output. Use .parsed property instead of .text"
+            )
+        return cast(str, self.content)
 
-        return cls(
-            temperature=temperature if temperature is not None else DEFAULT_TEMPERATURE,
-            max_tokens=max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS,
-        )
+    @property
+    def parsed(self) -> Dict[str, Any]:
+        """
+        Get response as structured data.
+
+        Returns:
+            The parsed JSON dictionary
+
+        Raises:
+            ValueError: If response is text (use .text instead)
+        """
+        if not self.is_structured:
+            raise ValueError(
+                "Response is text output. Use .text property instead of .parsed"
+            )
+        return cast(Dict[str, Any], self.content)
+
+    def parse_as(self, model: "Type[BaseModel]") -> "BaseModel":
+        """
+        Parse structured response into a Pydantic model.
+
+        Args:
+            model: Pydantic BaseModel class to parse into
+
+        Returns:
+            Instantiated Pydantic model
+
+        Raises:
+            ValueError: If response is not structured
+            ImportError: If pydantic is not installed
+
+        Example:
+            >>> from pydantic import BaseModel
+            >>> class Person(BaseModel):
+            ...     name: str
+            ...     age: int
+            >>> response = session.generate("Extract: Alice is 28", schema=Person)
+            >>> person = response.parse_as(Person)
+            >>> print(person.name, person.age)
+        """
+        return model(**self.parsed)
 
 
-class Stats(TypedDict):
+@dataclass
+class StreamChunk:
     """
-    Generation statistics and performance metrics.
+    A chunk from streaming generation.
 
-    Provides insights into the usage and performance of generation operations.
+    Represents a single delta in the streaming response. Multiple chunks
+    combine to form the complete response.
 
     Attributes:
-        total_requests: Total number of generation requests initiated
-        successful_requests: Number of requests that completed successfully
-        failed_requests: Number of requests that failed or were cancelled
-        total_tokens_generated: Total tokens generated across all requests
-        average_response_time: Average response time in seconds
-        total_processing_time: Total processing time in seconds
+        content: The text content delta for this chunk
+        finish_reason: Reason streaming ended (None for intermediate chunks)
+        index: Chunk sequence index (usually 0 for single-stream responses)
+
+    Example:
+        >>> for chunk in session.generate("Tell a story", stream=True):
+        ...     print(chunk.content, end='', flush=True)
+        ...     if chunk.finish_reason:
+        ...         print(f"\\n[Finished: {chunk.finish_reason}]")
     """
 
-    total_requests: int
-    successful_requests: int
-    failed_requests: int
-    total_tokens_generated: int
-    average_response_time: float
-    total_processing_time: float
+    content: str
+    finish_reason: Optional[str] = None
+    index: int = 0
 
 
 # Callback type aliases

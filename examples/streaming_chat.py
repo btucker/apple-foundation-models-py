@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Async streaming chat example using libai-py.
+Async streaming chat example.
 
 Demonstrates:
 - Async streaming with async/await
@@ -9,8 +9,8 @@ Demonstrates:
 """
 
 import asyncio
-from applefoundationmodels import Client
-from utils import check_availability_or_exit, print_stats
+from applefoundationmodels import AsyncSession
+from utils import check_availability_or_exit
 
 
 async def stream_question(session, question: str):
@@ -19,8 +19,8 @@ async def stream_question(session, question: str):
     print("Assistant: ", end="", flush=True)
 
     # Stream response chunks
-    async for chunk in session.generate_stream(question, temperature=0.8):
-        print(chunk, end="", flush=True)
+    async for chunk in session.generate(question, temperature=0.8, stream=True):
+        print(chunk.content, end="", flush=True)
 
     print()  # Newline after stream completes
 
@@ -30,12 +30,10 @@ async def main():
     if not check_availability_or_exit(verbose=False):
         return
 
-    # Create client and session
-    with Client() as client:
-        session = client.create_session(
-            instructions="You are a creative storyteller. Write engaging narratives."
-        )
-
+    # Create async session
+    async with AsyncSession(
+        instructions="You are a creative storyteller. Write engaging narratives."
+    ) as session:
         # Stream multiple questions
         questions = [
             "Tell me a short story about a brave robot.",
@@ -47,9 +45,6 @@ async def main():
             await stream_question(session, question)
             # Small delay between questions
             await asyncio.sleep(0.5)
-
-        # Show final statistics
-        print_stats(client, verbose=False)
 
 
 if __name__ == "__main__":
