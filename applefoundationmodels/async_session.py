@@ -23,7 +23,6 @@ from typing import (
 from typing_extensions import Literal
 import threading
 
-from . import _foundationmodels
 from .base_session import BaseSession
 from .base import AsyncContextManagedResource
 from .types import (
@@ -37,9 +36,17 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+def _get_foundationmodels():
+    """Lazy import helper to avoid circular imports."""
+    from . import _foundationmodels
+
+    return _foundationmodels
+
+
 # Register streaming function as direct-call (should not be wrapped in to_thread)
-# This must be done at module level after _foundationmodels is imported
-BaseSession._DIRECT_CALL_FUNCS.add(_foundationmodels.generate_stream)
+# This registration is deferred via the lazy import helper
+BaseSession._DIRECT_CALL_FUNCS.add(_get_foundationmodels().generate_stream)
 
 
 class AsyncSession(BaseSession, AsyncContextManagedResource):
@@ -235,7 +242,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         async with self._async_generation_context() as start_length:
             # Run sync FFI call in thread pool
             text = await asyncio.to_thread(
-                _foundationmodels.generate,
+                _get_foundationmodels().generate,
                 prompt,
                 temperature,
                 max_tokens,
@@ -254,7 +261,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             json_schema = normalize_schema(schema)
             # Run sync FFI call in thread pool
             result = await asyncio.to_thread(
-                _foundationmodels.generate_structured,
+                _get_foundationmodels().generate_structured,
                 prompt,
                 json_schema,
                 temperature,
@@ -294,7 +301,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             ...     print(f"{msg['role']}: {msg['content']}")
         """
         self._check_closed()
-        return await asyncio.to_thread(_foundationmodels.get_history)
+        return await asyncio.to_thread(_get_foundationmodels().get_history)
 
     async def clear_history(self) -> None:
         """
@@ -303,7 +310,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         Removes all messages from the session while keeping the session active.
         """
         self._check_closed()
-        await asyncio.to_thread(_foundationmodels.clear_history)
+        await asyncio.to_thread(_get_foundationmodels().clear_history)
         # Reset to current transcript length (may include persistent instructions)
         self._last_transcript_length = len(self.transcript)
 
