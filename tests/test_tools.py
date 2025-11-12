@@ -75,7 +75,7 @@ class ToolTestHarness:
 
 
 @pytest.fixture
-def session():
+def session(check_availability):
     """Create a session for testing."""
     with Session(
         instructions="You are a helpful assistant. Use the provided tools when needed."
@@ -463,7 +463,7 @@ class TestTranscript:
 class TestToolIntegration:
     """Integration tests requiring Apple Intelligence."""
 
-    def test_end_to_end_tool_calling(self):
+    def test_end_to_end_tool_calling(self, check_availability):
         """Full end-to-end test of tool calling."""
         results = {}
 
@@ -481,7 +481,7 @@ class TestToolIntegration:
             assert results.get("called")
             assert "4" in response.text
 
-    def test_large_tool_output(self):
+    def test_large_tool_output(self, check_availability):
         """Test that tools can return outputs larger than the initial 16KB buffer."""
         called = {}
 
