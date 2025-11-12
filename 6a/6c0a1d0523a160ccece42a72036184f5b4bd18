@@ -1,0 +1,3 @@
+- In applefoundationmodels/async_session.py around line 25, the module-level
+- in the github ci environment is it possible to enable apple intelligence so we
+  can run the tests?
