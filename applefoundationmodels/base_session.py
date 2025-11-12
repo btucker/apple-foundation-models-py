@@ -8,9 +8,19 @@ import threading
 import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, asynccontextmanager
-from typing import Optional, Dict, Any, Callable, List, Union, cast, Generator
+from typing import (
+    Optional,
+    Dict,
+    Any,
+    Callable,
+    List,
+    Union,
+    cast,
+    Generator,
+    AsyncGenerator,
+    ClassVar,
+)
 
-from . import _foundationmodels
 from .base import ContextManagedResource
 from .types import (
     GenerationResponse,
@@ -33,7 +43,7 @@ class BaseSession(ContextManagedResource, ABC):
 
     # Functions that should not be wrapped in asyncio.to_thread by AsyncSession
     # These are typically callback-based functions that manage their own threading
-    _DIRECT_CALL_FUNCS: set = set()
+    _DIRECT_CALL_FUNCS: ClassVar[set[Callable]] = set()
 
     def __init__(self, session_id: int, config: Optional[Dict[str, Any]] = None):
         """
@@ -139,7 +149,7 @@ class BaseSession(ContextManagedResource, ABC):
             raise
 
     @asynccontextmanager
-    async def _async_generation_context(self) -> Generator[int, None, None]:
+    async def _async_generation_context(self) -> AsyncGenerator[int, None]:
         """
         Context manager for asynchronous generation calls.
 
@@ -230,6 +240,7 @@ class BaseSession(ContextManagedResource, ABC):
             This is a generator that yields chunks synchronously. AsyncSession
             wraps this in an async generator.
         """
+        from . import _foundationmodels
 
         # Run streaming in a background thread
         def run_stream():
@@ -385,6 +396,8 @@ class BaseSession(ContextManagedResource, ABC):
             >>> for entry in transcript:
             ...     print(f"{entry['type']}: {entry.get('content', '')}")
         """
+        from . import _foundationmodels
+
         self._check_closed()
         # Explicit cast to ensure type checkers see the correct return type
         return cast(List[Dict[str, Any]], _foundationmodels.get_transcript())

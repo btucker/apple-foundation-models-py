@@ -99,6 +99,15 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
                 time.sleep(0.01)  # Small sleep to avoid busy-waiting
                 continue
 
+    def close(self) -> None:
+        """
+        Close the session and cleanup resources synchronously.
+
+        Delegates to the AsyncContextManagedResource.close() implementation
+        which handles async context detection and cleanup.
+        """
+        super().close()
+
     async def aclose(self) -> None:
         """
         Close the session and cleanup resources asynchronously.

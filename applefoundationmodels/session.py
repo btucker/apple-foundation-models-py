@@ -25,7 +25,6 @@ from typing_extensions import Literal
 from queue import Queue, Empty
 import threading
 
-from . import _foundationmodels
 from .base_session import BaseSession
 from .types import (
     GenerationResponse,
@@ -186,6 +185,8 @@ class Session(BaseSession):
         self, prompt: str, temperature: float, max_tokens: int
     ) -> GenerationResponse:
         """Internal implementation for text generation."""
+        from . import _foundationmodels
+
         with self._generation_context() as start_length:
             text = _foundationmodels.generate(prompt, temperature, max_tokens)
             return self._build_generation_response(text, False, start_length)
@@ -198,6 +199,8 @@ class Session(BaseSession):
         max_tokens: int,
     ) -> GenerationResponse:
         """Internal implementation for structured generation."""
+        from . import _foundationmodels
+
         with self._generation_context() as start_length:
             json_schema = normalize_schema(schema)
             result = _foundationmodels.generate_structured(
@@ -234,6 +237,8 @@ class Session(BaseSession):
             >>> for msg in history:
             ...     print(f"{msg['role']}: {msg['content']}")
         """
+        from . import _foundationmodels
+
         self._check_closed()
         return _foundationmodels.get_history()
 
@@ -243,6 +248,8 @@ class Session(BaseSession):
 
         Removes all messages from the session while keeping the session active.
         """
+        from . import _foundationmodels
+
         self._check_closed()
         _foundationmodels.clear_history()
         # Reset to current transcript length (may include persistent instructions)

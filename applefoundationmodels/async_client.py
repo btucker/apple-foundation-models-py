@@ -5,7 +5,7 @@ Provides async/await interface following OpenAI's AsyncClient pattern.
 """
 
 import asyncio
-from typing import Optional, List, Callable, Type, cast, TYPE_CHECKING
+from typing import Optional, List, Callable, Type, cast, TYPE_CHECKING, Iterable
 
 from .base_client import BaseClient
 from .base import AsyncContextManagedResource
@@ -55,6 +55,15 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
 
         return AsyncSession
 
+    def close(self) -> None:
+        """
+        Close the client and cleanup all resources synchronously.
+
+        Delegates to the AsyncContextManagedResource.close() implementation
+        which handles async context detection and cleanup.
+        """
+        super().close()
+
     async def aclose(self) -> None:
         """
         Close the client and cleanup all resources asynchronously.
@@ -67,7 +76,9 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
             >>> # ... use client ...
             >>> await client.aclose()
         """
-        for session in self._sessions:
+        # Cast to AsyncSession since AsyncClient only creates AsyncSession instances
+        sessions = cast(Iterable["AsyncSession"], self._sessions)
+        for session in sessions:
             await session.aclose()
         self._sessions.clear()
 
