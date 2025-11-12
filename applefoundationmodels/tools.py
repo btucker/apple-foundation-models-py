@@ -19,15 +19,13 @@ from typing import (
 from .exceptions import ToolCallError
 
 
-# Type mapping tables for efficient schema generation
-_BASIC_TYPE_MAP = {
+# Type mapping for efficient schema generation
+# Maps Python types and their string names to JSON schema types
+_TYPE_MAP = {
     str: "string",
     int: "integer",
     float: "number",
     bool: "boolean",
-}
-
-_STRING_TYPE_MAP = {
     "str": "string",
     "int": "integer",
     "float": "number",
@@ -128,13 +126,9 @@ def python_type_to_json_schema(python_type: Any) -> Dict[str, Any]:
         inner_type = unwrap_optional(python_type)
         return python_type_to_json_schema(inner_type)
 
-    # Check basic types via lookup table
-    if python_type in _BASIC_TYPE_MAP:
-        return {"type": _BASIC_TYPE_MAP[python_type]}
-
-    # Check string type annotations
-    if isinstance(python_type, str) and python_type in _STRING_TYPE_MAP:
-        return {"type": _STRING_TYPE_MAP[python_type]}
+    # Check basic types and string annotations via unified lookup table
+    if python_type in _TYPE_MAP:
+        return {"type": _TYPE_MAP[python_type]}
 
     # Get origin for generic types
     origin = get_origin(python_type)
@@ -252,12 +246,8 @@ def register_tool_for_function(func: Callable) -> Dict[str, Any]:
     """
     schema = extract_function_schema(func)
 
-    # Attach metadata to function for FFI access
-    func._tool_name = schema["name"]  # type: ignore[attr-defined]
-    func._tool_description = schema["description"]  # type: ignore[attr-defined]
-    func._tool_parameters = schema["parameters"]  # type: ignore[attr-defined]
-
-    return schema
+    # Use shared helper to attach metadata
+    return attach_tool_metadata(func, schema)
 
 
 def attach_tool_metadata(

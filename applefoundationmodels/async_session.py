@@ -5,14 +5,12 @@ Provides async session management, text generation, and async streaming support.
 """
 
 import asyncio
-import time
 import logging
 from typing import (
     Optional,
     Dict,
     Any,
     AsyncIterator,
-    Callable,
     Union,
     TYPE_CHECKING,
     overload,
@@ -21,7 +19,7 @@ from typing import (
 )
 from typing_extensions import Literal
 
-from .base_session import BaseSession
+from .base_session import BaseSession, StreamQueueItem
 from .base import AsyncContextManagedResource
 from .types import (
     GenerationResponse,
@@ -69,30 +67,27 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         """Execute FFI call asynchronously via a worker thread."""
         return await asyncio.to_thread(func, *args, **kwargs)
 
-    def _create_stream_queue(self) -> asyncio.Queue:
-        """Create an async queue for streaming."""
-        return asyncio.Queue()
+    def _create_stream_queue_adapter(self) -> BaseSession._StreamQueueAdapter:
+        """Return the async-aware queue adapter used for streaming."""
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[StreamQueueItem] = asyncio.Queue()
 
-    def _create_stream_callback(
-        self, queue: asyncio.Queue
-    ) -> Callable[[Optional[str]], None]:
-        """Create a callback that puts chunks into the async queue from background thread."""
-        loop = asyncio.get_event_loop()
-        return lambda chunk: asyncio.run_coroutine_threadsafe(queue.put(chunk), loop)
+        def push(item: StreamQueueItem) -> None:
+            asyncio.run_coroutine_threadsafe(queue.put(item), loop)
 
-    def _get_from_stream_queue(self, queue: asyncio.Queue) -> Optional[str]:
-        """
-        Get item from async queue synchronously by polling.
+        async def get_async() -> StreamQueueItem:
+            return await queue.get()
 
-        Note: This is called from the sync generator _stream_chunks_impl.
-        We poll the async queue using get_nowait() to make it work in a sync context.
-        """
-        while True:
-            try:
-                return queue.get_nowait()
-            except asyncio.QueueEmpty:
-                time.sleep(0.01)  # Small sleep to avoid busy-waiting
-                continue
+        def get_sync() -> StreamQueueItem:
+            raise RuntimeError(
+                "Synchronous queue access is not supported for AsyncSession"
+            )
+
+        return BaseSession._StreamQueueAdapter(
+            push=push,
+            get_sync=get_sync,
+            get_async=get_async,
+        )
 
     async def close(self) -> None:
         """
@@ -195,21 +190,16 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
                 >>> async for chunk in session.generate("Tell a story", stream=True):
                 ...     print(chunk.content, end='', flush=True)
         """
-        self._check_closed()
-        self._validate_generate_params(stream, schema)
+        plan = self._plan_generate_call(stream, schema, temperature, max_tokens)
 
-        # Apply defaults to parameters
-        temp, max_tok = self._apply_defaults(temperature, max_tokens)
+        if plan.mode == "stream":
+            return self._generate_stream_impl(prompt, plan.temperature, plan.max_tokens)
+        if plan.mode == "structured" and schema is not None:
+            return self._generate_structured_impl(
+                prompt, schema, plan.temperature, plan.max_tokens
+            )
 
-        if stream:
-            # Return async iterator directly (no await needed - caller uses async for)
-            return self._generate_stream_impl(prompt, temp, max_tok)
-        elif schema is not None:
-            # Structured generation mode - return coroutine (caller will await)
-            return self._generate_structured_impl(prompt, schema, temp, max_tok)
-        else:
-            # Text generation mode - return coroutine (caller will await)
-            return self._generate_text_impl(prompt, temp, max_tok)
+        return self._generate_text_impl(prompt, plan.temperature, plan.max_tokens)
 
     async def _generate_text_impl(
         self, prompt: str, temperature: float, max_tokens: int
@@ -248,75 +238,14 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
     ) -> AsyncIterator[StreamChunk]:
         """Internal implementation for async streaming generation."""
         start_length = self._begin_generation()
-
-        # Create an asyncio.Queue for inter-thread communication
-        output_queue: asyncio.Queue = asyncio.Queue()
-        loop = asyncio.get_event_loop()
-
-        # Create the queue and callback in the main thread (where event loop exists)
-        inner_queue = self._create_stream_queue()
-        callback = lambda chunk: asyncio.run_coroutine_threadsafe(
-            inner_queue.put(chunk), loop
-        )
-
-        # Sentinel value to signal end of stream
-        _DONE = object()
-
-        def run_generator_in_thread():
-            """Run the sync generator in a background thread and push chunks to async queue."""
-            try:
-                # Iterate over the sync generator and push chunks to the async queue
-                for chunk in self._stream_chunks_impl(
-                    prompt, temperature, max_tokens, inner_queue, callback
-                ):
-                    # Push chunk to async queue from background thread
-                    asyncio.run_coroutine_threadsafe(
-                        output_queue.put(chunk), loop
-                    ).result()
-
-                # Signal completion
-                asyncio.run_coroutine_threadsafe(output_queue.put(_DONE), loop).result()
-            except Exception as e:
-                # Forward exceptions to the async queue
-                asyncio.run_coroutine_threadsafe(output_queue.put(e), loop).result()
-
-        # Spawn the generator in a background thread
-        import concurrent.futures
-
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        future = executor.submit(run_generator_in_thread)
-
+        adapter = self._create_stream_queue_adapter()
         try:
-            # Yield chunks from the async queue (non-blocking, event-loop friendly)
-            while True:
-                item = await output_queue.get()
-
-                # Check for end of stream sentinel
-                if item is _DONE:
-                    break
-
-                # Check for exceptions
-                if isinstance(item, Exception):
-                    raise item
-
-                # Yield the chunk
-                yield item
+            async for chunk in self._stream_chunks_async_impl(
+                prompt, temperature, max_tokens, adapter
+            ):
+                yield chunk
         finally:
-            # Cleanup: ensure the background thread completes
-            try:
-                # Wait for the background task to complete (with timeout)
-                future.result(timeout=5.0)
-            except concurrent.futures.TimeoutError:
-                logger.warning(
-                    "Background streaming task did not complete within 5 seconds. "
-                    "Task will be cleaned up by the executor."
-                )
-            except Exception as e:
-                logger.error(f"Error during streaming cleanup: {e}")
-            finally:
-                # Shutdown the executor
-                executor.shutdown(wait=False)
-                self._end_generation(start_length)
+            self._end_generation(start_length)
 
     async def get_history(self) -> list:
         """

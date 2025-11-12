@@ -4,11 +4,13 @@ Base Session implementation for applefoundationmodels Python bindings.
 Provides shared logic for both sync and async sessions.
 """
 
+import asyncio
 import platform
 import threading
 import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, asynccontextmanager
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import (
     Optional,
@@ -20,7 +22,9 @@ from typing import (
     cast,
     Generator,
     AsyncGenerator,
+    Awaitable,
     ClassVar,
+    Literal,
 )
 
 from .base import ContextManagedResource
@@ -35,6 +39,8 @@ from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
 from .exceptions import NotAvailableError
 
 logger = logging.getLogger(__name__)
+
+StreamQueueItem = Union[str, None, Exception]
 
 
 @lru_cache(maxsize=1)
@@ -55,6 +61,18 @@ class BaseSession(ContextManagedResource, ABC):
 
     # Class-level flag to track if library has been initialized
     _initialized: ClassVar[bool] = False
+
+    @dataclass
+    class _GenerationPlan:
+        mode: Literal["stream", "structured", "text"]
+        temperature: float
+        max_tokens: int
+
+    @dataclass
+    class _StreamQueueAdapter:
+        push: Callable[[StreamQueueItem], None]
+        get_sync: Callable[[], StreamQueueItem]
+        get_async: Optional[Callable[[], Awaitable[StreamQueueItem]]] = None
 
     def __init__(
         self,
@@ -131,6 +149,31 @@ class BaseSession(ContextManagedResource, ABC):
             max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS,
         )
 
+    def _plan_generate_call(
+        self,
+        stream: bool,
+        schema: Optional[Union[Dict[str, Any], type]],
+        temperature: Optional[float],
+        max_tokens: Optional[int],
+    ) -> "BaseSession._GenerationPlan":
+        """Return normalized plan shared by Session and AsyncSession generate()."""
+        self._check_closed()
+        self._validate_generate_params(stream, schema)
+        temp, max_tok = self._apply_defaults(temperature, max_tokens)
+
+        if stream:
+            mode: Literal["stream", "structured", "text"] = "stream"
+        elif schema is not None:
+            mode = "structured"
+        else:
+            mode = "text"
+
+        return BaseSession._GenerationPlan(
+            mode=mode,
+            temperature=temp,
+            max_tokens=max_tok,
+        )
+
     def _begin_generation(self) -> int:
         """
         Mark the beginning of a generation call.
@@ -200,42 +243,8 @@ class BaseSession(ContextManagedResource, ABC):
             raise
 
     @abstractmethod
-    def _create_stream_queue(self) -> Any:
-        """
-        Create a queue for streaming coordination.
-
-        Returns:
-            Queue instance (Queue for sync, asyncio.Queue for async)
-        """
-        pass
-
-    @abstractmethod
-    def _create_stream_callback(self, queue: Any) -> Callable[[Optional[str]], None]:
-        """
-        Create a callback function for streaming that puts chunks in the queue.
-
-        Args:
-            queue: The queue to put chunks into
-
-        Returns:
-            Callback function that accepts optional string chunks
-        """
-        pass
-
-    @abstractmethod
-    def _get_from_stream_queue(self, queue: Any) -> Optional[str]:
-        """
-        Get an item from the streaming queue.
-
-        For sync sessions: polls with timeout
-        For async sessions: awaits the queue
-
-        Args:
-            queue: The queue to get from
-
-        Returns:
-            The chunk from the queue, None for end of stream, or Exception
-        """
+    def _create_stream_queue_adapter(self) -> "BaseSession._StreamQueueAdapter":
+        """Create a stream queue adapter for the current session implementation."""
         pass
 
     def _stream_chunks_impl(
@@ -243,84 +252,123 @@ class BaseSession(ContextManagedResource, ABC):
         prompt: str,
         temperature: float,
         max_tokens: int,
-        queue: Any,
-        callback: Callable,
+        adapter: "BaseSession._StreamQueueAdapter",
     ) -> Generator[StreamChunk, None, None]:
-        """
-        Shared streaming implementation for both sync and async sessions.
+        """Shared synchronous streaming implementation."""
+        thread = self._start_stream_thread(prompt, temperature, max_tokens, adapter)
+        try:
+            yield from self._drain_stream_queue_sync(adapter)
+        finally:
+            self._wait_for_stream_thread(thread)
 
-        This method contains all the common streaming logic. Subclasses provide
-        queue creation and access through abstract methods.
+    async def _stream_chunks_async_impl(
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        adapter: "BaseSession._StreamQueueAdapter",
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Shared asynchronous streaming implementation."""
+        if adapter.get_async is None:
+            raise RuntimeError("Async streaming requires an adapter with async support")
 
-        Args:
-            prompt: The text prompt
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens to generate
-            queue: The queue instance (created by _create_stream_queue)
-            callback: The callback function (created by _create_stream_callback)
+        thread = self._start_stream_thread(prompt, temperature, max_tokens, adapter)
+        try:
+            async for chunk in self._drain_stream_queue_async(adapter.get_async):
+                yield chunk
+        finally:
+            await self._await_stream_thread(thread)
 
-        Yields:
-            StreamChunk objects with content deltas
+    def _start_stream_thread(
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        adapter: "BaseSession._StreamQueueAdapter",
+    ) -> threading.Thread:
+        """Start background thread that drives the FFI stream."""
 
-        Note:
-            This is a generator that yields chunks synchronously. AsyncSession
-            wraps this in an async generator.
-        """
-
-        # Run streaming in a background thread
-        def run_stream():
+        def run_stream() -> None:
             try:
-                self._ffi.generate_stream(prompt, callback, temperature, max_tokens)
-            except Exception as e:
-                # Put exception in queue - subclass handles queue put
+                self._ffi.generate_stream(prompt, adapter.push, temperature, max_tokens)
+            except Exception as exc:  # pragma: no cover - defensive
                 try:
-                    # For sync: direct put, for async: needs run_coroutine_threadsafe
-                    # We'll just put it directly and let the exception propagate
-                    if hasattr(queue, "put_nowait"):
-                        # asyncio.Queue
-                        queue.put_nowait(e)
-                    else:
-                        # queue.Queue
-                        queue.put(e)
-                except Exception:
-                    # If we can't put the exception, log it
+                    adapter.push(exc)
+                except Exception:  # pragma: no cover - defensive
                     logger.error(
-                        f"Failed to put exception in queue: {e}", exc_info=True
+                        "Failed to propagate streaming exception", exc_info=True
                     )
 
         thread = threading.Thread(target=run_stream, daemon=True)
         thread.start()
+        return thread
 
-        # Yield StreamChunk objects
+    def _drain_stream_queue_sync(
+        self, adapter: "BaseSession._StreamQueueAdapter"
+    ) -> Generator[StreamChunk, None, None]:
+        """Yield chunks synchronously from the adapter."""
         chunk_index = 0
         while True:
-            item = self._get_from_stream_queue(queue)
-
-            if isinstance(item, Exception):
-                raise item
-
-            if item is None:  # End of stream
-                # Yield final chunk with finish_reason
-                yield StreamChunk(content="", finish_reason="stop", index=chunk_index)
+            item = adapter.get_sync()
+            chunk, done = self._convert_stream_item(item, chunk_index)
+            yield chunk
+            if done:
                 break
-
-            # Yield chunk with content
-            yield StreamChunk(content=item, finish_reason=None, index=chunk_index)
             chunk_index += 1
 
-        # Wait for streaming thread to complete cleanup
-        # By this point we've received the None sentinel, so the stream is done
-        # and the thread should finish quickly. We wait up to 5 seconds for
-        # clean shutdown.
-        thread.join(timeout=5.0)
+    async def _drain_stream_queue_async(
+        self, get_next: Callable[[], Awaitable[StreamQueueItem]]
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Yield chunks asynchronously using the provided getter."""
+        chunk_index = 0
+        while True:
+            item = await get_next()
+            chunk, done = self._convert_stream_item(item, chunk_index)
+            yield chunk
+            if done:
+                break
+            chunk_index += 1
 
+    def _convert_stream_item(
+        self, item: StreamQueueItem, chunk_index: int
+    ) -> tuple[StreamChunk, bool]:
+        """Convert a raw queue item into a StreamChunk plus completion flag."""
+        if isinstance(item, Exception):
+            raise item
+
+        if item is None:
+            return (
+                StreamChunk(content="", finish_reason="stop", index=chunk_index),
+                True,
+            )
+
+        return (
+            StreamChunk(content=item, finish_reason=None, index=chunk_index),
+            False,
+        )
+
+    def _wait_for_stream_thread(
+        self, thread: threading.Thread, timeout: float = 5.0
+    ) -> None:
+        """Wait for the background streaming thread to finish."""
+        thread.join(timeout=timeout)
         if thread.is_alive():
-            # Thread didn't finish in time - this shouldn't normally happen
-            # since we've already received the end-of-stream signal
             logger.warning(
-                "Streaming thread did not complete within 5 seconds after "
-                "stream end. Thread will continue as daemon and be cleaned up "
-                "at process exit."
+                "Streaming thread did not complete within %.1f seconds after stream end."
+                " Thread will be cleaned up as a daemon.",
+                timeout,
+            )
+
+    async def _await_stream_thread(
+        self, thread: threading.Thread, timeout: float = 5.0
+    ) -> None:
+        """Async variant of _wait_for_stream_thread."""
+        await asyncio.to_thread(thread.join, timeout)
+        if thread.is_alive():
+            logger.warning(
+                "Streaming thread did not complete within %.1f seconds after stream end."
+                " Thread will be cleaned up as a daemon.",
+                timeout,
             )
 
     def _extract_tool_calls_from_transcript(

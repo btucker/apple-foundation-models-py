@@ -11,7 +11,6 @@ from typing import (
     Optional,
     Dict,
     Any,
-    AsyncIterator,
     Callable,
     Union,
     TYPE_CHECKING,
@@ -25,7 +24,7 @@ from typing_extensions import Literal
 from queue import Queue, Empty
 import threading
 
-from .base_session import BaseSession
+from .base_session import BaseSession, StreamQueueItem
 from .types import (
     GenerationResponse,
     StreamChunk,
@@ -66,21 +65,21 @@ class Session(BaseSession):
         """Execute FFI call synchronously."""
         return func(*args, **kwargs)
 
-    def _create_stream_queue(self) -> Queue:
-        """Create a synchronous queue for streaming."""
-        return Queue()
+    def _create_stream_queue_adapter(self) -> BaseSession._StreamQueueAdapter:
+        """Return the queue adapter used by synchronous streaming."""
+        queue: Queue[StreamQueueItem] = Queue()
 
-    def _create_stream_callback(self, queue: Queue) -> Callable[[Optional[str]], None]:
-        """Create a callback that puts chunks directly into the sync queue."""
-        return lambda chunk: queue.put(chunk)
+        def push(item: StreamQueueItem) -> None:
+            queue.put(item)
 
-    def _get_from_stream_queue(self, queue: Queue) -> Optional[str]:
-        """Get item from sync queue with polling."""
-        while True:
-            try:
-                return queue.get(timeout=0.1)
-            except Empty:
-                continue
+        def get_sync() -> StreamQueueItem:
+            while True:
+                try:
+                    return queue.get(timeout=0.1)
+                except Empty:
+                    continue
+
+        return BaseSession._StreamQueueAdapter(push=push, get_sync=get_sync)
 
     def close(self) -> None:
         """Close the session and cleanup resources."""
@@ -176,21 +175,19 @@ class Session(BaseSession):
                 >>> for chunk in session.generate("Tell me a story", stream=True):
                 ...     print(chunk.content, end='', flush=True)
         """
-        self._check_closed()
-        self._validate_generate_params(stream, schema)
+        plan = self._plan_generate_call(stream, schema, temperature, max_tokens)
 
-        # Apply defaults to parameters
-        temp, max_tok = self._apply_defaults(temperature, max_tokens)
-
-        if stream:
+        if plan.mode == "stream":
             # Streaming mode: return Iterator[StreamChunk]
-            return self._generate_stream_impl(prompt, temp, max_tok)
-        elif schema is not None:
+            return self._generate_stream_impl(prompt, plan.temperature, plan.max_tokens)
+        if plan.mode == "structured" and schema is not None:
             # Structured generation mode
-            return self._generate_structured_impl(prompt, schema, temp, max_tok)
-        else:
-            # Text generation mode
-            return self._generate_text_impl(prompt, temp, max_tok)
+            return self._generate_structured_impl(
+                prompt, schema, plan.temperature, plan.max_tokens
+            )
+
+        # Text generation mode
+        return self._generate_text_impl(prompt, plan.temperature, plan.max_tokens)
 
     def _generate_text_impl(
         self, prompt: str, temperature: float, max_tokens: int
@@ -229,14 +226,11 @@ class Session(BaseSession):
     ) -> Iterator[StreamChunk]:
         """Internal implementation for streaming generation."""
         start_length = self._begin_generation()
+        adapter = self._create_stream_queue_adapter()
         try:
-            # Create queue and callback using abstract methods
-            queue = self._create_stream_queue()
-            callback = self._create_stream_callback(queue)
-
             # Use shared streaming implementation from base class
             yield from self._stream_chunks_impl(
-                prompt, temperature, max_tokens, queue, callback
+                prompt, temperature, max_tokens, adapter
             )
         finally:
             self._end_generation(start_length)
