@@ -1,0 +1,11 @@
+- add tool calling to the Features in @README.md. and split up "Async Streaming"
+  into two features. one is async, the other is streaming
+- the @README.md shows passing the instructions as part of the generate call,
+  but should it show passing the instructions into Session()?
+- should the AsyncSession example also show using instructions?
+- also, I think we should show an example of using await without stream
+- the readme still seems a bit overly complicated
+- start with 1
+- are all the @examples/ still valid?
+- run each of the examples to ensure they run
+- can we add a basic_async_chat example?
