@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "apple-foundation-models"
-version = "0.2.0"
+version = "0.2.1"
 description = "Python bindings for Apple's FoundationModels framework - on-device AI (requires macOS 26.0+)"
 readme = "README.md"
 license = "MIT"
@@ -67,8 +67,6 @@ universal = false
 dev = [
     "pre-commit>=4.3.0",
 ]
-# Note: Wheels tagged as macosx_11_0 for PyPI compatibility
-# Actual macOS 26+ requirement enforced by runtime checks in Client.__init__()
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
