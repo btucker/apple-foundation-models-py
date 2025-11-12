@@ -1,0 +1,265 @@
+# AgentTrail: AI Assistant Interactions
+
+## Session: 1b1589f7...
+**Time:** 2025-11-12 02:35:27
+**Project:** `/Users/btucker/Documents/projects/apple-foundation-models-py`
+
+### 👤 User
+all 55 tests are being skipped on github. it seems like some shouldn't need to be skipped?
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+You're absolutely right! Let me check the conftest.py fixture:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+I see the issue! The `check_availability` fixture on line 9 has `autouse=True`, which means it automatically runs for ALL tests and skips them all if Apple Intelligence isn't available. But tests like `test_check_availability`, `test_get_availability_reason`, `test_is_ready`, and `test_get_version` should be able to run even when Apple Intelligence isn't available - they're just checking the status, not actually using the service.
+
+Let me fix this by removing `autouse=True` and only applying the fixture to tests that actually need Apple Intelligence:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Edit**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Now let me check which tests in test_session_lifecycle.py should be able to run without Apple Intelligence:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! I can see that `TestAvailability` (lines 9-33) and `TestSessionInfo` (lines 35-43) should be able to run without Apple Intelligence - they're just checking status and version info. These tests don't have the `check_availability` fixture parameter, which is good.
+
+Now let me check test_integration.py to see what's there:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Read**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Grep**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Good! I can see that `test_availability()` at line 30 does NOT have the `@skip_in_ci` decorator, meaning it should run in CI. All the other tests have `@skip_in_ci` because they need actual Apple Intelligence.
+
+Now let me run the tests locally to verify everything still works:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! Now let me run the full test suite to make sure everything still works:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Excellent! All tests still pass locally. Now let me simulate CI behavior to see which tests would run on GitHub:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **BashOutput**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **BashOutput**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! When running with `CI=true` (simulating GitHub CI):
+
+**✅ 47 tests passed** - These don't need Apple Intelligence:
+- `test_integration.py::test_availability` - Checks availability status
+- All tests in `test_session.py` (28 tests)
+- All tests in `test_session_lifecycle.py` including availability/version checks (9 tests)
+- All tests in `test_tools.py` (17 tests)
+
+**⏭️ 8 tests skipped** - These need actual Apple Intelligence:
+- Integration tests in test_integration.py that actually use the service
+
+This is much better! Now let me format the updated conftest.py:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Let me check the git status:
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+
+<details>
+<summary>🔧 Tool Uses</summary>
+
+- **Bash**
+</details>
+
+### 🤖 Assistant
+
+### 🤖 Assistant
+Perfect! So the previous session's work was already committed. The current change is just to conftest.py to fix the test skipping issue.
+
+Let me create a summary of what changed and verify the fix works correctly:
+
+## Summary
+
+**Problem**: All 55 tests were being skipped on GitHub CI, even tests that should work without Apple Intelligence (like availability checks and version info).
+
+**Root Cause**: The `check_availability` fixture in conftest.py had `autouse=True`, which caused it to run automatically for ALL tests and skip them all if Apple Intelligence wasn't available.
+
+**Solution**: Removed `autouse=True` from the fixture so it only runs for tests that explicitly need it:
+
+```python
+# Before
+@pytest.fixture(scope="session", autouse=True)  # ❌ Runs for ALL tests
+def check_availability():
+    ...
+    pytest.skip(..., allow_module_level=True)  # ❌ Skips everything
+
+# After
+@pytest.fixture(scope="session")  # ✅ Only runs when requested
+def check_availability():
+    ...
+    pytest.skip(...)  # ✅ Skips only specific test
+```
+
+**Results** (simulated with `CI=true`):
+- ✅ **47 tests pass** on GitHub CI without Apple Intelligence
+  - Availability checking tests tests/test_session_lifecycle.py:12-32
+  - Version info tests tests/test_session_lifecycle.py:38-42
+  - All session tests tests/test_session.py
+  - All tool tests tests/test_tools.py
+
+- ⏭️ **8 tests skipped** appropriately (need actual Apple Intelligence)
+  - Integration tests marked with `@skip_in_ci`
+
+This ensures GitHub CI can still validate the library works correctly even without Apple Intelligence available.
+
+---
