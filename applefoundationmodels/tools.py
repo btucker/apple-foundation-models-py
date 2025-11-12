@@ -283,39 +283,3 @@ def attach_tool_metadata(
     func._tool_parameters = schema["parameters"]  # type: ignore[attr-defined]
 
     return schema
-
-
-def tool(
-    description: Optional[str] = None,
-    name: Optional[str] = None,
-) -> Callable:
-    """
-    Decorator to mark a function as a tool and attach metadata.
-
-    Args:
-        description: Optional tool description (uses docstring if not provided)
-        name: Optional tool name (uses function name if not provided)
-
-    Returns:
-        Decorated function with tool metadata attached
-
-    Note:
-        Tool output size limits:
-        - Initial buffer: 16KB
-        - Maximum size: 1MB (automatically retried with larger buffers)
-        - Tools returning outputs larger than 1MB will raise an error
-        - For large outputs, consider returning references or summaries
-
-    Example:
-        @tool(description="Get the current weather")
-        def get_weather(location: str) -> str:
-            return f"Weather in {location}: sunny"
-    """
-
-    def decorator(func: Callable) -> Callable:
-        # Extract schema and attach metadata
-        schema = extract_function_schema(func)
-        attach_tool_metadata(func, schema, description, name)
-        return func
-
-    return decorator

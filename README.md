@@ -271,8 +271,6 @@ class Session:
         max_tokens: Optional[int] = None
     ) -> Union[GenerationResponse, Iterator[StreamChunk]]: ...
 
-    def tool(description: str = None, name: str = None) -> Callable: ...
-
     @property
     def transcript() -> List[dict]: ...
     @property
@@ -315,8 +313,6 @@ class AsyncSession:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None
     ) -> Union[Coroutine[GenerationResponse], AsyncIterator[StreamChunk]]: ...
-
-    def tool(description: str = None, name: str = None) -> Callable: ...
 
     @property
     def transcript() -> List[dict]: ...
@@ -392,8 +388,9 @@ All exceptions inherit from `FoundationModelsError`:
 
 See the `examples/` directory for complete working examples:
 
-- `basic_chat.py` - Simple conversation
-- `streaming_chat.py` - Async streaming
+- `basic_chat.py` - Simple synchronous conversation
+- `basic_async_chat.py` - Async conversation with await (no streaming)
+- `streaming_chat.py` - Async streaming responses
 - `structured_output.py` - JSON schema validation
 - `tool_calling_comprehensive.py` - Complete tool calling demonstration with all parameter types
 
