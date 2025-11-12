@@ -55,29 +55,6 @@ class AsyncClient(BaseClient, AsyncContextManagedResource):
 
         return AsyncSession
 
-    def close(self) -> None:
-        """
-        Close the client and cleanup all resources synchronously.
-
-        This method runs the async cleanup on the event loop. For async
-        contexts, prefer using aclose() or the async context manager.
-
-        Note: This satisfies the ContextManagedResource.close() contract
-        inherited from BaseClient.
-        """
-        try:
-            # Check if we're in an async context with a running event loop
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # No running loop, safe to use asyncio.run()
-            asyncio.run(self.aclose())
-        else:
-            # If we get here, there's a running loop - we can't use asyncio.run()
-            # User should call aclose() instead in async contexts
-            raise RuntimeError(
-                "close() called from async context. Use 'await client.aclose()' instead."
-            )
-
     async def aclose(self) -> None:
         """
         Close the client and cleanup all resources asynchronously.

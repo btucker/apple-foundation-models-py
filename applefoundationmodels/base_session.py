@@ -4,8 +4,11 @@ Base Session implementation for applefoundationmodels Python bindings.
 Provides shared logic for both sync and async sessions.
 """
 
+import threading
+import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, Callable, List, Union, cast
+from contextlib import contextmanager, asynccontextmanager
+from typing import Optional, Dict, Any, Callable, List, Union, cast, Generator
 
 from . import _foundationmodels
 from .base import ContextManagedResource
@@ -17,6 +20,8 @@ from .types import (
 )
 from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
 
+logger = logging.getLogger(__name__)
+
 
 class BaseSession(ContextManagedResource, ABC):
     """
@@ -25,6 +30,10 @@ class BaseSession(ContextManagedResource, ABC):
     This class contains all the common functionality between the sync
     and async session implementations to avoid duplication.
     """
+
+    # Functions that should not be wrapped in asyncio.to_thread by AsyncSession
+    # These are typically callback-based functions that manage their own threading
+    _DIRECT_CALL_FUNCS: set = set()
 
     def __init__(self, session_id: int, config: Optional[Dict[str, Any]] = None):
         """
@@ -68,13 +77,23 @@ class BaseSession(ContextManagedResource, ABC):
         if self._closed:
             raise RuntimeError("Session is closed")
 
-    def _get_temperature(self, temperature: Optional[float]) -> float:
-        """Get temperature with default applied."""
-        return temperature if temperature is not None else DEFAULT_TEMPERATURE
+    def _apply_defaults(
+        self, temperature: Optional[float], max_tokens: Optional[int]
+    ) -> tuple[float, int]:
+        """
+        Apply default values to generation parameters.
 
-    def _get_max_tokens(self, max_tokens: Optional[int]) -> int:
-        """Get max_tokens with default applied."""
-        return max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS
+        Args:
+            temperature: Temperature value or None to use default
+            max_tokens: Max tokens value or None to use default
+
+        Returns:
+            Tuple of (temperature, max_tokens) with defaults applied
+        """
+        return (
+            temperature if temperature is not None else DEFAULT_TEMPERATURE,
+            max_tokens if max_tokens is not None else DEFAULT_MAX_TOKENS,
+        )
 
     def _begin_generation(self) -> int:
         """
@@ -93,6 +112,182 @@ class BaseSession(ContextManagedResource, ABC):
             start_length: The transcript length captured at generation start
         """
         self._last_transcript_length = start_length
+
+    @contextmanager
+    def _generation_context(self) -> Generator[int, None, None]:
+        """
+        Context manager for synchronous generation calls.
+
+        Handles:
+        - Marking generation start/end boundaries
+        - Automatic cleanup on exception
+        - Transcript length tracking
+
+        Yields:
+            start_length: Transcript length at generation start
+
+        Example:
+            >>> with self._generation_context() as start_length:
+            ...     text = _foundationmodels.generate(prompt, temp, max_tok)
+            ...     return self._build_generation_response(text, False, start_length)
+        """
+        start_length = self._begin_generation()
+        try:
+            yield start_length
+        except Exception:
+            self._end_generation(start_length)
+            raise
+
+    @asynccontextmanager
+    async def _async_generation_context(self) -> Generator[int, None, None]:
+        """
+        Context manager for asynchronous generation calls.
+
+        Handles:
+        - Marking generation start/end boundaries
+        - Automatic cleanup on exception
+        - Transcript length tracking
+
+        Yields:
+            start_length: Transcript length at generation start
+
+        Example:
+            >>> async with self._async_generation_context() as start_length:
+            ...     text = await asyncio.to_thread(fm.generate, prompt, temp, max_tok)
+            ...     return self._build_generation_response(text, False, start_length)
+        """
+        start_length = self._begin_generation()
+        try:
+            yield start_length
+        except Exception:
+            self._end_generation(start_length)
+            raise
+
+    @abstractmethod
+    def _create_stream_queue(self) -> Any:
+        """
+        Create a queue for streaming coordination.
+
+        Returns:
+            Queue instance (Queue for sync, asyncio.Queue for async)
+        """
+        pass
+
+    @abstractmethod
+    def _create_stream_callback(self, queue: Any) -> Callable[[Optional[str]], None]:
+        """
+        Create a callback function for streaming that puts chunks in the queue.
+
+        Args:
+            queue: The queue to put chunks into
+
+        Returns:
+            Callback function that accepts optional string chunks
+        """
+        pass
+
+    @abstractmethod
+    def _get_from_stream_queue(self, queue: Any) -> Optional[str]:
+        """
+        Get an item from the streaming queue.
+
+        For sync sessions: polls with timeout
+        For async sessions: awaits the queue
+
+        Args:
+            queue: The queue to get from
+
+        Returns:
+            The chunk from the queue, None for end of stream, or Exception
+        """
+        pass
+
+    def _stream_chunks_impl(
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        queue: Any,
+        callback: Callable,
+    ) -> Generator[StreamChunk, None, None]:
+        """
+        Shared streaming implementation for both sync and async sessions.
+
+        This method contains all the common streaming logic. Subclasses provide
+        queue creation and access through abstract methods.
+
+        Args:
+            prompt: The text prompt
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            queue: The queue instance (created by _create_stream_queue)
+            callback: The callback function (created by _create_stream_callback)
+
+        Yields:
+            StreamChunk objects with content deltas
+
+        Note:
+            This is a generator that yields chunks synchronously. AsyncSession
+            wraps this in an async generator.
+        """
+
+        # Run streaming in a background thread
+        def run_stream():
+            try:
+                _foundationmodels.generate_stream(
+                    prompt, callback, temperature, max_tokens
+                )
+            except Exception as e:
+                # Put exception in queue - subclass handles queue put
+                try:
+                    # For sync: direct put, for async: needs run_coroutine_threadsafe
+                    # We'll just put it directly and let the exception propagate
+                    if hasattr(queue, "put_nowait"):
+                        # asyncio.Queue
+                        queue.put_nowait(e)
+                    else:
+                        # queue.Queue
+                        queue.put(e)
+                except Exception:
+                    # If we can't put the exception, log it
+                    logger.error(
+                        f"Failed to put exception in queue: {e}", exc_info=True
+                    )
+
+        thread = threading.Thread(target=run_stream, daemon=True)
+        thread.start()
+
+        # Yield StreamChunk objects
+        chunk_index = 0
+        while True:
+            item = self._get_from_stream_queue(queue)
+
+            if isinstance(item, Exception):
+                raise item
+
+            if item is None:  # End of stream
+                # Yield final chunk with finish_reason
+                yield StreamChunk(content="", finish_reason="stop", index=chunk_index)
+                break
+
+            # Yield chunk with content
+            yield StreamChunk(content=item, finish_reason=None, index=chunk_index)
+            chunk_index += 1
+
+        # Wait for streaming thread to complete cleanup
+        # By this point we've received the None sentinel, so the stream is done
+        # and the thread should finish quickly. We wait up to 5 seconds for
+        # clean shutdown.
+        thread.join(timeout=5.0)
+
+        if thread.is_alive():
+            # Thread didn't finish in time - this shouldn't normally happen
+            # since we've already received the end-of-stream signal
+            logger.warning(
+                "Streaming thread did not complete within 5 seconds after "
+                "stream end. Thread will continue as daemon and be cleaned up "
+                "at process exit."
+            )
 
     def _extract_tool_calls_from_transcript(
         self, transcript_entries: List[Dict[str, Any]]

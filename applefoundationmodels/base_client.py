@@ -40,7 +40,7 @@ class BaseClient(ContextManagedResource, ABC):
         """
         self._validate_platform()
         self._initialize_library()
-        self._sessions: List[Any] = []
+        self._sessions: List[Union["Session", "AsyncSession"]] = []
 
     @property
     @abstractmethod

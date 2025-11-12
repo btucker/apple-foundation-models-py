@@ -56,11 +56,38 @@ class Session(BaseSession):
         """Execute FFI call synchronously."""
         return func(*args, **kwargs)
 
+    def _create_stream_queue(self) -> Queue:
+        """Create a synchronous queue for streaming."""
+        return Queue()
+
+    def _create_stream_callback(self, queue: Queue) -> Callable[[Optional[str]], None]:
+        """Create a callback that puts chunks directly into the sync queue."""
+        return lambda chunk: queue.put(chunk)
+
+    def _get_from_stream_queue(self, queue: Queue) -> Optional[str]:
+        """Get item from sync queue with polling."""
+        while True:
+            try:
+                return queue.get(timeout=0.1)
+            except Empty:
+                continue
+
     def close(self) -> None:
         """Close the session and cleanup resources."""
         self._closed = True
 
-    # Type overloads for non-streaming text generation
+    # ========================================================================
+    # Type overloads for generate() method
+    #
+    # IMPORTANT: These overloads must be kept in sync with AsyncSession.generate()
+    # in async_session.py. The signatures are identical except for:
+    # - async keyword (Session: def generate() vs AsyncSession: async def generate())
+    # - Return type for streaming (Iterator vs AsyncIterator)
+    #
+    # When modifying these overloads, update both files to maintain consistency.
+    # ========================================================================
+
+    # Type overload for non-streaming text generation
     @overload
     def generate(
         self,
@@ -143,8 +170,7 @@ class Session(BaseSession):
         self._validate_generate_params(stream, schema)
 
         # Apply defaults to parameters
-        temp = self._get_temperature(temperature)
-        max_tok = self._get_max_tokens(max_tokens)
+        temp, max_tok = self._apply_defaults(temperature, max_tokens)
 
         if stream:
             # Streaming mode: return Iterator[StreamChunk]
@@ -160,13 +186,9 @@ class Session(BaseSession):
         self, prompt: str, temperature: float, max_tokens: int
     ) -> GenerationResponse:
         """Internal implementation for text generation."""
-        start_length = self._begin_generation()
-        try:
+        with self._generation_context() as start_length:
             text = _foundationmodels.generate(prompt, temperature, max_tokens)
             return self._build_generation_response(text, False, start_length)
-        except Exception:
-            self._end_generation(start_length)
-            raise
 
     def _generate_structured_impl(
         self,
@@ -176,16 +198,12 @@ class Session(BaseSession):
         max_tokens: int,
     ) -> GenerationResponse:
         """Internal implementation for structured generation."""
-        start_length = self._begin_generation()
-        try:
+        with self._generation_context() as start_length:
             json_schema = normalize_schema(schema)
             result = _foundationmodels.generate_structured(
                 prompt, json_schema, temperature, max_tokens
             )
             return self._build_generation_response(result, True, start_length)
-        except Exception:
-            self._end_generation(start_length)
-            raise
 
     def _generate_stream_impl(
         self, prompt: str, temperature: float, max_tokens: int
@@ -193,60 +211,14 @@ class Session(BaseSession):
         """Internal implementation for streaming generation."""
         start_length = self._begin_generation()
         try:
-            # Use a queue to collect chunks from callback
-            queue: Queue = Queue()
+            # Create queue and callback using abstract methods
+            queue = self._create_stream_queue()
+            callback = self._create_stream_callback(queue)
 
-            def callback(chunk: Optional[str]) -> None:
-                queue.put(chunk)
-
-            # Run streaming in a background thread
-            def run_stream():
-                try:
-                    _foundationmodels.generate_stream(
-                        prompt, callback, temperature, max_tokens
-                    )
-                except Exception as e:
-                    queue.put(e)
-
-            thread = threading.Thread(target=run_stream, daemon=True)
-            thread.start()
-
-            # Yield StreamChunk objects
-            chunk_index = 0
-            while True:
-                try:
-                    item = queue.get(timeout=0.1)
-                except Empty:
-                    continue
-
-                if isinstance(item, Exception):
-                    raise item
-
-                if item is None:  # End of stream
-                    # Yield final chunk with finish_reason
-                    yield StreamChunk(
-                        content="", finish_reason="stop", index=chunk_index
-                    )
-                    break
-
-                # Yield chunk with content
-                yield StreamChunk(content=item, finish_reason=None, index=chunk_index)
-                chunk_index += 1
-
-            # Wait for streaming thread to complete cleanup
-            # By this point we've received the None sentinel, so the stream is done
-            # and the thread should finish quickly. We wait up to 5 seconds for
-            # clean shutdown.
-            thread.join(timeout=5.0)
-
-            if thread.is_alive():
-                # Thread didn't finish in time - this shouldn't normally happen
-                # since we've already received the end-of-stream signal
-                logger.warning(
-                    "Streaming thread did not complete within 5 seconds after "
-                    "stream end. Thread will continue as daemon and be cleaned up "
-                    "at process exit."
-                )
+            # Use shared streaming implementation from base class
+            yield from self._stream_chunks_impl(
+                prompt, temperature, max_tokens, queue, callback
+            )
         finally:
             self._end_generation(start_length)
 
