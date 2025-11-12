@@ -46,9 +46,20 @@ class Session(BaseSession):
     and instructions. Use as a context manager for automatic cleanup.
 
     Usage:
-        with client.create_session() as session:
+        with Session() as session:
             response = session.generate("Hello!")
-            print(response)
+            print(response.text)
+
+        # With configuration:
+        def get_weather(location: str) -> str:
+            '''Get current weather for a location.'''
+            return f"Weather in {location}: 22°C"
+
+        session = Session(
+            instructions="You are a helpful assistant.",
+            tools=[get_weather]
+        )
+        response = session.generate("What's the weather in Paris?")
     """
 
     def _call_ffi(self, func, *args, **kwargs):
@@ -73,7 +84,7 @@ class Session(BaseSession):
 
     def close(self) -> None:
         """Close the session and cleanup resources."""
-        self._closed = True
+        self._mark_closed()
 
     # ========================================================================
     # Type overloads for generate() method
@@ -185,10 +196,13 @@ class Session(BaseSession):
         self, prompt: str, temperature: float, max_tokens: int
     ) -> GenerationResponse:
         """Internal implementation for text generation."""
-        from . import _foundationmodels
-
         with self._generation_context() as start_length:
-            text = _foundationmodels.generate(prompt, temperature, max_tokens)
+            text = self._call_ffi(
+                self._ffi.generate,
+                prompt,
+                temperature,
+                max_tokens,
+            )
             return self._build_generation_response(text, False, start_length)
 
     def _generate_structured_impl(
@@ -199,12 +213,14 @@ class Session(BaseSession):
         max_tokens: int,
     ) -> GenerationResponse:
         """Internal implementation for structured generation."""
-        from . import _foundationmodels
-
         with self._generation_context() as start_length:
             json_schema = normalize_schema(schema)
-            result = _foundationmodels.generate_structured(
-                prompt, json_schema, temperature, max_tokens
+            result = self._call_ffi(
+                self._ffi.generate_structured,
+                prompt,
+                json_schema,
+                temperature,
+                max_tokens,
             )
             return self._build_generation_response(result, True, start_length)
 
@@ -237,10 +253,8 @@ class Session(BaseSession):
             >>> for msg in history:
             ...     print(f"{msg['role']}: {msg['content']}")
         """
-        from . import _foundationmodels
-
         self._check_closed()
-        return _foundationmodels.get_history()
+        return self._call_ffi(self._ffi.get_history)
 
     def clear_history(self) -> None:
         """
@@ -248,10 +262,8 @@ class Session(BaseSession):
 
         Removes all messages from the session while keeping the session active.
         """
-        from . import _foundationmodels
-
         self._check_closed()
-        _foundationmodels.clear_history()
+        self._call_ffi(self._ffi.clear_history)
         # Reset to current transcript length (may include persistent instructions)
         self._last_transcript_length = len(self.transcript)
 

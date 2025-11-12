@@ -5,6 +5,7 @@ Unit tests for applefoundationmodels.Session
 import pytest
 import asyncio
 import applefoundationmodels
+from applefoundationmodels import Session
 from conftest import assert_valid_response, assert_valid_chunks
 
 
@@ -116,16 +117,16 @@ class TestSessionHistory:
 class TestSessionLifecycle:
     """Tests for session lifecycle."""
 
-    def test_session_context_manager(self, client, check_availability):
+    def test_session_context_manager(self, check_availability):
         """Test session works as context manager."""
-        with client.create_session() as session:
+        with Session() as session:
             assert session is not None
             response = session.generate("Hello", temperature=0.5)
             assert isinstance(response.text, str), "Response should have text property"
 
-    def test_session_close(self, client, check_availability):
+    def test_session_close(self, check_availability):
         """Test explicit session close."""
-        session = client.create_session()
+        session = Session()
         response = session.generate("Hello", temperature=0.5)
         assert isinstance(response.text, str), "Response should have text property"
         session.close()
@@ -380,9 +381,7 @@ class TestTranscriptTracking:
                 assert "content" in entry, "Text entry should have 'content' field"
                 assert isinstance(entry["content"], str), "Content should be a string"
 
-    def test_last_generation_transcript_with_tool_calling(
-        self, client, check_availability
-    ):
+    def test_last_generation_transcript_with_tool_calling(self, check_availability):
         """Test last_generation_transcript includes tool_call and tool_output entries."""
         tool_call_count = {"first": 0, "second": 0}
 
@@ -396,7 +395,7 @@ class TestTranscriptTracking:
             return f"The temperature in {city} is 72°F"
 
         # Create session with tools
-        session = client.create_session(
+        session = Session(
             instructions="You are a helpful assistant. Use tools when appropriate.",
             tools=[get_temperature],
         )

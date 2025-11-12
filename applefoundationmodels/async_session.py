@@ -15,13 +15,11 @@ from typing import (
     Callable,
     Union,
     TYPE_CHECKING,
-    List,
-    cast,
     overload,
     Type,
+    Coroutine,
 )
 from typing_extensions import Literal
-import threading
 
 from .base_session import BaseSession
 from .base import AsyncContextManagedResource
@@ -37,18 +35,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _get_foundationmodels():
-    """Lazy import helper to avoid circular imports."""
-    from . import _foundationmodels
-
-    return _foundationmodels
-
-
-# Register streaming function as direct-call (should not be wrapped in to_thread)
-# This registration is deferred via the lazy import helper
-BaseSession._DIRECT_CALL_FUNCS.add(_get_foundationmodels().generate_stream)
-
-
 class AsyncSession(BaseSession, AsyncContextManagedResource):
     """
     Async AI session for maintaining conversation state.
@@ -58,27 +44,29 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
     history and can be configured with tools and instructions.
 
     Usage:
-        async with client.create_async_session() as session:
+        async with AsyncSession() as session:
             response = await session.generate("Hello!")
             print(response.text)
 
             # Async streaming
             async for chunk in session.generate("Story", stream=True):
                 print(chunk.content, end='', flush=True)
+
+        # With configuration:
+        def get_weather(location: str) -> str:
+            '''Get current weather for a location.'''
+            return f"Weather in {location}: 22°C"
+
+        session = AsyncSession(
+            instructions="You are a helpful assistant.",
+            tools=[get_weather]
+        )
+        response = await session.generate("What's the weather in Paris?")
+        await session.close()
     """
 
     async def _call_ffi(self, func, *args, **kwargs):
-        """
-        Execute FFI call asynchronously.
-
-        Functions registered in _DIRECT_CALL_FUNCS (like streaming callbacks)
-        are called directly without thread wrapping, while others are safely
-        wrapped in asyncio.to_thread for async execution.
-        """
-        # Check if function should be called directly (e.g., streaming with callbacks)
-        if func in self._DIRECT_CALL_FUNCS:
-            return func(*args, **kwargs)
-        # Other functions can be safely wrapped
+        """Execute FFI call asynchronously via a worker thread."""
         return await asyncio.to_thread(func, *args, **kwargs)
 
     def _create_stream_queue(self) -> asyncio.Queue:
@@ -106,28 +94,16 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
                 time.sleep(0.01)  # Small sleep to avoid busy-waiting
                 continue
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """
-        Close the session and cleanup resources synchronously.
-
-        Delegates to the AsyncContextManagedResource.close() implementation
-        which handles async context detection and cleanup.
-        """
-        super().close()
-
-    async def aclose(self) -> None:
-        """
-        Close the session and cleanup resources asynchronously.
-
-        This method should be used in async contexts or with the async
-        context manager.
+        Close the session and cleanup resources.
 
         Example:
-            >>> session = await client.create_session()
+            >>> session = AsyncSession()
             >>> # ... use session ...
-            >>> await session.aclose()
+            >>> await session.close()
         """
-        self._closed = True
+        self._mark_closed()
 
     # ========================================================================
     # Type overloads for generate() method
@@ -142,29 +118,29 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
 
     # Type overload for non-streaming text generation
     @overload
-    async def generate(
+    def generate(
         self,
         prompt: str,
         schema: None = None,
         stream: Literal[False] = False,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-    ) -> GenerationResponse: ...
+    ) -> Coroutine[Any, Any, GenerationResponse]: ...
 
     # Type overload for non-streaming structured generation
     @overload
-    async def generate(
+    def generate(
         self,
         prompt: str,
         schema: Union[Dict[str, Any], Type["BaseModel"]],
         stream: Literal[False] = False,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-    ) -> GenerationResponse: ...
+    ) -> Coroutine[Any, Any, GenerationResponse]: ...
 
     # Type overload for async streaming generation (text only)
     @overload
-    async def generate(
+    def generate(
         self,
         prompt: str,
         schema: None = None,
@@ -173,14 +149,14 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         max_tokens: Optional[int] = None,
     ) -> AsyncIterator[StreamChunk]: ...
 
-    async def generate(
+    def generate(
         self,
         prompt: str,
         schema: Optional[Union[Dict[str, Any], Type["BaseModel"]]] = None,
         stream: bool = False,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-    ) -> Union[GenerationResponse, AsyncIterator[StreamChunk]]:
+    ) -> Union[Coroutine[Any, Any, GenerationResponse], AsyncIterator[StreamChunk]]:
         """
         Generate text or structured output asynchronously, with optional streaming.
 
@@ -226,23 +202,22 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         temp, max_tok = self._apply_defaults(temperature, max_tokens)
 
         if stream:
-            # Return async iterator directly
+            # Return async iterator directly (no await needed - caller uses async for)
             return self._generate_stream_impl(prompt, temp, max_tok)
         elif schema is not None:
-            # Structured generation mode
-            return await self._generate_structured_impl(prompt, schema, temp, max_tok)
+            # Structured generation mode - return coroutine (caller will await)
+            return self._generate_structured_impl(prompt, schema, temp, max_tok)
         else:
-            # Text generation mode
-            return await self._generate_text_impl(prompt, temp, max_tok)
+            # Text generation mode - return coroutine (caller will await)
+            return self._generate_text_impl(prompt, temp, max_tok)
 
     async def _generate_text_impl(
         self, prompt: str, temperature: float, max_tokens: int
     ) -> GenerationResponse:
         """Internal implementation for async text generation."""
         async with self._async_generation_context() as start_length:
-            # Run sync FFI call in thread pool
-            text = await asyncio.to_thread(
-                _get_foundationmodels().generate,
+            text = await self._call_ffi(
+                self._ffi.generate,
                 prompt,
                 temperature,
                 max_tokens,
@@ -259,9 +234,8 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         """Internal implementation for async structured generation."""
         async with self._async_generation_context() as start_length:
             json_schema = normalize_schema(schema)
-            # Run sync FFI call in thread pool
-            result = await asyncio.to_thread(
-                _get_foundationmodels().generate_structured,
+            result = await self._call_ffi(
+                self._ffi.generate_structured,
                 prompt,
                 json_schema,
                 temperature,
@@ -274,19 +248,75 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
     ) -> AsyncIterator[StreamChunk]:
         """Internal implementation for async streaming generation."""
         start_length = self._begin_generation()
-        try:
-            # Create queue and callback using abstract methods
-            queue = self._create_stream_queue()
-            callback = self._create_stream_callback(queue)
 
-            # Wrap the shared sync generator in an async generator
-            # We use the shared implementation but await queue operations
-            for chunk in self._stream_chunks_impl(
-                prompt, temperature, max_tokens, queue, callback
-            ):
-                yield chunk
+        # Create an asyncio.Queue for inter-thread communication
+        output_queue: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_event_loop()
+
+        # Create the queue and callback in the main thread (where event loop exists)
+        inner_queue = self._create_stream_queue()
+        callback = lambda chunk: asyncio.run_coroutine_threadsafe(
+            inner_queue.put(chunk), loop
+        )
+
+        # Sentinel value to signal end of stream
+        _DONE = object()
+
+        def run_generator_in_thread():
+            """Run the sync generator in a background thread and push chunks to async queue."""
+            try:
+                # Iterate over the sync generator and push chunks to the async queue
+                for chunk in self._stream_chunks_impl(
+                    prompt, temperature, max_tokens, inner_queue, callback
+                ):
+                    # Push chunk to async queue from background thread
+                    asyncio.run_coroutine_threadsafe(
+                        output_queue.put(chunk), loop
+                    ).result()
+
+                # Signal completion
+                asyncio.run_coroutine_threadsafe(output_queue.put(_DONE), loop).result()
+            except Exception as e:
+                # Forward exceptions to the async queue
+                asyncio.run_coroutine_threadsafe(output_queue.put(e), loop).result()
+
+        # Spawn the generator in a background thread
+        import concurrent.futures
+
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(run_generator_in_thread)
+
+        try:
+            # Yield chunks from the async queue (non-blocking, event-loop friendly)
+            while True:
+                item = await output_queue.get()
+
+                # Check for end of stream sentinel
+                if item is _DONE:
+                    break
+
+                # Check for exceptions
+                if isinstance(item, Exception):
+                    raise item
+
+                # Yield the chunk
+                yield item
         finally:
-            self._end_generation(start_length)
+            # Cleanup: ensure the background thread completes
+            try:
+                # Wait for the background task to complete (with timeout)
+                future.result(timeout=5.0)
+            except concurrent.futures.TimeoutError:
+                logger.warning(
+                    "Background streaming task did not complete within 5 seconds. "
+                    "Task will be cleaned up by the executor."
+                )
+            except Exception as e:
+                logger.error(f"Error during streaming cleanup: {e}")
+            finally:
+                # Shutdown the executor
+                executor.shutdown(wait=False)
+                self._end_generation(start_length)
 
     async def get_history(self) -> list:
         """
@@ -301,7 +331,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             ...     print(f"{msg['role']}: {msg['content']}")
         """
         self._check_closed()
-        return await asyncio.to_thread(_get_foundationmodels().get_history)
+        return await self._call_ffi(self._ffi.get_history)
 
     async def clear_history(self) -> None:
         """
@@ -310,7 +340,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         Removes all messages from the session while keeping the session active.
         """
         self._check_closed()
-        await asyncio.to_thread(_get_foundationmodels().clear_history)
+        await self._call_ffi(self._ffi.clear_history)
         # Reset to current transcript length (may include persistent instructions)
         self._last_transcript_length = len(self.transcript)
 

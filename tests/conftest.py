@@ -9,9 +9,9 @@ import applefoundationmodels
 @pytest.fixture(scope="session", autouse=True)
 def check_availability():
     """Check if Apple Intelligence is available before running tests."""
-    status = applefoundationmodels.Client.check_availability()
+    status = applefoundationmodels.Session.check_availability()
     if status != applefoundationmodels.Availability.AVAILABLE:
-        reason = applefoundationmodels.Client.get_availability_reason()
+        reason = applefoundationmodels.Session.get_availability_reason()
         pytest.skip(
             f"Apple Intelligence not available: {reason}", allow_module_level=True
         )
@@ -19,18 +19,10 @@ def check_availability():
 
 
 @pytest.fixture
-def client(check_availability):
-    """Provide a applefoundationmodels Client instance."""
-    client = applefoundationmodels.Client()
-    yield client
-    client.close()
-
-
-@pytest.fixture
-def session(client):
+def session(check_availability):
     """Provide a applefoundationmodels Session instance."""
     # Create session without instructions to avoid transcript pollution
-    session = client.create_session(instructions=None)
+    session = applefoundationmodels.Session(instructions=None)
     yield session
     session.close()
 

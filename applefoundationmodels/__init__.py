@@ -5,21 +5,20 @@ High-level Pythonic interface for accessing Apple Intelligence on-device
 Foundation models.
 
 Basic text generation:
-    from applefoundationmodels import Client
+    from applefoundationmodels import Session
 
-    with Client() as client:
+    with Session() as session:
         # Check availability
-        if not client.is_ready():
+        if not Session.is_ready():
             print("Apple Intelligence not available")
             return
 
-        # Create a session and generate response
-        session = client.create_session()
+        # Generate response
         response = session.generate("Hello, how are you?")
         print(response.text)  # Access text via .text property
 
 Structured output:
-    from applefoundationmodels import Client
+    from applefoundationmodels import Session
 
     schema = {
         "type": "object",
@@ -29,26 +28,23 @@ Structured output:
         }
     }
 
-    with Client() as client:
-        session = client.create_session()
+    with Session() as session:
         response = session.generate("Extract: Alice is 28", schema=schema)
         print(response.parsed)  # {"name": "Alice", "age": 28}
 
 Sync streaming:
-    from applefoundationmodels import Client
+    from applefoundationmodels import Session
 
-    with Client() as client:
-        session = client.create_session()
+    with Session() as session:
         for chunk in session.generate("Tell me a story", stream=True):
             print(chunk.content, end='', flush=True)
 
 Async streaming:
     import asyncio
-    from applefoundationmodels import AsyncClient
+    from applefoundationmodels import AsyncSession
 
     async def main():
-        async with AsyncClient() as client:
-            session = await client.create_session()
+        async with AsyncSession() as session:
             async for chunk in session.generate("Tell me a story", stream=True):
                 print(chunk.content, end='', flush=True)
 
@@ -58,8 +54,6 @@ Async streaming:
 __version__ = "0.1.0"
 
 # Public API exports
-from .client import Client, client
-from .async_client import AsyncClient
 from .session import Session
 from .async_session import AsyncSession
 from .constants import (
@@ -100,11 +94,8 @@ __all__ = [
     # Version
     "__version__",
     # Main classes
-    "Client",
-    "AsyncClient",
     "Session",
     "AsyncSession",
-    "client",
     # Constants
     "DEFAULT_TEMPERATURE",
     "DEFAULT_MAX_TOKENS",

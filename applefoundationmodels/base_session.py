@@ -4,10 +4,12 @@ Base Session implementation for applefoundationmodels Python bindings.
 Provides shared logic for both sync and async sessions.
 """
 
+import platform
 import threading
 import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, asynccontextmanager
+from functools import lru_cache
 from typing import (
     Optional,
     Dict,
@@ -27,10 +29,20 @@ from .types import (
     StreamChunk,
     ToolCall,
     Function,
+    Availability,
 )
 from .constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
+from .exceptions import NotAvailableError
 
 logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def get_foundationmodels():
+    """Return the cached _foundationmodels module."""
+    from . import _foundationmodels
+
+    return _foundationmodels
 
 
 class BaseSession(ContextManagedResource, ABC):
@@ -41,19 +53,33 @@ class BaseSession(ContextManagedResource, ABC):
     and async session implementations to avoid duplication.
     """
 
-    # Functions that should not be wrapped in asyncio.to_thread by AsyncSession
-    # These are typically callback-based functions that manage their own threading
-    _DIRECT_CALL_FUNCS: ClassVar[set[Callable]] = set()
+    # Class-level flag to track if library has been initialized
+    _initialized: ClassVar[bool] = False
 
-    def __init__(self, session_id: int, config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        instructions: Optional[str] = None,
+        tools: Optional[List[Callable]] = None,
+    ):
         """
         Create a base session instance.
 
         Args:
-            session_id: The session ID from the FFI layer
-            config: Optional session configuration
+            instructions: Optional system instructions to guide AI behavior
+            tools: Optional list of tool functions to make available to the model
+
+        Raises:
+            InitializationError: If library initialization fails
+            NotAvailableError: If Apple Intelligence is not available
+            RuntimeError: If platform is not supported
         """
-        self._session_id = session_id
+        # Validate platform and initialize library on first session creation
+        self._validate_platform()
+        self._initialize_library()
+
+        self._ffi = get_foundationmodels()
+        config = self._build_session_config(instructions, tools)
+        self._session_id = self._ffi.create_session(config)
         self._closed = False
         self._config = config
         # Initialize to current transcript length to exclude any initial instructions
@@ -240,14 +266,11 @@ class BaseSession(ContextManagedResource, ABC):
             This is a generator that yields chunks synchronously. AsyncSession
             wraps this in an async generator.
         """
-        from . import _foundationmodels
 
         # Run streaming in a background thread
         def run_stream():
             try:
-                _foundationmodels.generate_stream(
-                    prompt, callback, temperature, max_tokens
-                )
+                self._ffi.generate_stream(prompt, callback, temperature, max_tokens)
             except Exception as e:
                 # Put exception in queue - subclass handles queue put
                 try:
@@ -396,11 +419,9 @@ class BaseSession(ContextManagedResource, ABC):
             >>> for entry in transcript:
             ...     print(f"{entry['type']}: {entry.get('content', '')}")
         """
-        from . import _foundationmodels
-
         self._check_closed()
         # Explicit cast to ensure type checkers see the correct return type
-        return cast(List[Dict[str, Any]], _foundationmodels.get_transcript())
+        return cast(List[Dict[str, Any]], self._ffi.get_transcript())
 
     @property
     def last_generation_transcript(self) -> List[Dict[str, Any]]:
@@ -452,3 +473,135 @@ class BaseSession(ContextManagedResource, ABC):
             raise ValueError(
                 "Streaming is not supported with structured output (schema parameter)"
             )
+
+    def _mark_closed(self) -> None:
+        """
+        Mark the session as closed.
+
+        This is used by both Session.close() and AsyncSession.close() to
+        set the closed flag.
+        """
+        self._closed = True
+
+    @staticmethod
+    def _validate_platform() -> None:
+        """
+        Validate platform requirements for Apple Intelligence.
+
+        Raises:
+            NotAvailableError: If platform is not supported or version is insufficient
+        """
+        # Check platform requirements
+        if platform.system() != "Darwin":
+            raise NotAvailableError(
+                "Apple Intelligence is only available on macOS. "
+                f"Current platform: {platform.system()}"
+            )
+
+        # Check macOS version
+        mac_ver = platform.mac_ver()[0]
+        if mac_ver:
+            try:
+                major_version = int(mac_ver.split(".")[0])
+                if major_version < 26:
+                    raise NotAvailableError(
+                        f"Apple Intelligence requires macOS 26.0 or later. "
+                        f"Current version: {mac_ver}"
+                    )
+            except (ValueError, IndexError):
+                # If we can't parse the version, let it try anyway
+                pass
+
+    @staticmethod
+    def _initialize_library() -> None:
+        """
+        Initialize the FoundationModels library if not already initialized.
+
+        This is called automatically on first session creation.
+        """
+        if not BaseSession._initialized:
+            get_foundationmodels().init()
+            BaseSession._initialized = True
+
+    @staticmethod
+    def _build_session_config(
+        instructions: Optional[str],
+        tools: Optional[List[Callable]],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Build session configuration dictionary and register tools.
+
+        Args:
+            instructions: Optional system instructions
+            tools: Optional list of tool functions to register
+
+        Returns:
+            Configuration dictionary or None if empty
+        """
+        # Register tools if provided
+        if tools:
+            from .tools import register_tool_for_function
+
+            # Build tool dictionary with function objects
+            tool_dict = {}
+            for func in tools:
+                schema = register_tool_for_function(func)
+                tool_name = schema["name"]
+                tool_dict[tool_name] = func
+
+            # Register with FFI
+            get_foundationmodels().register_tools(tool_dict)
+
+        config = {}
+        if instructions is not None:
+            config["instructions"] = instructions
+        return config if config else None
+
+    @staticmethod
+    def check_availability() -> Availability:
+        """
+        Check Apple Intelligence availability on this device.
+
+        This is a static method that can be called without creating a session.
+
+        Returns:
+            Availability status enum value
+
+        Example:
+            >>> from applefoundationmodels import Session, Availability
+            >>> status = Session.check_availability()
+            >>> if status == Availability.AVAILABLE:
+            ...     print("Apple Intelligence is available!")
+        """
+        return Availability(get_foundationmodels().check_availability())
+
+    @staticmethod
+    def get_availability_reason() -> Optional[str]:
+        """
+        Get detailed availability status message.
+
+        Returns:
+            Detailed status description with actionable guidance,
+            or None if library not initialized
+        """
+        return get_foundationmodels().get_availability_reason()
+
+    @staticmethod
+    def is_ready() -> bool:
+        """
+        Check if Apple Intelligence is ready for immediate use.
+
+        Returns:
+            True if ready for use, False otherwise
+        """
+        return get_foundationmodels().is_ready()
+
+    @staticmethod
+    def get_version() -> str:
+        """
+        Get library version string.
+
+        Returns:
+            Version string in format "major.minor.patch"
+        """
+        return get_foundationmodels().get_version()
