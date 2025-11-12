@@ -235,7 +235,7 @@ class Session(BaseSession):
         finally:
             self._end_generation(start_length)
 
-    def get_history(self) -> list:
+    def get_history(self) -> List[Dict[str, Any]]:
         """
         Get conversation history.
 
@@ -248,7 +248,8 @@ class Session(BaseSession):
             ...     print(f"{msg['role']}: {msg['content']}")
         """
         self._check_closed()
-        return self._call_ffi(self._ffi.get_history)
+        result = self._call_ffi(self._ffi.get_history)
+        return cast(List[Dict[str, Any]], result)
 
     def clear_history(self) -> None:
         """

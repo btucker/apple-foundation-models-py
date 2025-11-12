@@ -1,6 +1,6 @@
 # apple-foundation-models
 
-Unofficial Python bindings for Apple's [Foundation Models framework](https://developer.apple.com/documentation/FoundationModels) - Direct access to the on-device LLM available in MacOS 26+.
+Unofficial Python bindings for Apple's [Foundation Models framework](https://developer.apple.com/documentation/FoundationModels) - Direct access to the on-device LLM available in macOS 26+.
 
 ## Features
 

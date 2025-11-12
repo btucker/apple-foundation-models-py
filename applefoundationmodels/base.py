@@ -43,7 +43,7 @@ class AsyncContextManagedResource(ABC):
     Base class for resources that support async context manager protocol.
 
     Provides standard __aenter__ and __aexit__ methods that call the
-    close() method on exit.
+    aclose() method on exit.
     """
 
     async def __aenter__(self: AT) -> AT:
@@ -52,10 +52,10 @@ class AsyncContextManagedResource(ABC):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit with automatic cleanup."""
-        await self.close()
+        await self.aclose()
 
     @abstractmethod
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         """
         Close and cleanup resources asynchronously.
 

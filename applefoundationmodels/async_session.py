@@ -10,12 +10,14 @@ from typing import (
     Optional,
     Dict,
     Any,
+    List,
     AsyncIterator,
     Union,
     TYPE_CHECKING,
     overload,
     Type,
     Coroutine,
+    cast,
 )
 from typing_extensions import Literal
 
@@ -60,7 +62,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             tools=[get_weather]
         )
         response = await session.generate("What's the weather in Paris?")
-        await session.close()
+        await session.aclose()
     """
 
     async def _call_ffi(self, func, *args, **kwargs):
@@ -89,15 +91,32 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             get_async=get_async,
         )
 
-    async def close(self) -> None:
-        """
-        Close the session and cleanup resources.
+    def close(self) -> None:
+        """Close the session synchronously.
 
-        Example:
-            >>> session = AsyncSession()
-            >>> # ... use session ...
-            >>> await session.close()
+        When no event loop is running, this method drives the async cleanup via
+        asyncio.run(). If called while an event loop is active, a RuntimeError is
+        raised to avoid nested event loops—the caller should instead await
+        `aclose()` or use `async with`.
         """
+        if self._closed:
+            return
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self.aclose())
+            return
+
+        raise RuntimeError(
+            "AsyncSession.close() cannot be called while an event loop is running. "
+            "Use await session.aclose() or 'async with AsyncSession()'."
+        )
+
+    async def aclose(self) -> None:
+        """Asynchronously close the session and cleanup resources."""
+        if self._closed:
+            return
         self._mark_closed()
 
     # ========================================================================
@@ -247,7 +266,7 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
         finally:
             self._end_generation(start_length)
 
-    async def get_history(self) -> list:
+    async def get_history(self) -> List[Dict[str, Any]]:
         """
         Get conversation history asynchronously.
 
@@ -260,7 +279,8 @@ class AsyncSession(BaseSession, AsyncContextManagedResource):
             ...     print(f"{msg['role']}: {msg['content']}")
         """
         self._check_closed()
-        return await self._call_ffi(self._ffi.get_history)
+        result = await self._call_ffi(self._ffi.get_history)
+        return cast(List[Dict[str, Any]], result)
 
     async def clear_history(self) -> None:
         """
