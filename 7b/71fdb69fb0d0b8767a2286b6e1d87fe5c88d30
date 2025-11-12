@@ -1,0 +1,8 @@
+- In applefoundationmodels/async_client.py around line 12, remove the
+  module-level
+- In applefoundationmodels/session.py around line 28 (and impacting uses at
+  ~190,
+- In applefoundationmodels/base_session.py around lines 141 to 164, the async
+- In applefoundationmodels/base_session.py around lines 34 to 36, the class
+- In applefoundationmodels/base_session.py at line 13 and around lines 237 and
+- tests/test_integration.py:140: in test_streaming
