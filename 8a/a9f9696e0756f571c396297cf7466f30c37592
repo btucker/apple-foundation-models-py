@@ -1,0 +1,3 @@
+- it looks like there's some tests that need to get marked as needing apple
+  intelligence: _ ERROR at setup of
+  TestToolCallsProperty.test_tool_calls_property_without_tools _
