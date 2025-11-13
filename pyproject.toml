@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "apple-foundation-models"
-version = "0.2.1"
+version = "0.2.2"
 description = "Python bindings for Apple's FoundationModels framework - on-device AI (requires macOS 26.0+)"
 readme = "README.md"
 license = "MIT"
@@ -47,7 +47,7 @@ Documentation = "https://github.com/btucker/apple-foundation-models-py#readme"
 Issues = "https://github.com/btucker/apple-foundation-models-py/issues"
 
 [tool.setuptools]
-packages = ["applefoundationmodels"]
+include-package-data = true
 
 [tool.setuptools.exclude-package-data]
 applefoundationmodels = ["swift/*", "*.c", "*.pxd", "*.pyx"]
@@ -58,6 +58,7 @@ applefoundationmodels = [
     "*.pyi",
     "*.dylib",
     "*.so",
+    "*.json",
 ]
 
 [bdist_wheel]

@@ -13,5 +13,8 @@ include applefoundationmodels/*.pxd
 include applefoundationmodels/swift/*.swift
 include applefoundationmodels/swift/*.h
 
+# Shared metadata
+include applefoundationmodels/*.json
+
 # Exclude the lib build directory if it exists
 prune lib

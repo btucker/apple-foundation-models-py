@@ -1,0 +1,163 @@
+[
+  {
+    "code": -1,
+    "name": "InitializationError",
+    "swift_case": null,
+    "parent": "FoundationModelsError",
+    "description": "Library initialization failed."
+  },
+  {
+    "code": -2,
+    "name": "NotAvailableError",
+    "swift_case": "errorNotAvailable",
+    "parent": "FoundationModelsError",
+    "description": "Apple Intelligence not available on this device."
+  },
+  {
+    "code": -3,
+    "name": "InvalidParametersError",
+    "swift_case": "errorInvalidParams",
+    "parent": "FoundationModelsError",
+    "description": "Invalid parameters provided to function."
+  },
+  {
+    "code": -4,
+    "name": "MemoryError",
+    "swift_case": "errorMemory",
+    "parent": "FoundationModelsError",
+    "description": "Memory allocation error."
+  },
+  {
+    "code": -5,
+    "name": "JSONParseError",
+    "swift_case": "errorJSONParse",
+    "parent": "FoundationModelsError",
+    "description": "JSON parsing or validation error."
+  },
+  {
+    "code": -6,
+    "name": "GenerationError",
+    "swift_case": "errorGeneration",
+    "parent": "FoundationModelsError",
+    "description": "Text generation error."
+  },
+  {
+    "code": -7,
+    "name": "TimeoutError",
+    "swift_case": "errorTimeout",
+    "parent": "FoundationModelsError",
+    "description": "Operation timeout."
+  },
+  {
+    "code": -8,
+    "name": "SessionNotFoundError",
+    "swift_case": null,
+    "parent": "FoundationModelsError",
+    "description": "Session ID not found."
+  },
+  {
+    "code": -9,
+    "name": "StreamNotFoundError",
+    "swift_case": null,
+    "parent": "FoundationModelsError",
+    "description": "Stream ID not found or already completed."
+  },
+  {
+    "code": -10,
+    "name": "GuardrailViolationError",
+    "swift_case": "errorGuardrailViolation",
+    "parent": "FoundationModelsError",
+    "description": "Content blocked by safety filters."
+  },
+  {
+    "code": -11,
+    "name": "ToolNotFoundError",
+    "swift_case": "errorToolNotFound",
+    "parent": "FoundationModelsError",
+    "description": "Tool callback not registered for session."
+  },
+  {
+    "code": -12,
+    "name": "ToolExecutionError",
+    "swift_case": "errorToolExecution",
+    "parent": "FoundationModelsError",
+    "description": "Tool execution failed or returned invalid result."
+  },
+  {
+    "code": -13,
+    "name": "BufferTooSmallError",
+    "swift_case": null,
+    "parent": "FoundationModelsError",
+    "description": "Internal buffer too small to serialize error message."
+  },
+  {
+    "code": -14,
+    "name": "ContextWindowExceededError",
+    "swift_case": "errorContextWindowExceeded",
+    "parent": "GenerationError",
+    "description": "Context window size limit exceeded (4096 tokens)."
+  },
+  {
+    "code": -15,
+    "name": "DecodingFailureError",
+    "swift_case": "errorDecodingFailure",
+    "parent": "GenerationError",
+    "description": "Failed to deserialize a valid generable type from model output."
+  },
+  {
+    "code": -16,
+    "name": "RateLimitedError",
+    "swift_case": "errorRateLimited",
+    "parent": "GenerationError",
+    "description": "Session has been rate limited."
+  },
+  {
+    "code": -17,
+    "name": "RefusalError",
+    "swift_case": "errorRefusal",
+    "parent": "GenerationError",
+    "description": "Session refused the request."
+  },
+  {
+    "code": -18,
+    "name": "ConcurrentRequestsError",
+    "swift_case": "errorConcurrentRequests",
+    "parent": "GenerationError",
+    "description": "Attempted to make a session respond to a second prompt while responding to the first."
+  },
+  {
+    "code": -19,
+    "name": "UnsupportedGuideError",
+    "swift_case": "errorUnsupportedGuide",
+    "parent": "GenerationError",
+    "description": "Generation guide with an unsupported pattern was used."
+  },
+  {
+    "code": -20,
+    "name": "UnsupportedLanguageError",
+    "swift_case": "errorUnsupportedLanguage",
+    "parent": "GenerationError",
+    "description": "Model was prompted to respond in a language that it does not support."
+  },
+  {
+    "code": -21,
+    "name": "AssetsUnavailableError",
+    "swift_case": "errorAssetsUnavailable",
+    "parent": "GenerationError",
+    "description": "Assets required for the session are unavailable."
+  },
+  {
+    "code": -98,
+    "name": "ToolCallError",
+    "swift_case": null,
+    "parent": "FoundationModelsError",
+    "description": "Tool call error (validation, schema, etc.)."
+  },
+  {
+    "code": -99,
+    "name": "UnknownError",
+    "swift_case": "errorUnknown",
+    "parent": "FoundationModelsError",
+    "description": "Unknown error occurred."
+  }
+]

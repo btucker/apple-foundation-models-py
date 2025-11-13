@@ -66,6 +66,7 @@ venv.bak/
 # Cython generated files
 *.c
 libai/_libai.cpp
+.swift-module-cache
 
 # Build artifacts (temporary build files)
 *.o

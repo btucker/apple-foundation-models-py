@@ -20,7 +20,7 @@ private var registeredTools: [any Tool] = []
 
 // MARK: - Error Codes
 
-public enum AIResult: Int32 {
+public enum AIResult: Int32, CaseIterable {
     case success = 0
     case errorInitFailed = -1
     case errorNotAvailable = -2
@@ -29,9 +29,18 @@ public enum AIResult: Int32 {
     case errorJSONParse = -5
     case errorGeneration = -6
     case errorTimeout = -7
+    case errorGuardrailViolation = -10
     case errorToolNotFound = -11
     case errorToolExecution = -12
     case errorBufferTooSmall = -13
+    case errorContextWindowExceeded = -14
+    case errorDecodingFailure = -15
+    case errorRateLimited = -16
+    case errorRefusal = -17
+    case errorConcurrentRequests = -18
+    case errorUnsupportedGuide = -19
+    case errorUnsupportedLanguage = -20
+    case errorAssetsUnavailable = -21
     case errorUnknown = -99
 }
 
@@ -153,9 +162,17 @@ struct PythonToolWrapper: Tool, Sendable {
 
 // MARK: - Helper Functions
 
+/// Create a fallback error JSON string
+private func fallbackErrorJSON(code: AIResult = .errorUnknown) -> String {
+    return "{\"error\":\"An error occurred\",\"error_code\":\(code.rawValue)}"
+}
+
 /// Create an error response in JSON format using safe serialization
-private func createErrorResponse(_ message: String) -> UnsafeMutablePointer<CChar>? {
-    let errorDict: [String: String] = ["error": message]
+private func createErrorResponse(_ message: String, errorCode: AIResult = .errorGeneration) -> UnsafeMutablePointer<CChar>? {
+    let errorDict: [String: Any] = [
+        "error": message,
+        "error_code": errorCode.rawValue
+    ]
 
     do {
         let jsonData = try JSONSerialization.data(withJSONObject: errorDict, options: [])
@@ -164,14 +181,45 @@ private func createErrorResponse(_ message: String) -> UnsafeMutablePointer<CCha
         }
     } catch {
         // Fallback to generic error message if serialization fails
-        let fallback = "{\"error\":\"An error occurred\"}"
-        return strdup(fallback)
+        return strdup(fallbackErrorJSON())
     }
 
     // If UTF-8 encoding fails, return generic error
-    let fallback = "{\"error\":\"An error occurred\"}"
-    return strdup(fallback)
+    return strdup(fallbackErrorJSON())
 }
+
+#if canImport(FoundationModels)
+/// Map LanguageModelSession.GenerationError to our error codes
+@available(macOS 26.0, *)
+private func mapGenerationErrorToCode(_ error: Error) -> AIResult {
+    guard let genError = error as? LanguageModelSession.GenerationError else {
+        return .errorGeneration
+    }
+
+    switch genError {
+    case .exceededContextWindowSize:
+        return .errorContextWindowExceeded
+    case .guardrailViolation:
+        return .errorGuardrailViolation
+    case .assetsUnavailable:
+        return .errorAssetsUnavailable
+    case .decodingFailure:
+        return .errorDecodingFailure
+    case .rateLimited:
+        return .errorRateLimited
+    case .refusal:
+        return .errorRefusal
+    case .concurrentRequests:
+        return .errorConcurrentRequests
+    case .unsupportedGuide:
+        return .errorUnsupportedGuide
+    case .unsupportedLanguageOrLocale:
+        return .errorUnsupportedLanguage
+    @unknown default:
+        return .errorGeneration
+    }
+}
+#endif
 
 /// Create or get a session with specified parameters
 /// - Parameters:
@@ -480,12 +528,15 @@ public func appleAIGenerate(
 
                 result = response.content
             } catch {
+                // Map error to specific error code
+                let errorCode = mapGenerationErrorToCode(error)
+
                 // Use safe JSON serialization for error messages
-                if let errorJson = createErrorResponse(error.localizedDescription) {
+                if let errorJson = createErrorResponse(error.localizedDescription, errorCode: errorCode) {
                     result = String(cString: errorJson)
                     free(errorJson)
                 } else {
-                    result = "{\"error\":\"An error occurred\"}"
+                    result = fallbackErrorJSON(code: errorCode)
                 }
             }
             semaphore.signal()
@@ -564,16 +615,19 @@ public func appleAIGenerateStream(
                 cb(nil)
 
             } catch {
+                // Map error to specific error code
+                let errorCode = mapGenerationErrorToCode(error)
+
                 // Use safe JSON serialization for error messages
                 let errorMessage = "Error: \(error.localizedDescription)"
-                if let errorJson = createErrorResponse(errorMessage) {
+                if let errorJson = createErrorResponse(errorMessage, errorCode: errorCode) {
                     cb(errorJson)
                     // Note: callback takes ownership, will be freed by caller
                 } else {
-                    cb(strdup("{\"error\":\"An error occurred\"}"))
+                    cb(strdup(fallbackErrorJSON(code: errorCode)))
                 }
                 cb(nil)
-                resultCode = .errorGeneration
+                resultCode = errorCode
             }
             semaphore.signal()
         }
@@ -948,10 +1002,19 @@ public func appleAIGenerateStructured(
                 if let jsonString = String(data: jsonData, encoding: .utf8) {
                     result = jsonString
                 } else {
-                    result = "{\"error\": \"Failed to encode JSON as string\"}"
+                    // Use fallback error JSON for encoding failure
+                    result = fallbackErrorJSON(code: .errorGeneration)
                 }
             } catch {
-                result = "{\"error\": \"\(error.localizedDescription)\"}"
+                // Map error to specific error code
+                let errorCode = mapGenerationErrorToCode(error)
+                // Use safe JSON serialization for error response
+                if let errorJson = createErrorResponse(error.localizedDescription, errorCode: errorCode) {
+                    result = String(cString: errorJson)
+                    free(errorJson)
+                } else {
+                    result = fallbackErrorJSON(code: errorCode)
+                }
             }
             semaphore.signal()
         }

@@ -82,20 +82,16 @@ class GenerationParams(TypedDict, total=False):
     """
     Text generation parameters.
 
-    Controls various aspects of AI text generation including randomness,
-    length limits, and reproducibility.
+    Controls various aspects of AI text generation including randomness
+    and length limits.
 
     Attributes:
         temperature: Generation randomness (0.0 = deterministic, 2.0 = very random)
         max_tokens: Maximum response tokens (0 = use system default)
-        include_reasoning: Include reasoning in response (reserved for future use)
-        seed: Random seed for reproducibility (0 = use random seed)
     """
 
     temperature: NotRequired[float]
     max_tokens: NotRequired[int]
-    include_reasoning: NotRequired[bool]
-    seed: NotRequired[int]
 
 
 @dataclass

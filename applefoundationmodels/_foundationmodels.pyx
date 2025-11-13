@@ -364,7 +364,9 @@ def generate(
     if result_str.startswith('{"error"'):
         try:
             error_data = json.loads(result_str)
-            raise RuntimeError(error_data.get('error', 'Unknown error'))
+            error_msg = error_data.get('error', 'Unknown error')
+            error_code = error_data.get('error_code', -6)  # Default to GenerationError
+            raise_for_error_code(error_code, error_msg)
         except json.JSONDecodeError:
             pass  # Not JSON, treat as normal response
 
@@ -429,7 +431,9 @@ def generate_structured(
 
     # Check for error in response
     if "error" in result_data:
-        raise RuntimeError(result_data["error"])
+        error_msg = result_data["error"]
+        error_code = result_data.get("error_code", -6)  # Default to GenerationError
+        raise_for_error_code(error_code, error_msg)
 
     return result_data
 
