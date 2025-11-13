@@ -91,25 +91,27 @@ def build_swift_dylib():
 
     generate_swift_error_code_file()
 
-    # Skip if up to date
-    if dylib_path.exists() and SWIFT_SRC.exists():
-        latest_src_mtime = max(
-            SWIFT_SRC.stat().st_mtime,
-            (
-                SWIFT_ERROR_CODES_FILE.stat().st_mtime
-                if SWIFT_ERROR_CODES_FILE.exists()
-                else 0
-            ),
-        )
-        if latest_src_mtime <= dylib_path.stat().st_mtime:
-            print(f"Swift dylib is up to date: {dylib_path}")
-            return
-
     # Validate environment
     if platform.system() != "Darwin":
         sys.exit("Error: Swift dylib can only be built on macOS")
-    if not SWIFT_SRC.exists():
-        sys.exit(f"Error: Swift source not found at {SWIFT_SRC}")
+
+    # Collect all Swift source files
+    swift_sources = sorted(SWIFT_SRC_DIR.glob("*.swift"))
+    if not swift_sources:
+        sys.exit("Error: No Swift source files found")
+
+    # Skip if up to date - check all Swift sources
+    if dylib_path.exists():
+        # Get modification time of all Swift sources
+        swift_mtimes = [src.stat().st_mtime for src in swift_sources]
+        if SWIFT_ERROR_CODES_FILE.exists():
+            swift_mtimes.append(SWIFT_ERROR_CODES_FILE.stat().st_mtime)
+
+        latest_src_mtime = max(swift_mtimes) if swift_mtimes else 0
+
+        if latest_src_mtime <= dylib_path.stat().st_mtime:
+            print(f"Swift dylib is up to date: {dylib_path}")
+            return
 
     print("Building Swift FoundationModels dylib...")
     LIB_DIR.mkdir(parents=True, exist_ok=True)
@@ -135,10 +137,8 @@ def build_swift_dylib():
         env = None
         print("⚠ Using command line tools (@Generable macro not available)")
 
-    # Build dylib
-    swift_sources = sorted(str(path) for path in SWIFT_SRC_DIR.glob("*.swift"))
-    if not swift_sources:
-        sys.exit("Error: No Swift source files found")
+    # Convert Path objects to strings for compiler
+    swift_source_paths = sorted(str(path) for path in swift_sources)
 
     SWIFT_MODULE_CACHE.mkdir(exist_ok=True)
 
@@ -146,7 +146,7 @@ def build_swift_dylib():
         swift_compiler,
         "swiftc" if swift_compiler == "xcrun" else None,
         *sdk_args,
-        *swift_sources,
+        *swift_source_paths,
         "-O",
         "-whole-module-optimization",
         "-target",
