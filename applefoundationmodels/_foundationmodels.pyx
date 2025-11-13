@@ -364,7 +364,9 @@ def generate(
     if result_str.startswith('{"error"'):
         try:
             error_data = json.loads(result_str)
-            raise RuntimeError(error_data.get('error', 'Unknown error'))
+            error_msg = error_data.get('error', 'Unknown error')
+            error_code = error_data.get('error_code', -6)  # Default to GenerationError
+            raise_for_error_code(error_code, error_msg)
         except json.JSONDecodeError:
             pass  # Not JSON, treat as normal response
 
@@ -429,7 +431,9 @@ def generate_structured(
 
     # Check for error in response
     if "error" in result_data:
-        raise RuntimeError(result_data["error"])
+        error_msg = result_data["error"]
+        error_code = result_data.get("error_code", -6)  # Default to GenerationError
+        raise_for_error_code(error_code, error_msg)
 
     return result_data
 
@@ -540,4 +544,34 @@ def clear_history() -> None:
     """Clear conversation history."""
     with nogil:
         apple_ai_clear_history()
+
+
+# ============================================================================
+# Testing helpers
+# ============================================================================
+
+def get_swift_error_code_mappings() -> dict:
+    """
+    Get error code mappings from Swift layer for testing.
+
+    Returns a dictionary mapping error names to their error codes as defined
+    in the Swift AIResult enum. This allows Python tests to verify that Swift
+    error codes match Python exception expectations.
+
+    Returns:
+        Dictionary mapping error case names to error codes (int)
+    """
+    cdef char* mappings_json
+
+    with nogil:
+        mappings_json = apple_ai_get_error_code_mappings()
+
+    if mappings_json == NULL:
+        return {}
+
+    try:
+        mappings_str = _decode_string(mappings_json)
+        return json.loads(mappings_str)
+    finally:
+        apple_ai_free_string(mappings_json)
 

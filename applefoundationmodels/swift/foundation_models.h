@@ -65,6 +65,9 @@ void apple_ai_clear_history(void);
 char *apple_ai_get_stats(void);
 void apple_ai_reset_stats(void);
 
+// Testing helpers
+char *apple_ai_get_error_code_mappings(void);
+
 // Memory management
 void apple_ai_free_string(char *ptr);
 

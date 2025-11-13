@@ -53,6 +53,29 @@ Async streaming:
 
 __version__ = "0.1.0"
 
+
+def apple_intelligence_available() -> bool:
+    """
+    Check if Apple Intelligence is available and ready for use.
+
+    This is a convenience function that checks if the Apple Intelligence
+    framework is available on the current device and ready for immediate use.
+
+    Returns:
+        True if Apple Intelligence is available and ready, False otherwise
+
+    Example:
+        >>> from applefoundationmodels import apple_intelligence_available
+        >>> if apple_intelligence_available():
+        ...     print("Apple Intelligence is ready!")
+        ... else:
+        ...     print("Apple Intelligence is not available")
+    """
+    from .session import Session
+
+    return Session.is_ready()
+
+
 # Public API exports
 from .session import Session
 from .async_session import AsyncSession
@@ -73,26 +96,13 @@ from .types import (
     StreamCallback,
     ToolCallback,
 )
-from .exceptions import (
-    FoundationModelsError,
-    InitializationError,
-    NotAvailableError,
-    InvalidParametersError,
-    MemoryError,
-    JSONParseError,
-    GenerationError,
-    TimeoutError,
-    SessionNotFoundError,
-    StreamNotFoundError,
-    GuardrailViolationError,
-    ToolNotFoundError,
-    ToolExecutionError,
-    UnknownError,
-)
+from .exceptions import *
 
 __all__ = [
     # Version
     "__version__",
+    # Convenience functions
+    "apple_intelligence_available",
     # Main classes
     "Session",
     "AsyncSession",
@@ -111,19 +121,4 @@ __all__ = [
     "StreamChunk",
     "StreamCallback",
     "ToolCallback",
-    # Exceptions
-    "FoundationModelsError",
-    "InitializationError",
-    "NotAvailableError",
-    "InvalidParametersError",
-    "MemoryError",
-    "JSONParseError",
-    "GenerationError",
-    "TimeoutError",
-    "SessionNotFoundError",
-    "StreamNotFoundError",
-    "GuardrailViolationError",
-    "ToolNotFoundError",
-    "ToolExecutionError",
-    "UnknownError",
 ]

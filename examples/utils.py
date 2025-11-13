@@ -4,8 +4,7 @@ Utility functions for examples.
 Provides common functionality used across multiple example scripts.
 """
 
-import sys
-from applefoundationmodels import Session, Availability, NotAvailableError
+from applefoundationmodels import Session, apple_intelligence_available
 
 
 def check_availability_or_exit(verbose=True):
@@ -18,8 +17,7 @@ def check_availability_or_exit(verbose=True):
     Returns:
         True if available, False otherwise (will exit if not available)
     """
-    status = Session.check_availability()
-    if status != Availability.AVAILABLE:
+    if not apple_intelligence_available():
         if verbose:
             print("Apple Intelligence is not available:")
             print(Session.get_availability_reason())
@@ -40,19 +38,3 @@ def print_example_header(title, width=60):
     print(f"\n{'=' * width}")
     print(f"{title}")
     print(f"{'=' * width}\n")
-
-
-def handle_example_error(e):
-    """
-    Standard error handling for examples.
-
-    Args:
-        e: The exception to handle
-    """
-    if isinstance(e, NotAvailableError):
-        print(f"Error: {e.message}")
-        print("Make sure Apple Intelligence is enabled in System Settings")
-        sys.exit(1)
-    else:
-        print(f"Error: {e}")
-        raise

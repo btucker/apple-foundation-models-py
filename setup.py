@@ -5,6 +5,7 @@ import os
 import platform
 import subprocess
 import shutil
+import json
 from pathlib import Path
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
@@ -22,20 +23,73 @@ except ImportError:
 REPO_ROOT = Path(__file__).parent.resolve()
 PKG_DIR = REPO_ROOT / "applefoundationmodels"
 SWIFT_SRC = PKG_DIR / "swift" / "foundation_models.swift"
+SWIFT_SRC_DIR = PKG_DIR / "swift"
 LIB_DIR = REPO_ROOT / "lib"
 PKG_DYLIB = PKG_DIR / "libfoundation_models.dylib"
+ERROR_CODES_JSON = PKG_DIR / "error_codes.json"
+SWIFT_ERROR_CODES_FILE = SWIFT_SRC_DIR / "error_codes.generated.swift"
+SWIFT_MODULE_CACHE = REPO_ROOT / ".swift-module-cache"
 
 # Only support Apple Silicon (arm64)
 ARCH = "arm64"
+
+
+def generate_swift_error_code_file():
+    """Generate Swift source that embeds error code mappings."""
+    if not ERROR_CODES_JSON.exists():
+        sys.exit(f"Error: {ERROR_CODES_JSON} not found")
+
+    with ERROR_CODES_JSON.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    entries = []
+    for entry in data:
+        swift_case = entry.get("swift_case")
+        if not swift_case:
+            continue
+        entries.append((swift_case, int(entry["code"])))
+
+    entries.sort(key=lambda item: item[0])
+
+    lines = [
+        "// This file is auto-generated from error_codes.json. Do not edit manually.",
+        "// Run setup.py build (or pip install) to regenerate.",
+        "",
+        "let ERROR_CODE_MAPPINGS: [String: Int32] = [",
+    ]
+    for name, code in entries:
+        lines.append(f'    "{name}": {code},')
+    lines.append("]")
+    lines.append("")
+
+    content = "\n".join(lines)
+
+    if SWIFT_ERROR_CODES_FILE.exists():
+        existing = SWIFT_ERROR_CODES_FILE.read_text(encoding="utf-8")
+        if existing == content:
+            return
+
+    SWIFT_ERROR_CODES_FILE.write_text(content, encoding="utf-8")
+    print(f"✓ Generated Swift error code map: {SWIFT_ERROR_CODES_FILE}")
 
 
 def build_swift_dylib():
     """Build the Swift FoundationModels dylib."""
     dylib_path = LIB_DIR / "libfoundation_models.dylib"
 
+    generate_swift_error_code_file()
+
     # Skip if up to date
     if dylib_path.exists() and SWIFT_SRC.exists():
-        if SWIFT_SRC.stat().st_mtime <= dylib_path.stat().st_mtime:
+        latest_src_mtime = max(
+            SWIFT_SRC.stat().st_mtime,
+            (
+                SWIFT_ERROR_CODES_FILE.stat().st_mtime
+                if SWIFT_ERROR_CODES_FILE.exists()
+                else 0
+            ),
+        )
+        if latest_src_mtime <= dylib_path.stat().st_mtime:
             print(f"Swift dylib is up to date: {dylib_path}")
             return
 
@@ -70,11 +124,17 @@ def build_swift_dylib():
         print("⚠ Using command line tools (@Generable macro not available)")
 
     # Build dylib
+    swift_sources = sorted(str(path) for path in SWIFT_SRC_DIR.glob("*.swift"))
+    if not swift_sources:
+        sys.exit("Error: No Swift source files found")
+
+    SWIFT_MODULE_CACHE.mkdir(exist_ok=True)
+
     cmd = [
         swift_compiler,
         "swiftc" if swift_compiler == "xcrun" else None,
         *sdk_args,
-        str(SWIFT_SRC),
+        *swift_sources,
         "-O",
         "-whole-module-optimization",
         "-target",
@@ -93,6 +153,8 @@ def build_swift_dylib():
         "-install_name",
         "-Xlinker",
         "@rpath/libfoundation_models.dylib",
+        "-module-cache-path",
+        str(SWIFT_MODULE_CACHE),
     ]
     cmd = [arg for arg in cmd if arg is not None]  # Remove None entries
 

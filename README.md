@@ -9,6 +9,10 @@ Unofficial Python bindings for Apple's [Foundation Models framework](https://dev
 - **Structured Outputs**: JSON Schema and Pydantic model support
 - **Streaming**: Real-time token-by-token response generation
 
+## Limitations
+
+- **Context Window**: 4,096 tokens per session (includes instructions, prompts, and outputs)
+
 ## Requirements
 
 - macOS 26.0+ (macOS Sequoia or later)
@@ -50,6 +54,17 @@ pip install -e .
 **Note:** The Swift dylib is built automatically during installation.
 
 ## Quick Start
+
+### Check Availability
+
+```python
+from applefoundationmodels import apple_intelligence_available
+
+if apple_intelligence_available():
+    print("Apple Intelligence is ready!")
+else:
+    print("Apple Intelligence is not available")
+```
 
 ### Basic Usage
 
@@ -238,6 +253,14 @@ We provide separate session classes for sync and async:
 
 Both have identical method signatures - just use `await` with `AsyncSession`.
 
+### Convenience Functions
+
+```python
+def apple_intelligence_available() -> bool:
+    """Check if Apple Intelligence is available and ready for use."""
+    ...
+```
+
 ### Session
 
 Manages conversation state and text generation (synchronous).
@@ -362,27 +385,42 @@ class SessionConfig(TypedDict):
 class GenerationParams(TypedDict):
     temperature: float
     max_tokens: int
-    seed: int
 ```
 
 ### Exceptions
 
 All exceptions inherit from `FoundationModelsError`:
 
+**System Errors:**
+
 - `InitializationError` - Library initialization failed
 - `NotAvailableError` - Apple Intelligence not available
 - `InvalidParametersError` - Invalid parameters
 - `MemoryError` - Memory allocation failed
 - `JSONParseError` - JSON parsing error
-- `GenerationError` - Text generation failed
 - `TimeoutError` - Operation timeout
 - `SessionNotFoundError` - Session not found
 - `StreamNotFoundError` - Stream not found
+- `UnknownError` - Unknown error
+
+**Generation Errors** (all inherit from `GenerationError`):
+
+- `GenerationError` - Generic text generation error
+- `ContextWindowExceededError` - Context window limit exceeded (4096 tokens)
+- `AssetsUnavailableError` - Required model assets are unavailable
+- `DecodingFailureError` - Failed to deserialize model output
 - `GuardrailViolationError` - Content blocked by safety filters
+- `RateLimitedError` - Session has been rate limited
+- `RefusalError` - Session refused the request
+- `ConcurrentRequestsError` - Multiple concurrent requests to same session
+- `UnsupportedGuideError` - Unsupported generation guide pattern
+- `UnsupportedLanguageError` - Unsupported language or locale
+
+**Tool Errors:**
+
 - `ToolNotFoundError` - Tool not registered
 - `ToolExecutionError` - Tool execution failed
 - `ToolCallError` - Tool call error (validation, schema, etc.)
-- `UnknownError` - Unknown error
 
 ## Examples
 
@@ -437,18 +475,24 @@ apple-foundation-models-py/
 │   ├── __init__.py     # Public API
 │   ├── _foundationmodels.pyx  # Cython bindings
 │   ├── _foundationmodels.pxd  # C declarations
+│   ├── _foundationmodels.pyi  # Type stubs
 │   ├── base.py         # Base context manager classes
 │   ├── base_session.py # Shared session logic
 │   ├── session.py      # Synchronous session
 │   ├── async_session.py # Asynchronous session
 │   ├── types.py        # Type definitions
+│   ├── constants.py    # Constants and defaults
+│   ├── tools.py        # Tool calling support
+│   ├── pydantic_compat.py # Pydantic compatibility layer
 │   ├── exceptions.py   # Exception classes
 │   └── swift/          # Swift FoundationModels bindings
 │       ├── foundation_models.swift  # Swift implementation
 │       └── foundation_models.h      # C FFI header
 ├── lib/                # Swift dylib and modules (auto-generated)
-│   └── libfoundation_models.dylib    # Compiled Swift library
+│   ├── libfoundation_models.dylib    # Compiled Swift library
+│   └── foundation_models.swiftmodule # Swift module
 ├── examples/           # Example scripts
+│   └── utils.py        # Shared utilities
 └── tests/              # Unit tests
 ```
 
@@ -467,13 +511,6 @@ Python API (session.py, async_session.py)
          ↓
   FoundationModels Framework (Apple Intelligence)
 ```
-
-**Key Design Decisions:**
-
-- **Direct FoundationModels Integration**: No intermediate C library - Swift calls FoundationModels directly
-- **Minimal Overhead**: C FFI layer provides thin wrapper for Python/Swift communication
-- **Async Coordination**: Uses semaphores to bridge Swift's async/await with synchronous C calls
-- **Streaming**: Real-time delta calculation from FoundationModels snapshot-based streaming
 
 ## Performance
 

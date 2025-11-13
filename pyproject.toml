@@ -58,6 +58,7 @@ applefoundationmodels = [
     "*.pyi",
     "*.dylib",
     "*.so",
+    "*.json",
 ]
 
 [bdist_wheel]

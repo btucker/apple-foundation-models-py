@@ -1,11 +1,24 @@
 """
 Exception hierarchy for applefoundationmodels Python bindings.
 
-All exceptions raised by the library inherit from FoundationModelsError.
-Each exception corresponds to a specific error code from the Swift API.
+Exceptions are generated from a single error_codes.json definition so both
+Python and Swift share the same source of truth for error metadata.
 """
 
-from typing import Optional
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from importlib import resources
+from typing import Dict, List, Optional, Tuple, Type
+
+__all__ = [
+    "FoundationModelsError",
+    "GenerationError",
+    "ERROR_CODE_TO_EXCEPTION",
+    "raise_for_error_code",
+    "get_error_definitions",
+]
 
 
 class FoundationModelsError(Exception):
@@ -17,106 +30,78 @@ class FoundationModelsError(Exception):
         self.error_code = error_code
 
 
-class InitializationError(FoundationModelsError):
-    """Library initialization failed."""
-
-    pass
-
-
-class NotAvailableError(FoundationModelsError):
-    """Apple Intelligence not available on this device."""
-
-    pass
-
-
-class InvalidParametersError(FoundationModelsError):
-    """Invalid parameters provided to function."""
-
-    pass
-
-
-class MemoryError(FoundationModelsError):
-    """Memory allocation error."""
-
-    pass
-
-
-class JSONParseError(FoundationModelsError):
-    """JSON parsing or validation error."""
-
-    pass
-
-
 class GenerationError(FoundationModelsError):
     """Text generation error."""
 
     pass
 
 
-class TimeoutError(FoundationModelsError):
-    """Operation timeout."""
+@dataclass(frozen=True)
+class ErrorDefinition:
+    """Structured representation of an error entry from the JSON definition."""
 
-    pass
-
-
-class SessionNotFoundError(FoundationModelsError):
-    """Session ID not found."""
-
-    pass
-
-
-class StreamNotFoundError(FoundationModelsError):
-    """Stream ID not found or already completed."""
-
-    pass
+    code: int
+    name: str
+    parent: str
+    description: str
+    swift_case: Optional[str]
 
 
-class GuardrailViolationError(FoundationModelsError):
-    """Content blocked by safety filters."""
+def _load_error_definitions() -> Tuple[ErrorDefinition, ...]:
+    data_path = resources.files(__package__).joinpath("error_codes.json")
+    with data_path.open("r", encoding="utf-8") as f:
+        raw: List[Dict[str, object]] = json.load(f)
 
-    pass
-
-
-class ToolNotFoundError(FoundationModelsError):
-    """Tool callback not registered for session."""
-
-    pass
-
-
-class ToolExecutionError(FoundationModelsError):
-    """Tool execution failed or returned invalid result."""
-
-    pass
-
-
-class ToolCallError(FoundationModelsError):
-    """Tool call error (validation, schema, etc.)."""
-
-    pass
+    definitions: List[ErrorDefinition] = []
+    for entry in raw:
+        definitions.append(
+            ErrorDefinition(
+                code=int(entry["code"]),
+                name=str(entry["name"]),
+                parent=str(entry.get("parent", "FoundationModelsError")),
+                description=str(entry["description"]),
+                swift_case=entry.get("swift_case") or None,
+            )
+        )
+    return tuple(definitions)
 
 
-class UnknownError(FoundationModelsError):
-    """Unknown error occurred."""
+_ERROR_DEFINITIONS = _load_error_definitions()
 
-    pass
-
-
-# Mapping from ai_result_t error codes to exception classes
-ERROR_CODE_TO_EXCEPTION = {
-    -1: InitializationError,
-    -2: NotAvailableError,
-    -3: InvalidParametersError,
-    -4: MemoryError,
-    -5: JSONParseError,
-    -6: GenerationError,
-    -7: TimeoutError,
-    -8: SessionNotFoundError,
-    -9: StreamNotFoundError,
-    -10: GuardrailViolationError,
-    -11: ToolNotFoundError,
-    -12: ToolExecutionError,
-    -99: UnknownError,
+_PARENT_CLASS_MAP: Dict[str, Type[FoundationModelsError]] = {
+    "FoundationModelsError": FoundationModelsError,
+    "GenerationError": GenerationError,
 }
+
+
+def get_error_definitions() -> Tuple[ErrorDefinition, ...]:
+    """Return the error definitions used to build the exception hierarchy."""
+
+    return _ERROR_DEFINITIONS
+
+
+ERROR_CODE_TO_EXCEPTION: Dict[int, Type[FoundationModelsError]] = {}
+
+
+def _register_exception_classes() -> None:
+    for definition in _ERROR_DEFINITIONS:
+        parent_class = _PARENT_CLASS_MAP.get(definition.parent, FoundationModelsError)
+
+        if definition.name == "GenerationError":
+            ERROR_CODE_TO_EXCEPTION[definition.code] = GenerationError
+            continue
+
+        exception_class = type(
+            definition.name,
+            (parent_class,),
+            {"__doc__": definition.description},
+        )
+        globals()[definition.name] = exception_class
+        __all__.append(definition.name)
+        ERROR_CODE_TO_EXCEPTION[definition.code] = exception_class
+
+
+_register_exception_classes()
 
 
 def raise_for_error_code(error_code: int, message: str) -> None:
@@ -130,5 +115,8 @@ def raise_for_error_code(error_code: int, message: str) -> None:
     Raises:
         FoundationModelsError: The appropriate exception subclass for the error code
     """
-    exception_class = ERROR_CODE_TO_EXCEPTION.get(error_code, UnknownError)
+
+    exception_class = ERROR_CODE_TO_EXCEPTION.get(
+        error_code, ERROR_CODE_TO_EXCEPTION.get(-99, FoundationModelsError)
+    )
     raise exception_class(message, error_code)
