@@ -85,8 +85,5 @@ cdef extern from "../applefoundationmodels/swift/foundation_models.h":
     char *apple_ai_get_stats() nogil
     void apple_ai_reset_stats() nogil
 
-    # Testing helpers
-    char *apple_ai_get_error_code_mappings() nogil
-
     # Memory management
     void apple_ai_free_string(char *ptr) nogil

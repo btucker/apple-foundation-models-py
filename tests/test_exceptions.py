@@ -8,17 +8,13 @@ Test Coverage:
 1. TestErrorCodeMapping: Verifies error code → exception class mappings
 2. TestRaiseForErrorCode: Tests raise_for_error_code() for all error codes
 3. TestExceptionInheritance: Tests exception hierarchy and catch behavior
-4. TestSwiftErrorCodeMappings: **NEW** - Tests Swift layer error codes
-   - Calls Swift code directly to get error code mappings
-   - Verifies Swift AIResult enum values match Python expectations
-   - Ensures Swift → Python error code contract is maintained
-5. TestErrorJSONParsing: End-to-end tests for Swift → Cython → Python flow
+4. TestErrorJSONParsing: End-to-end tests for Swift → Cython → Python flow
    - Simulates the exact Cython error handling logic
    - Verifies error JSON format contract between Swift and Python
    - Tests edge cases (missing error_code, malformed JSON, etc.)
 
-Combined, TestSwiftErrorCodeMappings and TestErrorJSONParsing verify the
-complete error propagation chain from Swift → C FFI → Cython → Python.
+All exception types are auto-generated from error_codes.json, ensuring
+Python and Swift share the same source of truth for error definitions.
 """
 
 from dataclasses import dataclass
@@ -58,10 +54,6 @@ ERROR_CASES_BY_CODE = {case.code: case for case in ERROR_CASES}
 GENERATION_ERROR_CODES = tuple(
     case.code for case in ERROR_CASES if issubclass(case.exception, GenerationError)
 )
-SWIFT_ERROR_CASES = tuple(case for case in ERROR_CASES if case.swift_key is not None)
-SWIFT_CASES_BY_KEY = {
-    case.swift_key: case for case in SWIFT_ERROR_CASES if case.swift_key is not None
-}
 
 
 class TestErrorCodeMapping:
@@ -138,60 +130,6 @@ class TestExceptionInheritance:
                 pytest.fail(
                     f"Error code {code} not caught by FoundationModelsError: {e}"
                 )
-
-
-class TestSwiftErrorCodeMappings:
-    """Test that Swift error codes match Python exception mappings."""
-
-    def test_swift_error_codes_are_accessible(self):
-        """Test that we can retrieve error code mappings from Swift layer."""
-        import applefoundationmodels._foundationmodels as fm
-
-        mappings = fm.get_swift_error_code_mappings()
-        assert isinstance(mappings, dict)
-        assert len(mappings) > 0
-
-    def test_swift_error_codes_match_python_expectations(self):
-        """
-        Test that Swift AIResult enum values match Python ERROR_CODE_TO_EXCEPTION.
-
-        This verifies the contract between Swift and Python layers:
-        - Swift defines error codes in AIResult enum
-        - Python maps error codes to exception classes in ERROR_CODE_TO_EXCEPTION
-        - Both must agree on what each error code means
-        """
-        import applefoundationmodels._foundationmodels as fm
-
-        swift_mappings = fm.get_swift_error_code_mappings()
-
-        for case in SWIFT_ERROR_CASES:
-            assert case.swift_key is not None
-            assert (
-                case.swift_key in swift_mappings
-            ), f"Swift layer missing error code: {case.swift_key}"
-
-            actual_code = swift_mappings[case.swift_key]
-            assert (
-                actual_code == case.code
-            ), f"Swift {case.swift_key}={actual_code}, expected {case.code}"
-
-            assert (
-                ERROR_CODE_TO_EXCEPTION[case.code] == case.exception
-            ), f"Python maps {case.code} to wrong exception"
-
-    def test_all_swift_error_codes_have_python_exceptions(self):
-        """Test that every Swift error code has a corresponding Python exception."""
-        import applefoundationmodels._foundationmodels as fm
-
-        swift_mappings = fm.get_swift_error_code_mappings()
-
-        for swift_name, error_code in swift_mappings.items():
-            assert (
-                error_code in ERROR_CODE_TO_EXCEPTION
-            ), f"Swift error '{swift_name}' (code {error_code}) has no Python exception"
-            assert (
-                swift_name in SWIFT_CASES_BY_KEY
-            ), f"Swift error '{swift_name}' not tracked in tests"
 
 
 class TestErrorJSONParsing:

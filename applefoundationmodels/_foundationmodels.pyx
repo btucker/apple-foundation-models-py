@@ -545,33 +545,3 @@ def clear_history() -> None:
     with nogil:
         apple_ai_clear_history()
 
-
-# ============================================================================
-# Testing helpers
-# ============================================================================
-
-def get_swift_error_code_mappings() -> dict:
-    """
-    Get error code mappings from Swift layer for testing.
-
-    Returns a dictionary mapping error names to their error codes as defined
-    in the Swift AIResult enum. This allows Python tests to verify that Swift
-    error codes match Python exception expectations.
-
-    Returns:
-        Dictionary mapping error case names to error codes (int)
-    """
-    cdef char* mappings_json
-
-    with nogil:
-        mappings_json = apple_ai_get_error_code_mappings()
-
-    if mappings_json == NULL:
-        return {}
-
-    try:
-        mappings_str = _decode_string(mappings_json)
-        return json.loads(mappings_str)
-    finally:
-        apple_ai_free_string(mappings_json)
-

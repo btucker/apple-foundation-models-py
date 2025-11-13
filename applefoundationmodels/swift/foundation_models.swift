@@ -1078,17 +1078,3 @@ public func appleAIGetStats() -> UnsafeMutablePointer<CChar>? {
 public func appleAIResetStats() {
     // Stub for compatibility
 }
-
-// MARK: - Testing Helpers
-
-/// Get error code mappings for testing
-/// Returns JSON mapping of error case names to error codes
-@_cdecl("apple_ai_get_error_code_mappings")
-public func appleAIGetErrorCodeMappings() -> UnsafeMutablePointer<CChar>? {
-    guard let jsonData = try? JSONSerialization.data(withJSONObject: ERROR_CODE_MAPPINGS, options: .sortedKeys),
-          let jsonString = String(data: jsonData, encoding: .utf8) else {
-        return nil
-    }
-
-    return strdup(jsonString)
-}
