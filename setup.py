@@ -49,8 +49,16 @@ def generate_swift_error_code_file():
     entries = []
     for entry in data:
         swift_case = entry.get("swift_case")
+
+        # Auto-generate swift_case from name if not provided
+        # Pattern: "error" + name without "Error" suffix
+        # e.g., InitializationError → errorInitialization
         if not swift_case:
-            continue
+            name = entry["name"]
+            if name.endswith("Error"):
+                name = name[:-5]  # Remove "Error" suffix
+            swift_case = "error" + name
+
         entries.append((swift_case, int(entry["code"])))
 
     entries.sort(key=lambda item: item[0])

@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from importlib import resources
-from typing import Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 __all__ = [
     "FoundationModelsError",
@@ -50,7 +50,7 @@ class ErrorDefinition:
 def _load_error_definitions() -> Tuple[ErrorDefinition, ...]:
     data_path = resources.files(__package__).joinpath("error_codes.json")
     with data_path.open("r", encoding="utf-8") as f:
-        raw: List[Dict[str, object]] = json.load(f)
+        raw: List[Dict[str, Any]] = json.load(f)
 
     definitions: List[ErrorDefinition] = []
     for entry in raw:

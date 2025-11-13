@@ -2,7 +2,7 @@
   {
     "code": -1,
     "name": "InitializationError",
-    "swift_case": "errorInitFailed",
+    "swift_case": null,
     "parent": "FoundationModelsError",
     "description": "Library initialization failed."
   },
@@ -82,6 +82,13 @@
     "swift_case": "errorToolExecution",
     "parent": "FoundationModelsError",
     "description": "Tool execution failed or returned invalid result."
+  },
+  {
+    "code": -13,
+    "name": "BufferTooSmallError",
+    "swift_case": null,
+    "parent": "FoundationModelsError",
+    "description": "Internal buffer too small to serialize error message."
   },
   {
     "code": -14,
