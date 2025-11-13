@@ -1002,12 +1002,19 @@ public func appleAIGenerateStructured(
                 if let jsonString = String(data: jsonData, encoding: .utf8) {
                     result = jsonString
                 } else {
-                    result = "{\"error\": \"Failed to encode JSON as string\",\"error_code\":-6}"
+                    // Use fallback error JSON for encoding failure
+                    result = fallbackErrorJSON(code: .errorGeneration)
                 }
             } catch {
                 // Map error to specific error code
                 let errorCode = mapGenerationErrorToCode(error)
-                result = "{\"error\": \"\(error.localizedDescription)\",\"error_code\":\(errorCode.rawValue)}"
+                // Use safe JSON serialization for error response
+                if let errorJson = createErrorResponse(error.localizedDescription, errorCode: errorCode) {
+                    result = String(cString: errorJson)
+                    free(errorJson)
+                } else {
+                    result = fallbackErrorJSON(code: errorCode)
+                }
             }
             semaphore.signal()
         }
