@@ -6,10 +6,14 @@ import platform
 import subprocess
 import shutil
 import json
+import warnings
 from pathlib import Path
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_py import build_py as _build_py
+
+# Suppress warning about swift directory not being a Python package
+warnings.filterwarnings("ignore", message=".*applefoundationmodels\\.swift.*")
 
 try:
     from Cython.Build import cythonize
@@ -233,6 +237,9 @@ cmdclass = {
 
 if __name__ == "__main__":
     setup(
+        packages=find_packages(
+            exclude=["applefoundationmodels.swift", "applefoundationmodels.swift.*"]
+        ),
         ext_modules=ext_modules,
         cmdclass=cmdclass,
     )
