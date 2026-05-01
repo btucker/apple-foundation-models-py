@@ -1085,3 +1085,38 @@ public func appleAIGetStats() -> UnsafeMutablePointer<CChar>? {
 public func appleAIResetStats() {
     // Stub for compatibility
 }
+
+
+// MARK: - Counting Tokens
+
+@_cdecl("apple_ai_token_count")
+public func appleAITokenCount(
+  prompt: UnsafePointer<CChar>?
+) -> Int32 {
+    guard let prompt = prompt else {
+        return AIResult.errorInvalidParams.rawValue
+    }
+
+    #if canImport(FoundationModels)
+    if #available(macOS 26.4, *) {
+        let promptString = String(cString: prompt)
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: Int32 = AIResult.errorUnknown.rawValue
+        Task {
+            do {
+                let model = SystemLanguageModel.default
+                let tokenCount = try await model.tokenCount(
+                    for: Prompt(promptString)
+                )
+                result = Int32(tokenCount)
+            } catch {
+              result = AIResult.errorGeneration.rawValue
+            }
+            semaphore.signal()
+        }
+        semaphore.wait()
+        return result
+    }
+    #endif
+    return AIResult.errorNotAvailable.rawValue
+}

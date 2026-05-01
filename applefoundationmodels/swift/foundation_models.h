@@ -65,6 +65,9 @@ void apple_ai_clear_history(void);
 char *apple_ai_get_stats(void);
 void apple_ai_reset_stats(void);
 
+// Token counting
+int32_t apple_ai_token_count(const char *prompt);
+
 // Memory management
 void apple_ai_free_string(char *ptr);
 
@@ -73,3 +76,4 @@ void apple_ai_free_string(char *ptr);
 #endif
 
 #endif /* FOUNDATION_MODELS_H */
+

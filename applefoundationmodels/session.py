@@ -262,4 +262,17 @@ class Session(BaseSession):
         # Reset to current transcript length (may include persistent instructions)
         self._last_transcript_length = len(self.transcript)
 
+    def token_count(self, prompt: str) -> int:
+        """
+        Count tokens in a prompt using the model tokenizer.
+
+        Args:
+            prompt: Prompt text to count tokens for
+
+        Returns:
+            Token count for the given prompt
+        """
+        result = self._call_ffi(self._ffi.token_count, prompt)
+        return cast(int, result)
+
     # Properties inherited from BaseSession (transcript, last_generation_transcript)

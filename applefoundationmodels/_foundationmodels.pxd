@@ -77,6 +77,9 @@ cdef extern from "../applefoundationmodels/swift/foundation_models.h":
                                        double temperature,
                                        int32_t max_tokens) nogil
 
+    # Token counting
+    int32_t apple_ai_token_count(const char *prompt) nogil
+
     # History management
     char *apple_ai_get_history() nogil
     void apple_ai_clear_history() nogil

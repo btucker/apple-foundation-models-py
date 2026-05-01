@@ -474,3 +474,13 @@ class TestTranscriptTracking:
         ), "Last entries of full transcript should match last_generation_transcript"
 
         session.close()
+
+
+class TestTokenCount:
+    """Tests for prompt token counting."""
+
+    def test_token_count_returns_non_negative_int(self, session, check_availability):
+        """token_count should return a non-negative integer for prompt text."""
+        count = session.token_count("Count tokens for this prompt.")
+        assert isinstance(count, int), "Token count should be an integer"
+        assert count >= 0, "Token count should be non-negative"

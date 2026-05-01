@@ -373,6 +373,34 @@ def generate(
     return result_str
 
 
+def token_count(prompt: str) -> int:
+    """
+    Count prompt tokens using the FoundationModels tokenizer.
+
+    Args:
+        prompt: Input prompt text
+
+    Returns:
+        Number of tokens in the prompt
+
+    Raises:
+        InvalidParametersError: If prompt is invalid
+        NotAvailableError: If FoundationModels is unavailable
+        GenerationError: If token counting fails
+    """
+    cdef bytes prompt_bytes = _encode_string(prompt)
+    cdef const char *prompt_c = prompt_bytes
+    cdef int32_t count
+
+    with nogil:
+        count = apple_ai_token_count(prompt_c)
+
+    if count < 0:
+        raise_for_error_code(count, "Token counting failed")
+
+    return count
+
+
 # ============================================================================
 # Structured generation
 # ============================================================================
